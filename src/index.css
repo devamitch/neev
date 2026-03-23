@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Plus+Jakarta+Sans:wght@200..800&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-surface: #F9F9F7;
+  --color-surface-container-low: #F4F4F2;
+  --color-surface-container: #EEEEEC;
+  --color-surface-container-high: #E8E8E6;
+  --color-surface-container-highest: #E2E3E1;
+  --color-surface-container-lowest: #FFFFFF;
+
+  --color-primary: #55615D;
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #E0EDE8;
+  --color-on-primary-container: #1A1C1B;
+
+  --color-secondary: #686163;
+  --color-secondary-container: #E8DDDF;
+  --color-on-secondary-container: #686163;
+
+  --color-tertiary: #55615D;
+  --color-tertiary-container: #F1EAD3;
+  --color-on-tertiary-container: #1A1C1B;
+
+  --color-on-surface: #1A1C1B;
+  --color-on-surface-variant: #686163;
+  --color-outline-variant: #D0C5AF;
+
+  --font-serif: "Newsreader", serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline: "Gloock", serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}
+
+:root {
+  --surface: #F9F9F7;
+  --surface-container-low: #F4F4F2;
+  --surface-container: #EEEEEC;
+  --surface-container-highest: #E2E3E1;
+  --surface-container-lowest: #FFFFFF;
+
+  --primary: #55615D;
+  --on-primary: #FFFFFF;
+  --primary-container: #E0EDE8;
+  --on-primary-container: #1A1C1B;
+
+  --secondary-container: #E8DDDF;
+  --on-secondary-container: #686163;
+
+  --tertiary-container: #F1EAD3;
+  --on-tertiary-container: #1A1C1B;
+
+  --on-surface: #1A1C1B;
+  --on-surface-variant: #686163;
+  --outline-variant: #D0C5AF;
+
+  --font-serif: "Newsreader", serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --ease-silk: cubic-bezier(0.16, 1, 0.3, 1);
+  
+  --background: #F9F9F7;
+  --foreground: #1A1C1B;
+  
+  --card: #FFFFFF;
+  --card-foreground: #1A1C1B;
+  
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1C1B;
+  
+  --primary-shadcn: #55615D;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #E8DDDF;
+  --secondary-foreground: #686163;
+  
+  --muted: #F4F4F2;
+  --muted-foreground: #686163;
+  
+  --accent: #E0EDE8;
+  --accent-foreground: #1A1C1B;
+  
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+  
+  --border: transparent;
+  --input: #F4F4F2;
+  --ring: #55615D;
+  
+  --radius: 0.75rem;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  color: var(--on-surface);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.display-lg {
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: 1.05;
+}
+
+.headline-lg {
+  font-size: 2.5rem;
+  line-height: 1.1;
+}
+
+.body-lg {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.label-md {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* The Overlap Principle */
+.overlap-plane {
+  position: relative;
+  z-index: 10;
+}
+
+/* Ghost Border Fallback */
+.ghost-border {
+  outline: 1px solid rgba(208, 197, 175, 0.1);
+}
+
+.silk-texture {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.02;
+}
+
+.glass-gold-edge {
+    box-shadow: inset 0 0 0 1.5px rgba(212, 175, 55, 0.2);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Newsreader', serif;
+  --font-headline: 'Gloock', serif;
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-primary: var(--primary-shadcn);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-none outline-none;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

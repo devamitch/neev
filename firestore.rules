@@ -1,0 +1,203 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, 'admin', 'steward', 'member')
+    //   - familyId: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: families
+    // Document ID: {familyId}
+    // Fields:
+    //   - name: string (required)
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: families/{familyId}/ledger
+    // Document ID: {entryId}
+    // Fields:
+    //   - familyId: string (required)
+    //   - title: string (required)
+    //   - description: string (optional)
+    //   - type: string (required, 'milestone', 'achievement', 'marriage', 'career', 'birth')
+    //   - date: timestamp (required)
+    //   - imageUrl: string (optional)
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: families/{familyId}/wisdom
+    // Document ID: {entryId}
+    // Fields:
+    //   - familyId: string (required)
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - type: string (required, 'philosophy', 'journal', 'audio', 'recipe')
+    //   - authorName: string (optional)
+    //   - year: number (optional)
+    //   - imageUrl: string (optional)
+    //   - audioUrl: string (optional)
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: families/{familyId}/rituals
+    // Document ID: {ritualId}
+    // Fields:
+    //   - familyId: string (required)
+    //   - title: string (required)
+    //   - intention: string (required)
+    //   - frequency: string (required, 'daily', 'weekly', 'monthly', 'seasonal', 'yearly')
+    //   - timeOfDay: string (optional, 'morning', 'afternoon', 'evening', 'night', 'any')
+    //   - createdBy: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "amit98ch@gmail.com" && request.auth.token.email_verified == true));
+    }
+    function isFamilyMember(familyId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId;
+    }
+    function isFamilyStewardOrAdmin(familyId) {
+      let role = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId && (role == 'admin' || role == 'steward');
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'familyId', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 128 &&
+             data.email is string && isValidEmail(data.email) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             data.role in ['admin', 'steward', 'member'] &&
+             (!('familyId' in data) || (data.familyId is string && data.familyId.size() < 128)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidFamily(data) {
+      return hasOnlyAllowedFields(['name', 'createdBy', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidLedgerEntry(data) {
+      return hasOnlyAllowedFields(['familyId', 'title', 'description', 'type', 'date', 'imageUrl', 'createdBy', 'createdAt']) &&
+             data.familyId is string && data.familyId.size() > 0 && data.familyId.size() < 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
+             data.type in ['milestone', 'achievement', 'marriage', 'career', 'birth'] &&
+             data.date is timestamp &&
+             (!('imageUrl' in data) || (data.imageUrl is string && isValidUrl(data.imageUrl) && data.imageUrl.size() < 1000)) &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidWisdomEntry(data) {
+      return hasOnlyAllowedFields(['familyId', 'title', 'content', 'type', 'authorName', 'year', 'imageUrl', 'audioUrl', 'createdBy', 'createdAt']) &&
+             data.familyId is string && data.familyId.size() > 0 && data.familyId.size() < 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.type in ['philosophy', 'journal', 'audio', 'recipe'] &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() < 100)) &&
+             (!('year' in data) || (data.year is number && data.year > 1000 && data.year < 3000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && isValidUrl(data.imageUrl) && data.imageUrl.size() < 1000)) &&
+             (!('audioUrl' in data) || (data.audioUrl is string && isValidUrl(data.audioUrl) && data.audioUrl.size() < 1000)) &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidRitual(data) {
+      return hasOnlyAllowedFields(['familyId', 'title', 'intention', 'frequency', 'timeOfDay', 'createdBy', 'createdAt']) &&
+             data.familyId is string && data.familyId.size() > 0 && data.familyId.size() < 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.intention is string && data.intention.size() > 0 && data.intention.size() < 2000 &&
+             data.frequency in ['daily', 'weekly', 'monthly', 'seasonal', 'yearly'] &&
+             (!('timeOfDay' in data) || (data.timeOfDay in ['morning', 'afternoon', 'evening', 'night', 'any'])) &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged() && ((request.resource.data.role == 'member') || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && ((request.resource.data.role == resource.data.role) || isAdmin()) && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /families/{familyId} {
+      allow read: if isFamilyMember(familyId) || isAdmin();
+      allow create: if isAuthenticated() && isValidFamily(request.resource.data) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isFamilyStewardOrAdmin(familyId) && isValidFamily(request.resource.data) && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+      
+      match /ledger/{entryId} {
+        allow read: if isFamilyMember(familyId) || isAdmin();
+        allow create: if isFamilyStewardOrAdmin(familyId) && isValidLedgerEntry(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isFamilyStewardOrAdmin(familyId) && isValidLedgerEntry(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isFamilyStewardOrAdmin(familyId) || isAdmin();
+      }
+
+      match /wisdom/{entryId} {
+        allow read: if isFamilyMember(familyId) || isAdmin();
+        allow create: if isFamilyStewardOrAdmin(familyId) && isValidWisdomEntry(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isFamilyStewardOrAdmin(familyId) && isValidWisdomEntry(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isFamilyStewardOrAdmin(familyId) || isAdmin();
+      }
+
+      match /rituals/{ritualId} {
+        allow read: if isFamilyMember(familyId) || isAdmin();
+        allow create: if isFamilyStewardOrAdmin(familyId) && isValidRitual(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isFamilyStewardOrAdmin(familyId) && isValidRitual(request.resource.data) && request.resource.data.familyId == familyId && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isFamilyStewardOrAdmin(familyId) || isAdmin();
+      }
+    }
+  }
+}

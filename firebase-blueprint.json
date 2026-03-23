@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the BloomParents platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "steward", "member"], "description": "Role within the family lineage" },
+        "familyId": { "type": "string", "description": "ID of the family this user belongs to" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Family": {
+      "title": "Family",
+      "description": "A family lineage.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Family Name (e.g., The Vardhan Lineage)" },
+        "createdBy": { "type": "string", "description": "UID of the user who created the family" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["name", "createdBy", "createdAt"]
+    },
+    "LedgerEntry": {
+      "title": "Ledger Entry",
+      "description": "A milestone or record in the family ledger.",
+      "type": "object",
+      "properties": {
+        "familyId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["milestone", "achievement", "marriage", "career", "birth"] },
+        "date": { "type": "timestamp" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["familyId", "title", "type", "date", "createdBy", "createdAt"]
+    },
+    "WisdomEntry": {
+      "title": "Wisdom Entry",
+      "description": "A piece of ancestral wisdom, philosophy, or recipe.",
+      "type": "object",
+      "properties": {
+        "familyId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["philosophy", "journal", "audio", "recipe"] },
+        "authorName": { "type": "string" },
+        "year": { "type": "number" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "audioUrl": { "type": "string", "format": "uri" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["familyId", "title", "content", "type", "createdBy", "createdAt"]
+    },
+    "Ritual": {
+      "title": "Ritual",
+      "description": "A family ritual or tradition.",
+      "type": "object",
+      "properties": {
+        "familyId": { "type": "string" },
+        "title": { "type": "string" },
+        "intention": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly", "monthly", "seasonal", "yearly"] },
+        "timeOfDay": { "type": "string", "enum": ["morning", "afternoon", "evening", "night", "any"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["familyId", "title", "intention", "frequency", "createdBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users of the platform."
+    },
+    "/families/{familyId}": {
+      "schema": { "$ref": "#/entities/Family" },
+      "description": "Family lineages."
+    },
+    "/families/{familyId}/ledger/{entryId}": {
+      "schema": { "$ref": "#/entities/LedgerEntry" },
+      "description": "Ledger entries for a specific family."
+    },
+    "/families/{familyId}/wisdom/{entryId}": {
+      "schema": { "$ref": "#/entities/WisdomEntry" },
+      "description": "Wisdom entries for a specific family."
+    },
+    "/families/{familyId}/rituals/{ritualId}": {
+      "schema": { "$ref": "#/entities/Ritual" },
+      "description": "Rituals for a specific family."
+    }
+  }
+}
