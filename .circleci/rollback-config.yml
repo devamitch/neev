@@ -1,0 +1,33 @@
+version: 2.1
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:22.14
+    working_directory: ~/repo
+
+jobs:
+  rollback:
+    executor: node-executor
+    steps:
+      - checkout
+      - run:
+          name: Enable Corepack & Install pnpm
+          command: |
+            corepack enable
+            corepack prepare pnpm@latest --activate
+      - run:
+          name: Install EAS CLI
+          command: pnpm dlx eas-cli@latest --version
+      - run:
+          name: Publish EAS Rollback Update
+          command: |
+            pnpm dlx eas-cli@latest update --channel production --message "Automated rollback to previous stable runtime" --non-interactive
+          env:
+            EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+workflows:
+  version: 2
+  rollback-pipeline:
+    jobs:
+      - rollback

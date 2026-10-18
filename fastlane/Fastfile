@@ -1,0 +1,60 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build Android release bundle"
+  lane :build do
+    gradle(
+      project_dir: "android",
+      task: ":app:bundleRelease"
+    )
+  end
+
+  desc "Deploy a new version to Google Play Internal track"
+  lane :internal do
+    build
+    upload_to_play_store(
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      track: "internal",
+      release_status: "draft",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Deploy a new version to Google Play Closed Beta (alpha track)"
+  lane :beta do |options|
+    build
+    upload_to_play_store(
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      track: "alpha",
+      release_status: options[:status] || "completed",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Deploy to Google Play Production track"
+  lane :release do |options|
+    build
+    upload_to_play_store(
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      track: "production",
+      release_status: options[:status] || "completed",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Deploy to Google Play (default: internal testing)"
+  lane :deploy do
+    internal
+  end
+end

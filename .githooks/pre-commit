@@ -1,0 +1,27 @@
+#!/bin/sh
+# Blocks staged changes that must not be committed directly:
+#   - generated android/ or ios/ build files
+#   - temporary / backup files (.bak, .orig)
+#   - secrets (.env.local, private keys, service account JSONs)
+set -eu
+
+blocked=$(git diff --cached --name-status -M)
+[ -z "$blocked" ] && exit 0
+
+fail=0
+while IFS= read -r line; do
+  status=$(printf '%s' "$line" | cut -f1)
+  path=$(printf '%s' "$line" | cut -f2)
+  case "$path" in
+    android/app/build/*|ios/build/*|*/.cxx/*|*/.gradle/*)
+      echo "blocked: $path is a generated build artifact"; fail=1 ;;
+    *.bak|*.orig|*.tmp)
+      echo "blocked: $path (.bak/.orig/.tmp files must not be committed)"; fail=1 ;;
+    *.env.local|*service-account*.json)
+      echo "blocked: $path contains secrets or private credentials"; fail=1 ;;
+  esac
+done <<EOF
+$blocked
+EOF
+
+exit "$fail"

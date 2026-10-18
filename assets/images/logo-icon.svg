@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8A9B8A"/>
+      <stop offset="100%" stop-color="#6B7D6B"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="30" fill="#E0EDE8"/>
+  <path d="M60 22 C38 22, 26 42, 26 62 C26 78, 36 90, 60 98 C84 90, 94 78, 94 62 C94 42, 82 22, 60 22Z" fill="none" stroke="url(#g)" stroke-width="4" opacity="0.3"/>
+  <text x="60" y="72" font-family="'Newsreader', Georgia, serif" font-size="52" font-weight="600" font-style="italic" fill="#55615D" text-anchor="middle" dominant-baseline="middle" letter-spacing="-1">N</text>
+  <line x1="40" y1="88" x2="80" y2="88" stroke="#7D8C7D" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+</svg>

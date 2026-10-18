@@ -1,0 +1,105 @@
+version: 2.1
+
+# Environment & component identifiers for CircleCI Release Management
+# Environment: production
+# Component: blinkquest-android
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:22.14
+    working_directory: ~/repo
+
+jobs:
+  verify:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - pnpm-deps-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-deps-v1-
+      - run:
+          name: Enable Corepack & Install pnpm
+          command: |
+            corepack enable
+            corepack prepare pnpm@latest --activate
+      - run:
+          name: Install Dependencies
+          command: pnpm install --frozen-lockfile
+      - save_cache:
+          key: pnpm-deps-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.local/share/pnpm/store
+            - node_modules
+      - run:
+          name: Typecheck (TypeScript)
+          command: pnpm typecheck
+      - run:
+          name: Lint
+          command: pnpm lint
+      - run:
+          name: Unit Tests
+          command: pnpm test
+
+  deploy:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - pnpm-deps-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-deps-v1-
+      - run:
+          name: Enable Corepack & Install pnpm
+          command: |
+            corepack enable
+            corepack prepare pnpm@latest --activate
+      - run:
+          name: Install Dependencies
+          command: pnpm install --frozen-lockfile
+      # CircleCI Deploy Marker: Plan Deploy
+      - run:
+          name: Plan a deploy
+          command: |
+            circleci run release plan \
+              --environment-name="production" \
+              --component-name="blinkquest-android" \
+              --target-version="${CIRCLE_TAG:-$CIRCLE_SHA1}"
+      # Actual Deployment: Triggers EAS Production Build & Submission
+      - run:
+          name: Trigger EAS Production Build
+          command: |
+            npx eas-cli@latest build --platform android --profile production --non-interactive
+          env:
+            EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # CircleCI Deploy Marker: Update Status
+      - run:
+          name: Update a deploy to SUCCESS
+          command: circleci run release update --status=SUCCESS
+          when: on_success
+      - run:
+          name: Update planned deploy to FAILED
+          command: circleci run release update --status=FAILED
+          when: on_fail
+
+workflows:
+  version: 2
+  ci-pipeline:
+    jobs:
+      - verify:
+          filters:
+            branches:
+              ignore: []
+            tags:
+              only: /.*/
+      - deploy:
+          requires:
+            - verify
+          filters:
+            branches:
+              only:
+                - main
+                - release/*
+            tags:
+              only: /^v.*/

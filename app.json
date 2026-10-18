@@ -1,0 +1,81 @@
+{
+  "name": "Neev",
+  "slug": "neev",
+  "scheme": "neev",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "userInterfaceStyle": "light",
+  "icon": "./assets/images/app-icon-all.png",
+  "android": {
+    "package": "com.amit.neev",
+    "versionCode": 1,
+    "icon": "./assets/images/app-icon-android-legacy.png",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
+      "backgroundColor": "#FAF9F5"
+    },
+    "allowBackup": false,
+    "blockedPermissions": [
+      "com.google.android.gms.permission.AD_ID",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.SYSTEM_ALERT_WINDOW"
+    ]
+  },
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.amit.neev",
+    "buildNumber": "1",
+    "config": {
+      "usesNonExemptEncryption": false
+    },
+    "privacyManifests": {
+      "NSPrivacyAccessedAPITypes": [
+        {
+          "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+          "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+        }
+      ]
+    }
+  },
+  "web": {
+    "favicon": "./assets/images/app-icon-web-favicon.png",
+    "bundler": "metro"
+  },
+  "plugins": [
+    "expo-localization",
+    "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        "image": "./assets/images/splash-screen.png",
+        "imageWidth": 260,
+        "resizeMode": "contain",
+        "backgroundColor": "#FAF9F5"
+      }
+    ],
+    [
+      "react-native-edge-to-edge",
+      {
+        "android": {
+          "parentTheme": "Light",
+          "enforceNavigationBarContrast": false
+        }
+      }
+    ],
+    "expo-build-properties",
+    "expo-router",
+    "expo-image"
+  ],
+  "experiments": {
+    "tsconfigPaths": true,
+    "typedRoutes": true
+  },
+  "extra": {
+    "eas": {
+      "projectId": "neev-family-sanctuary"
+    },
+    "router": {}
+  },
+  "owner": "amit98ch"
+}

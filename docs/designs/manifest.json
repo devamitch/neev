@@ -1,0 +1,25 @@
+{
+  "name": "BlinkQuest Complete UI/UX Design Pack",
+  "image_count": 7,
+  "images": [
+    "images/01_complete_screen_gallery.png",
+    "images/02_full_app_and_navigation_board.png",
+    "images/03_app_flow_and_screen_inventory.png",
+    "images/04_detailed_screen_library.png",
+    "images/05_features_and_pip_states.png",
+    "images/06_visual_direction_reference.png",
+    "images/07_full_product_and_pip_design_board.png"
+  ],
+  "editable_diagrams": [
+    "flows/NAVIGATION_ARCHITECTURE.svg",
+    "flows/USER_FLOWS_AND_STATES.svg"
+  ],
+  "diagram_previews": [
+    "flows/NAVIGATION_ARCHITECTURE.png",
+    "flows/USER_FLOWS_AND_STATES.png"
+  ],
+  "design_system": [
+    "DESIGN_SYSTEM_TOKENS.svg",
+    "DESIGN_SYSTEM_TOKENS.png"
+  ]
+}

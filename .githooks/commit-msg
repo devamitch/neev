@@ -1,0 +1,15 @@
+#!/bin/sh
+# Enforces conventional commit message rules:
+#   <type>(<scope>): <summary>
+m=$(head -1 "$1")
+case "$m" in Merge*|Revert*) exit 0;; esac
+
+echo "$m" | grep -Eq '^(fix|feat|chore|refactor|docs|test|perf|style)\([a-z0-9._-]+\): .+' || {
+  echo "commit subject must be type(scope): summary, type in fix|feat|chore|refactor|docs|test|perf|style"
+  exit 1
+}
+[ "${#m}" -le 72 ] || { echo "commit subject must be 72 characters or fewer (got ${#m})"; exit 1; }
+echo "$m" | grep -qi phase && { echo "never use the word phase"; exit 1; }
+echo "$m" | grep -q '\.$' && { echo "commit subject must not end with a period"; exit 1; }
+
+exit 0

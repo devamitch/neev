@@ -1,0 +1,3 @@
+# GitHub Copilot Instructions — BlinkQuest
+
+Read the repository-root `AGENTS.md` first and follow it as the canonical project contract. It contains the shared documentation index and all cross-agent rules; do not duplicate those rules or create another project plan/tracker. Inspect the current repository before editing, use pnpm only, reuse existing code, maintain truthful status/evidence, add no test files during the current MVP completion pass, and do not commit or push unless explicitly authorized. When the user limits the scope to agent instructions, modify only the authorized agent instruction files.
