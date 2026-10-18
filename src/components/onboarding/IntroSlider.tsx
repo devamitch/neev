@@ -67,7 +67,7 @@ const SLIDES: readonly IntroSlide[] = [
     title: "The Sanctuary for Every Family",
     description:
       "One app. Every role. Every stage. Coordinated with the calm, structured wisdom of a trusted elder.",
-    image: AssetIllustrations.discover,
+    image: AssetIllustrations.familyHome,
     background: "#F4F7F4",
     accent: "#5A7A64",
   },
@@ -76,7 +76,7 @@ const SLIDES: readonly IntroSlide[] = [
     title: "Shared Functions & Rituals",
     description:
       "Plan weddings, pujas, milestone birthdays, and school events with shared task delegations for everyone.",
-    image: AssetIllustrations.empty,
+    image: AssetIllustrations.schoolingKids,
     background: "#FAF6F0",
     accent: "#C27835",
   },
@@ -85,7 +85,7 @@ const SLIDES: readonly IntroSlide[] = [
     title: "Heirloom Wisdom & Lifeline Vault",
     description:
       "Preserve ancestral recipes, elder life lessons, and emergency contacts safely stored on your device.",
-    image: AssetIllustrations.network,
+    image: AssetIllustrations.heirloomVault,
     background: "#F0F4F6",
     accent: "#4E7A7A",
   },
