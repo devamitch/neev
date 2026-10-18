@@ -63,3 +63,26 @@ jest.mock("../src/i18n/index.ts", () => ({
     numberToCurrency: jest.fn(),
   },
 }))
+
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn().mockResolvedValue(true),
+    signIn: jest.fn().mockResolvedValue({
+      data: {
+        idToken: "mock-id-token",
+        user: { id: "u-1", name: "Amit", email: "amit@example.com" },
+      },
+    }),
+    signOut: jest.fn().mockResolvedValue(null),
+    getTokens: jest.fn().mockResolvedValue({ accessToken: "mock-access-token", idToken: "mock-id-token" }),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: "SIGN_IN_CANCELLED",
+    IN_PROGRESS: "IN_PROGRESS",
+    PLAY_SERVICES_NOT_AVAILABLE: "PLAY_SERVICES_NOT_AVAILABLE",
+  },
+  isErrorWithCode: jest.fn(),
+  isSuccessResponse: jest.fn(() => true),
+}))
+

@@ -17,10 +17,11 @@ import { useKnowledgeStore, type KnowledgeCategory } from "@/stores/useKnowledge
 
 const CATEGORIES: { key: KnowledgeCategory | "all"; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "All Vault", icon: "albums-outline" },
-  { key: "wisdom", label: "Elder Wisdom", icon: "sparkles-outline" },
+  { key: "story", label: "Family Stories", icon: "book-outline" },
   { key: "recipe", label: "Heirloom Recipes", icon: "restaurant-outline" },
-  { key: "health", label: "Lifeline & Health", icon: "medkit-outline" },
+  { key: "wisdom", label: "Elder Wisdom", icon: "sparkles-outline" },
   { key: "tradition", label: "Rituals & Mandir", icon: "flame-outline" },
+  { key: "project", label: "Pet Projects", icon: "hammer-outline" },
 ]
 
 export default function KnowledgeScreen() {
@@ -37,7 +38,7 @@ export default function KnowledgeScreen() {
     <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
       <AppHeader
         title="Knowledge Sanctuary"
-        subtitle="Heirloom Recipes, Elder Wisdom & Lifeline Records"
+        subtitle="Family Stories, Heirloom Recipes & Traditions Vault"
         showBack={false}
         rightAction={
           <HeaderIconButton
@@ -101,9 +102,11 @@ export default function KnowledgeScreen() {
                     tone={
                       entry.category === "wisdom"
                         ? "warning"
-                        : entry.category === "health"
-                        ? "error"
-                        : "info"
+                        : entry.category === "story"
+                        ? "info"
+                        : entry.category === "recipe"
+                        ? "success"
+                        : "neutral"
                     }
                     size="small"
                   />

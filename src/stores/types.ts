@@ -8,11 +8,25 @@ import "zustand/middleware/immer"
 
 import type { AppSlice } from "./slices/createAppSlice"
 import type { AuthSlice } from "./slices/createAuthSlice"
-import type { EyeHealthSlice } from "./slices/createEyeHealthSlice"
+import type { IntentionsSlice } from "./slices/createIntentionsSlice"
 import type { ProfileSlice } from "./slices/createProfileSlice"
 import type { UiSlice } from "./slices/createUiSlice"
+import type { FamilySlice } from "./slices/createFamilySlice"
+import type { ScheduleSlice } from "./slices/createScheduleSlice"
+import type { KnowledgeSlice } from "./slices/createKnowledgeSlice"
+import type { RoutineSlice } from "./slices/createRoutineSlice"
+import type { SpacesSlice } from "./slices/createSpacesSlice"
 
-export type RootStoreState = AppSlice & EyeHealthSlice & UiSlice & ProfileSlice & AuthSlice
+export type RootStoreState = AppSlice &
+  IntentionsSlice &
+  UiSlice &
+  ProfileSlice &
+  AuthSlice &
+  FamilySlice &
+  ScheduleSlice &
+  KnowledgeSlice &
+  RoutineSlice &
+  SpacesSlice
 
 export type ImmerStateCreator<Slice> = StateCreator<
   RootStoreState,

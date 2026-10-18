@@ -13,11 +13,11 @@ import { useColors } from "@/theme/useTheme"
 import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleStore"
 
 const CATEGORIES: { key: FunctionCategory; label: string }[] = [
-  { key: "ritual", label: "Puja / Ritual" },
   { key: "celebration", label: "Celebration" },
   { key: "gathering", label: "Family Dinner" },
-  { key: "school", label: "School & Youth" },
-  { key: "health", label: "Health Checkup" },
+  { key: "outing", label: "Outing & Picnic" },
+  { key: "ritual", label: "Puja / Ritual" },
+  { key: "project", label: "Pet & House Project" },
 ]
 
 export default function AddEventModal() {

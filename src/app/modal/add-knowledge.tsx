@@ -13,10 +13,11 @@ import { useColors } from "@/theme/useTheme"
 import { useKnowledgeStore, type KnowledgeCategory } from "@/stores/useKnowledgeStore"
 
 const CATEGORIES: { key: KnowledgeCategory; label: string }[] = [
-  { key: "wisdom", label: "Elder Wisdom" },
+  { key: "story", label: "Family Story" },
   { key: "recipe", label: "Heirloom Recipe" },
+  { key: "wisdom", label: "Elder Wisdom" },
   { key: "tradition", label: "Tradition / Ritual" },
-  { key: "health", label: "Health / Lifeline" },
+  { key: "project", label: "Pet / House Project" },
 ]
 
 export default function AddKnowledgeModal() {

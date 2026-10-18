@@ -16,13 +16,16 @@ import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleStore"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 
+import { googleServicesClient } from "@/services/google/googleServicesClient"
+import { useRootStore } from "@/stores/useRootStore"
+
 const CATEGORIES: { key: FunctionCategory | "all"; label: string }[] = [
   { key: "all", label: "All Functions" },
-  { key: "ritual", label: "Pujas & Rituals" },
   { key: "celebration", label: "Celebrations" },
-  { key: "gathering", label: "Gatherings" },
-  { key: "school", label: "School & Youth" },
-  { key: "health", label: "Health & Checkups" },
+  { key: "gathering", label: "Family Gatherings" },
+  { key: "outing", label: "Outings & Picnics" },
+  { key: "ritual", label: "Pujas & Rituals" },
+  { key: "project", label: "Pet & House Projects" },
 ]
 
 export default function ScheduleScreen() {

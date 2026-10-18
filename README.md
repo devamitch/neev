@@ -1,46 +1,52 @@
-# 🪷 Neev (नींव) · Mobile App
+# 🪷 Neev (नींव) · Private Family AI Operating System
 
 > **One app. Every role. Every stage of family life — coordinated with the calm wisdom of a trusted elder.**
 
-Neev is a **private, local-first, AI-guided family operating system** built on **Expo SDK 55, React Native, New Architecture, and SQLite**.
+Neev is a **production-grade, private family AI operating system** engineered on **Expo SDK 55, React Native New Architecture, Zustand, Firebase Firestore, and Google Services**.
+
+It safeguards family data within an encrypted private enclave with zero third-party data selling, coordinating life across **Personal Space**, **Nuclear Space**, and the **Family Sanctuary**.
 
 ---
 
-## 🌟 Architecture & Core Pillars
+## 🌟 Core Architecture & Sacred Spaces
 
-### 1. 🪷 Family Sanctuary (Dashboard)
-- Multigenerational pulse across Elders, Parents, and Youth.
-- Daily Elder Wisdom reflections from ancestral archives.
-- Countdown, venues, and status for upcoming family gatherings.
-- Daily household rhythms checklist (morning prayers, vitals, screen-free dinner).
+### 1. 🔒 Sacred Spaces Multi-Partitioning
+- **Personal Space (Confidential)**: Career switch plans, staff engineering interview preparation, system design drills, and private goals.
+- **Nuclear Space (Immediate Home)**: Child school curriculum, science fair deadlines, pediatrician checkups, office deliverables, and chores.
+- **Family Sanctuary (Multigenerational)**: Grandparents, oral histories, festival muhurats, heirloom recipes, family pujas, and beloved pets (Simba 🐾).
 
-### 2. 📅 Functions & Rituals Scheduler (`/schedule`)
-- Multigenerational event coordination (Weddings, Pujas, Milestones, School Events, Health Checkups).
-- Shared task delegation per family member with real-time toggle.
-- Preparation checklists and reminders.
+### 2. ⚡ Token-Saving Deterministic Cognitive Engine (`neevHeuristicEngine`)
+- **0 AI Tokens Consumed**: Computes transit departure buffers, preparation countdowns, and checklists deterministically on-device.
+- **Time Arithmetic**: Automatically calculates departure times with traffic buffers (e.g. clinic parking: -35m; school bus: -20m).
+- **Family Load Balancing**: Evaluates chore distributions across family members to prevent caregiver fatigue.
 
-### 3. 🏺 Shared Knowledge Sanctuary Vault (`/knowledge`)
-- Heirloom family recipes passed down through generations.
-- Elder oral histories, life lessons, and ancestral records.
-- Emergency family lifeline directory (blood groups, doctors, policy numbers).
-- Pinning and category filtering.
+### 3. 🔔 Proactive Escalating Notifications Engine (`notificationsService`)
+- Persistent, tiered reminders that nudge the right family members at the right time:
+  - **Tier 1 (Gentle Advance)**: Heads-up reminder scheduled well in advance.
+  - **Tier 2 (Preparation Checklist)**: 30 minutes prior with actionable tasks (e.g. immunization card, science project battery test).
+  - **Tier 3 (Immediate Action)**: Due right now with 1-tap Google Meet / Calendar links.
 
-### 4. 👥 Family Directory & Multigenerational Tree (`/family`)
-- Hierarchical view of Elders, Parents, and Youth.
-- Member blood groups, health notes, and direct call integration.
-- Household motto and sanctuary settings.
+### 4. 🌐 Google Services & Cloud Synchronization
+- **Google Calendar**: Real-time sync for family functions, puja muhurats, and school events.
+- **Google Tasks**: Delegated chore tracking synchronized with Google accounts.
+- **Google Meet**: Automatic 1-tap video conference generation for interviews and overseas family calls.
+- **Google Fit / Health Connect**: Daily family movement telemetry (steps, sleep, active minutes).
+- **Firebase Firestore**: Multi-user real-time synchronization partitioned by Household Enclave (`NEEV-xxxx-SANC`).
+
+### 5. 🏛️ Single Store, Separate Slices (`useRootStore`)
+- Unified Zustand state store with MMKV persistent storage.
+- Slices for `Spaces`, `Family`, `Schedule`, `Knowledge`, `Routine`, `Intentions`, `Profile`, and `Auth`.
 
 ---
 
-## 📱 Mobile Tech Stack
+## 📱 Tech Stack & Quality Standards
 
 - **Framework**: Expo SDK 55 · React Native 0.83 · React 19
-- **Routing**: Expo Router v4 (Tabs, Drawer, Modals)
-- **Local Storage**: `expo-sqlite` (WAL mode, offline resilience) + MMKV key-value store
-- **State Management**: Zustand stores (`useFamilyStore`, `useScheduleStore`, `useKnowledgeStore`, `useRoutineStore`, `useRootStore`)
-- **Animation & Gestures**: React Native Reanimated 4, Gesture Handler, Haptics
-- **UI & Design Tokens**: Setu-derived Squircle continuous curvature, porcelain/sage palette (`#FAF9F6`, `#5A7A64`, `#C27835`), Space Grotesk typography
-- **Target OS**: Android 14+ (minSdkVersion 24, targetSdkVersion 35) & iOS 17+
+- **State**: Zustand with Immer & MMKV persistence
+- **Backend & Cloud**: Firebase 13 (Firestore, Cloud Storage) + Google Cloud REST APIs
+- **Notifications**: `expo-notifications` with tiered escalating nudges
+- **Testing**: Jest unit tests (100% passing across stores, heuristic engine, and sync)
+- **Expo Doctor**: 20/20 checks verified passing
 
 ---
 
@@ -50,24 +56,15 @@ Neev is a **private, local-first, AI-guided family operating system** built on *
 # Install dependencies
 pnpm install
 
-# Start development client
-pnpm start
-
-# Run on Android device / emulator
-pnpm android
-
-# Run on iOS simulator
-pnpm ios
-
-# Typecheck and lint
+# Run static type verification
 pnpm typecheck
-pnpm lint
+
+# Run automated test suite
+pnpm test
+
+# Verify Expo project health (20/20 checks)
+pnpm dlx expo-doctor
+
+# Start development server
+pnpm start
 ```
-
----
-
-## 🛡️ Sanctuary Privacy Covenant
-
-- **100% On-Device Processing**: All family functions, memories, and health details are stored on your device SQLite database.
-- **Zero Advertising**: Zero trackers, zero third-party brokers, zero telemetry selling.
-- **Ecosystem**: Proud sibling app to **Setu** and **BlinkQuest**.
