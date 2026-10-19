@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
-import React, { memo, useState } from "react"
+import React, { memo, useMemo, useState } from "react"
 import { StyleSheet, View } from "react-native"
 
 import { AppButton } from "@/components/ui/AppButton"
@@ -12,6 +12,7 @@ import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
 import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useColors } from "@/theme/useTheme"
+import { useQueryClient } from "@tanstack/react-query"
 
 export interface RealFamilyGame {
   id: string
@@ -103,6 +104,7 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
   const colors = useColors()
   const showToast = useRootStore((s) => s.showToast)
   const addFunction = useScheduleStore((s) => s.addFunction)
+  const queryClient = useQueryClient()
 
   const [activeGameIdx, setActiveGameIdx] = useState(0)
   const [teamScoreA, setTeamScoreA] = useState(0)
@@ -112,6 +114,15 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
   const game = REAL_FAMILY_GAMES[activeGameIdx]
 
   const members = useFamilyStore((s) => s.members)
+
+  const teamAName = useMemo(
+    () => (members.length >= 1 ? `Team ${members[0].name.split(" ")[0]}` : "Team A"),
+    [members],
+  )
+  const teamBName = useMemo(
+    () => (members.length >= 2 ? `Team ${members[1].name.split(" ")[0]}` : "Team B"),
+    [members],
+  )
 
   const handleNextGame = () => {
     void Haptics.selectionAsync()
@@ -150,6 +161,7 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
         },
       ],
     })
+    void queryClient.invalidateQueries({ queryKey: ["schedule", "functions"] })
     showToast({
       message: `Weekly real game ritual scheduled in Family Functions!`,
       type: "success",
@@ -237,10 +249,10 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
               REAL MATCH SCOREBOARD
             </AppText>
             <View style={styles.scoreRow}>
-              {/* Team Elders & Youth */}
+              {/* Team 1 */}
               <View style={styles.teamCol}>
                 <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
-                  Team Dadu & Aarav
+                  {teamAName}
                 </AppText>
                 <AppText variant="h1" style={{ fontWeight: "800", marginVertical: 4 }}>
                   {teamScoreA}
@@ -263,10 +275,10 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
 
               <View style={styles.scoreDivider} />
 
-              {/* Team Parents */}
+              {/* Team 2 */}
               <View style={styles.teamCol}>
                 <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
-                  Team Papa & Maa
+                  {teamBName}
                 </AppText>
                 <AppText variant="h1" style={{ fontWeight: "800", marginVertical: 4 }}>
                   {teamScoreB}
