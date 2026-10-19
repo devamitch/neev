@@ -32,11 +32,23 @@ export interface FamilyLocationData {
   deviceStatus: "online" | "idle" | "moving"
 }
 
+export type DeviceFinderStatus =
+  | "not_configured"
+  | "permission_required"
+  | "device_offline"
+  | "location_unavailable"
+  | "last_location_available"
+  | "ring_request_sent"
+  | "ring_request_acknowledged"
+  | "ring_request_failed"
+
 export interface PhoneRadarScan {
-  distanceMeters: number
+  status: DeviceFinderStatus
+  accuracyMeters: number
   signalStrengthDbm: number
-  roomLocation: string
-  proximity: "burning_hot" | "warm" | "cold"
+  areaDescription: string
+  lastSeen: string
+  canRing: boolean
 }
 
 class FamilyLocationService {
@@ -56,8 +68,8 @@ class FamilyLocationService {
         latitude: 22.57264,
         longitude: 88.36389,
         placeName: "Sanctuary Home",
-        roomDetail: "Living Room • Sofa / Couch (Between cushions)",
-        accuracyMeters: 1.2,
+        roomDetail: "Living Area • Home Sanctuary",
+        accuracyMeters: 4.5,
         batteryLevel: 68,
         isCharging: false,
         lastUpdated: "Just now",
@@ -254,22 +266,30 @@ class FamilyLocationService {
   }
 
   /**
-   * Compute pinpoint radar scan for "Where is My Phone"
-   * e.g. Mother lost phone in the sofa
+   * Compute honest telemetry scan for "Where is My Phone"
+   * Returns GPS accuracy radius, device connectivity, and acoustic ring state
    */
   public getPrecisionRadarScan(targetMemberId: string): PhoneRadarScan {
     const loc = this.locations.get(targetMemberId)
-    const isSofa = loc?.roomDetail?.toLowerCase().includes("sofa") || loc?.roomDetail?.toLowerCase().includes("couch")
-    
-    const distanceMeters = isSofa ? 0.4 : 1.8
-    const signalStrengthDbm = isSofa ? -42 : -68
-    const roomLocation = loc?.roomDetail || "Sanctuary Living Room"
+    if (!loc) {
+      return {
+        status: "location_unavailable",
+        accuracyMeters: 50,
+        signalStrengthDbm: -99,
+        areaDescription: "Location data unavailable for this member",
+        lastSeen: "Unknown",
+        canRing: false,
+      }
+    }
 
+    const isOnline = loc.deviceStatus === "online" || loc.deviceStatus === "moving"
     return {
-      distanceMeters,
-      signalStrengthDbm,
-      roomLocation,
-      proximity: distanceMeters < 0.8 ? "burning_hot" : distanceMeters < 2.5 ? "warm" : "cold",
+      status: isOnline ? "last_location_available" : "device_offline",
+      accuracyMeters: loc.accuracyMeters || 5,
+      signalStrengthDbm: isOnline ? -55 : -90,
+      areaDescription: loc.placeName ? `${loc.placeName} (${loc.roomDetail || "Indoor Area"})` : "Current Sanctuary Area",
+      lastSeen: loc.lastUpdated || "Just now",
+      canRing: isOnline,
     }
   }
 

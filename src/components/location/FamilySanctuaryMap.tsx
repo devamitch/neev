@@ -1,11 +1,13 @@
-import React, { memo, useEffect, useState } from "react"
+import React, { memo, useEffect, useMemo, useState } from "react"
 import {
+  ActivityIndicator,
   Dimensions,
   Modal,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native"
+import { Image } from "expo-image"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import Animated, {
@@ -39,13 +41,25 @@ import {
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
+import {
+  latLonToTileXY,
+  getTileUrl,
+  TILE_SERVERS,
+} from "@/services/location/offlineMapTileService"
+import {
+  useFamilyLocationsQuery,
+  useOfflineMapPackQuery,
+  useDownloadOfflineMapMutation,
+} from "@/hooks/useFamilyLocationQuery"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { useScheduleStore } from "@/stores/useScheduleStore"
+import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
 import { useColors } from "@/theme/useTheme"
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 const MAP_HEIGHT = 220
+const TILE_SIZE = 256
 
 export interface DineOutSuggestion {
   id: string
@@ -64,12 +78,12 @@ const DINE_OUT_SUGGESTIONS: DineOutSuggestion[] = [
     id: "do-1",
     name: "Oh! Calcutta (Silver Spring)",
     vibe: "Heirloom Traditional Dining",
-    cuisine: "Authentic Bengali & Comfort Curries",
+    cuisine: "Authentic Comfort Curries",
     rating: 4.8,
     distanceMins: 14,
     elderFriendly: true,
     petFriendly: false,
-    aiReason: "Equidistant for all family members. Gentle elevator access and quiet acoustic corners loved by Dadu & Dida.",
+    aiReason: "Equidistant for family members. Gentle elevator access and quiet acoustic corners loved by grandparents.",
   },
   {
     id: "do-2",
@@ -80,18 +94,18 @@ const DINE_OUT_SUGGESTIONS: DineOutSuggestion[] = [
     distanceMins: 8,
     elderFriendly: true,
     petFriendly: true,
-    aiReason: "Outdoor lawn area allows Simba to join. Right along Dadu's morning walkway with zero staircase barriers.",
+    aiReason: "Outdoor lawn area allows family pets to join. Right along morning walkway with zero staircase barriers.",
   },
   {
     id: "do-3",
     name: "Flurys Heritage Tea Room",
     vibe: "Afternoon High Tea & Stories",
-    cuisine: "English Pastries, Darjeeling First Flush & Patties",
+    cuisine: "Pastries, Darjeeling First Flush & Savory Bakes",
     rating: 4.9,
     distanceMins: 20,
     elderFriendly: true,
     petFriendly: false,
-    aiReason: "Great weekend afternoon memory spot for Aarav's school celebrations and storytelling.",
+    aiReason: "Great weekend afternoon memory spot for school celebrations and storytelling.",
   },
 ]
 
@@ -108,8 +122,15 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const colors = useColors()
   const showToast = useRootStore((s) => s.showToast)
   const addFunction = useScheduleStore((s) => s.addFunction)
+  const familyMembers = useFamilyStore((s) => s.members)
 
-  const [locations, setLocations] = useState<FamilyLocationData[]>([])
+  // TanStack React Query Hooks
+  const { data: queryLocations = [] } = useFamilyLocationsQuery()
+  const { data: offlinePack } = useOfflineMapPackQuery()
+  const downloadMapMutation = useDownloadOfflineMapMutation()
+
+  const [mapMode, setMapMode] = useState<"tile" | "schematic">("tile")
+  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null)
   const [selectedMember, setSelectedMember] = useState<FamilyLocationData | null>(null)
   const [finderModalVisible, setFinderModalVisible] = useState(false)
   const [fullscreenMapVisible, setFullscreenMapVisible] = useState(false)
@@ -117,6 +138,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const [radarScan, setRadarScan] = useState<PhoneRadarScan | null>(null)
   const [isSirenActive, setIsSirenActive] = useState(false)
   const [isStrobeActive, setIsStrobeActive] = useState(false)
+
+  // Interactive zoom level for real tile map (zoom 14 = neighbourhood level)
+  const [tileZoom, setTileZoom] = useState(14)
 
   // Zoom and pan shared values for interactive full-screen map
   const zoomScale = useSharedValue(1)
@@ -127,27 +151,30 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const strobeOpacity = useSharedValue(1)
   const radarPulse = useSharedValue(1)
 
-  useEffect(() => {
-    const load = () => {
-      const data = familyLocationService.getAllFamilyLocations()
-      setLocations(data)
-      setSelectedMember((prev) => prev || data.find((d) => d.memberId === "m-4") || data[0] || null)
-    }
-    load()
-    const timer = setInterval(load, 15000)
-    return () => clearInterval(timer)
-  }, [])
+  const locations = useMemo(() => {
+    return queryLocations.length > 0 ? queryLocations : familyLocationService.getAllFamilyLocations()
+  }, [queryLocations])
 
   useEffect(() => {
-    radarPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.35, { duration: 1200, easing: Easing.out(Easing.ease) }),
-        withTiming(1, { duration: 1200, easing: Easing.in(Easing.ease) }),
-      ),
-      -1,
-      true,
-    )
-  }, [radarPulse])
+    if (!selectedMember && locations.length > 0) {
+      setSelectedMember(locations[0])
+    }
+  }, [locations, selectedMember])
+
+  useEffect(() => {
+    if (finderModalVisible) {
+      radarPulse.value = withRepeat(
+        withSequence(
+          withTiming(1.35, { duration: 1200, easing: Easing.out(Easing.ease) }),
+          withTiming(1, { duration: 1200, easing: Easing.in(Easing.ease) }),
+        ),
+        -1,
+        true,
+      )
+    } else {
+      radarPulse.value = 1
+    }
+  }, [finderModalVisible, radarPulse])
 
   useEffect(() => {
     if (isStrobeActive) {
@@ -163,6 +190,46 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       strobeOpacity.value = 1
     }
   }, [isStrobeActive, strobeOpacity])
+
+  // Center coordinate: default to Sanctuary Home (Kolkata)
+  const centerLat = 22.57264
+  const centerLon = 88.36389
+
+  // Calculate 3x3 grid of tiles around center
+  const centerTile = useMemo(() => {
+    return latLonToTileXY(centerLat, centerLon, tileZoom)
+  }, [centerLat, centerLon, tileZoom])
+
+  const tileGrid = useMemo(() => {
+    const tiles = []
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = centerTile.x + dx
+        const y = centerTile.y + dy
+        const url = getTileUrl(x, y, tileZoom, TILE_SERVERS.cartoVoyager)
+        tiles.push({ x, y, dx, dy, url, key: `${tileZoom}_${x}_${y}` })
+      }
+    }
+    return tiles
+  }, [centerTile, tileZoom])
+
+  // Converts member lat/lon into screen X/Y offset from center
+  const getScreenCoordinates = (lat: number, lon: number, canvasWidth: number, canvasHeight: number) => {
+    const n = Math.pow(2, tileZoom)
+    const centerWorldX = ((centerLon + 180) / 360) * (TILE_SIZE * n)
+    const centerLatRad = (centerLat * Math.PI) / 180
+    const centerWorldY =
+      ((1 - Math.asinh(Math.tan(centerLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
+
+    const pointWorldX = ((lon + 180) / 360) * (TILE_SIZE * n)
+    const pointLatRad = (lat * Math.PI) / 180
+    const pointWorldY =
+      ((1 - Math.asinh(Math.tan(pointLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
+
+    const x = canvasWidth / 2 + (pointWorldX - centerWorldX)
+    const y = canvasHeight / 2 + (pointWorldY - centerWorldY)
+    return { x, y }
+  }
 
   const handleOpenFinder = (member: FamilyLocationData) => {
     void Haptics.selectionAsync()
@@ -186,10 +253,36 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     }
   }
 
+  const handleDownloadMapArea = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setDownloadProgress({ current: 1, total: 49 })
+    try {
+      const pack = await downloadMapMutation.mutateAsync({
+        centerLat,
+        centerLon,
+        areaName: "Home Sanctuary & Vicinity",
+        onProgress: (current, total) => setDownloadProgress({ current, total }),
+      })
+      showToast({
+        message: `Offline map saved! ${pack.tileCount} tiles cached (${Math.round(pack.sizeBytes / 1024)} KB) for zero-data use.`,
+        type: "success",
+      })
+    } catch {
+      showToast({ message: "Could not complete offline map download.", type: "error" })
+    } finally {
+      setDownloadProgress(null)
+    }
+  }
+
   const handleZoom = (factor: number) => {
     void Haptics.selectionAsync()
     const next = Math.max(0.8, Math.min(3.2, zoomScale.value * factor))
     zoomScale.value = withSpring(next)
+  }
+
+  const handleTileZoomStep = (delta: number) => {
+    void Haptics.selectionAsync()
+    setTileZoom((prev) => Math.max(13, Math.min(16, prev + delta)))
   }
 
   const handleResetZoom = () => {
@@ -197,13 +290,18 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     zoomScale.value = withSpring(1)
     panX.value = withSpring(0)
     panY.value = withSpring(0)
+    setTileZoom(14)
   }
 
   const handleScheduleDineOut = async (suggestion: DineOutSuggestion) => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    const validMemberIds = familyMembers.map((m) => m.id)
+    const primaryAssignee = validMemberIds[0] || locations[0]?.memberId || "m-1"
+    const secondaryAssignee = validMemberIds[1] || locations[1]?.memberId || primaryAssignee
+
     const newFn = {
       id: `fn-${Date.now()}`,
-      title: `Family Dine-Out @ ${suggestion.name}`,
+      title: `Family Outing @ ${suggestion.name}`,
       date: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
       time: "07:30 PM",
       location: suggestion.name,
@@ -213,8 +311,8 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       invitationsCount: locations.length,
       reminderSet: true,
       tasks: [
-        { id: `t-${Date.now()}-1`, title: "Reserve elder-friendly corner table", assignedToMemberId: "m-3", isDone: false },
-        { id: `t-${Date.now()}-2`, title: "Confirm menu & dietary notes with Dida", assignedToMemberId: "m-4", isDone: false },
+        { id: `t-${Date.now()}-1`, title: `Reserve table at ${suggestion.name}`, assignedToMemberId: primaryAssignee, isDone: false },
+        { id: `t-${Date.now()}-2`, title: "Confirm transportation & elder seating", assignedToMemberId: secondaryAssignee, isDone: false },
       ],
     }
 
@@ -239,8 +337,159 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     opacity: strobeOpacity.value,
   }))
 
-  // Reusable SVG Map Geometry
-  const renderMapCanvas = (width: number | string, height: number, isFullscreen = false) => (
+  // Render Real Free OpenStreetMap / CartoDB Slippy Map
+  const renderTileMap = (width: number, height: number, isFullscreen = false) => {
+    const halfW = width / 2
+    const halfH = height / 2
+
+    return (
+      <View style={[styles.tileMapContainer, { width, height }]}>
+        {/* Render 3x3 Tile Matrix */}
+        {tileGrid.map((tile) => {
+          const left = halfW + tile.dx * TILE_SIZE - TILE_SIZE / 2
+          const top = halfH + tile.dy * TILE_SIZE - TILE_SIZE / 2
+
+          return (
+            <Image
+              key={tile.key}
+              source={{ uri: tile.url }}
+              style={[
+                styles.mapTileImage,
+                {
+                  left,
+                  top,
+                  width: TILE_SIZE,
+                  height: TILE_SIZE,
+                },
+              ]}
+              contentFit="cover"
+              cachePolicy="disk"
+            />
+          )
+        })}
+
+        {/* Soft Pista Theme Tint Layer to Harmonize OpenStreetMap with Neev Palette */}
+        <View style={styles.tileTintOverlay} pointerEvents="none" />
+
+        {/* Sanctuary Geofenced Perimeter Ring */}
+        <View
+          style={[
+            styles.geofenceRing,
+            {
+              left: halfW - 48,
+              top: halfH - 48,
+              width: 96,
+              height: 96,
+              borderRadius: 48,
+              borderColor: colors.primary,
+            },
+          ]}
+          pointerEvents="none"
+        />
+
+        {/* Dining Suggestions Pins */}
+        <View
+          style={[
+            styles.dineOutPinWrap,
+            { left: halfW + 64, top: halfH + 32 },
+          ]}
+        >
+          <View style={[styles.dineOutDot, { backgroundColor: colors.warning }]}>
+            <Ionicons name="restaurant" size={10} color="#FFFFFF" />
+          </View>
+          <View style={[styles.pinLabelBox, { backgroundColor: colors.surface }]}>
+            <AppText style={{ fontSize: 9, fontWeight: "700", color: colors.text.primary }}>
+              Oh! Calcutta
+            </AppText>
+          </View>
+        </View>
+
+        {/* Member Pins Overlaid at Real Lat/Lon */}
+        {locations.map((member) => {
+          const pos = getScreenCoordinates(member.latitude, member.longitude, width, height)
+          const isSelected = selectedMember?.memberId === member.memberId
+
+          // Clamp within visible boundaries
+          const clampedX = Math.max(24, Math.min(width - 24, pos.x))
+          const clampedY = Math.max(24, Math.min(height - 24, pos.y))
+
+          return (
+            <PressableScale
+              key={member.memberId}
+              style={[
+                styles.memberPinMarker,
+                {
+                  left: clampedX - 16,
+                  top: clampedY - 16,
+                },
+              ]}
+              onPress={() => {
+                void Haptics.selectionAsync()
+                setSelectedMember(member)
+                if (onSelectMember) onSelectMember(member)
+              }}
+            >
+              {/* Accuracy Pulse Ring */}
+              <View
+                style={[
+                  styles.memberHalo,
+                  {
+                    backgroundColor: member.avatarColor,
+                    transform: [{ scale: isSelected ? 1.5 : 1.1 }],
+                    opacity: isSelected ? 0.35 : 0.2,
+                  },
+                ]}
+              />
+
+              {/* Pin Head */}
+              <View
+                style={[
+                  styles.memberPinHead,
+                  {
+                    backgroundColor: member.avatarColor,
+                    borderColor: isSelected ? "#FFFFFF" : "rgba(255,255,255,0.85)",
+                    borderWidth: isSelected ? 2.5 : 1.5,
+                  },
+                ]}
+              >
+                <AppText style={styles.memberPinText}>
+                  {member.memberNickname?.[0] || member.memberName[0]}
+                </AppText>
+              </View>
+
+              {/* Pin Tag */}
+              <View style={[styles.memberPinTag, { backgroundColor: colors.surface }]}>
+                <AppText style={styles.memberPinTagText} numberOfLines={1}>
+                  {member.memberNickname || member.memberName.split(" ")[0]}
+                </AppText>
+              </View>
+            </PressableScale>
+          )
+        })}
+
+        {/* Zoom Controls for Tile Map */}
+        <View style={styles.tileZoomBar}>
+          <PressableScale style={styles.tileZoomBtn} onPress={() => handleTileZoomStep(1)}>
+            <Ionicons name="add" size={16} color="#192216" />
+          </PressableScale>
+          <View style={styles.tileZoomDivider} />
+          <PressableScale style={styles.tileZoomBtn} onPress={() => handleTileZoomStep(-1)}>
+            <Ionicons name="remove" size={16} color="#192216" />
+          </PressableScale>
+        </View>
+
+        {/* Provider Attribution Badge */}
+        <View style={styles.osmAttributionBadge}>
+          <AppText style={styles.osmAttributionText}>
+            © OpenStreetMap · CartoDB Voyager
+          </AppText>
+        </View>
+      </View>
+    )
+  }
+
+  // Reusable SVG Architectural Layout
+  const renderSchematicCanvas = (width: number | string, height: number, isFullscreen = false) => (
     <Svg width={width} height={height} viewBox="0 0 360 220">
       <Defs>
         <LinearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
@@ -275,14 +524,14 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       {/* Sanctuary Boundary Zone */}
       <Circle cx="120" cy="90" r="44" fill="rgba(125, 140, 125, 0.14)" stroke="#7D8C7D" strokeWidth="1.5" strokeDasharray="4,4" />
       <SvgText x="120" y="58" fontSize="9" fontWeight="700" fill="#3D5250" textAnchor="middle">
-        🏡 SANCTUARY HOME
+        HOME SANCTUARY
       </SvgText>
 
       {/* Dine-out / Meetup Suggested Hubs */}
       <G>
         <Circle cx="210" cy="140" r="8" fill="#C27835" stroke="#FFFFFF" strokeWidth="1.5" />
         <SvgText x="210" y="154" fontSize="7.5" fontWeight="700" fill="#C27835" textAnchor="middle">
-          🍽️ Oh! Calcutta
+          Oh! Calcutta
         </SvgText>
       </G>
 
@@ -295,7 +544,6 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
         return (
           <G key={member.memberId}>
-            {/* Accuracy Halo */}
             <Circle
               cx={cx}
               cy={cy}
@@ -303,7 +551,6 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
               fill={member.avatarColor}
               fillOpacity={isSelected ? 0.3 : 0.15}
             />
-            {/* Pin Head */}
             <Circle
               cx={cx}
               cy={cy}
@@ -322,8 +569,6 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             >
               {member.memberNickname?.[0] || member.memberName[0]}
             </SvgText>
-
-            {/* Nickname label */}
             <SvgText
               x={cx}
               y={cy + 19}
@@ -340,6 +585,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     </Svg>
   )
 
+  const activeCanvasWidth = SCREEN_WIDTH - 32
+  const activeCanvasHeight = compact ? 150 : MAP_HEIGHT
+
   return (
     <View style={styles.container}>
       {/* ── Top Bar Header ── */}
@@ -347,18 +595,36 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         <View style={styles.titleWrap}>
           <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
           <AppText variant="subheading" style={{ fontWeight: "700" }}>
-            Family Live Sanctuary & Telemetry
+            Family Live Sanctuary & Map
           </AppText>
         </View>
 
         <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+          {/* Mode Switcher Pill */}
+          <PressableScale
+            style={[styles.smallActionBtn, { backgroundColor: colors.surface2 }]}
+            onPress={() => {
+              void Haptics.selectionAsync()
+              setMapMode((m) => (m === "tile" ? "schematic" : "tile"))
+            }}
+          >
+            <Ionicons
+              name={mapMode === "tile" ? "map-outline" : "grid-outline"}
+              size={13}
+              color={colors.primary}
+            />
+            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 11 }}>
+              {mapMode === "tile" ? "OSM Map" : "Layout"}
+            </AppText>
+          </PressableScale>
+
           <PressableScale
             style={[styles.smallActionBtn, { backgroundColor: colors.surface2 }]}
             onPress={() => setDineoutModalVisible(true)}
           >
             <Ionicons name="restaurant-outline" size={13} color={colors.primary} />
             <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 11 }}>
-              Plan Dine-Out
+              Outings
             </AppText>
           </PressableScale>
 
@@ -374,9 +640,53 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         </View>
       </View>
 
-      {/* ── Styled Pista Map Canvas ── */}
+      {/* ── Offline Map Pack Status Bar ── */}
+      <View style={[styles.offlineStatusBar, { backgroundColor: colors.surface2 }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Ionicons
+            name={offlinePack?.isOfflineReady ? "cloud-done" : "cloud-download-outline"}
+            size={14}
+            color={offlinePack?.isOfflineReady ? colors.success : colors.text.muted}
+            style={{ marginRight: 6 }}
+          />
+          <AppText variant="caption" style={{ color: colors.text.secondary, fontSize: 11, flex: 1 }} numberOfLines={1}>
+            {offlinePack?.isOfflineReady
+              ? `Offline Map Ready (${offlinePack.tileCount} tiles · ${Math.round(offlinePack.sizeBytes / 1024)} KB)`
+              : "Download local map for zero-network offline resilience"}
+          </AppText>
+        </View>
+
+        <PressableScale
+          style={[styles.downloadMapBtn, { backgroundColor: colors.primaryAlpha }]}
+          onPress={handleDownloadMapArea}
+          disabled={downloadMapMutation.isPending}
+        >
+          {downloadMapMutation.isPending ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <Ionicons name="download-outline" size={12} color={colors.primary} />
+              <AppText style={{ fontSize: 10, fontWeight: "700", color: colors.primary, marginLeft: 4 }}>
+                {offlinePack?.isOfflineReady ? "Update Pack" : "Download Area"}
+              </AppText>
+            </>
+          )}
+        </PressableScale>
+      </View>
+
+      {downloadProgress && (
+        <View style={[styles.progressDownloadBar, { backgroundColor: colors.surface2 }]}>
+          <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 10 }}>
+            Caching tiles: {downloadProgress.current} / {downloadProgress.total}…
+          </AppText>
+        </View>
+      )}
+
+      {/* ── Active Map Canvas (Tile Map or Architectural Schematic) ── */}
       <View style={[styles.mapCanvasWrapper, { backgroundColor: colors.surface2 }]}>
-        {renderMapCanvas("100%", compact ? 130 : MAP_HEIGHT, false)}
+        {mapMode === "tile"
+          ? renderTileMap(activeCanvasWidth, activeCanvasHeight, false)
+          : renderSchematicCanvas(activeCanvasWidth, activeCanvasHeight, false)}
       </View>
 
       {/* ── Horizontal Family Member Chips ── */}
@@ -390,6 +700,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 styles.memberChip,
                 {
                   backgroundColor: isSelected ? colors.primary : colors.surface,
+                  borderColor: isSelected ? colors.primary : "transparent",
                 },
               ]}
               onPress={() => {
@@ -427,7 +738,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                     color: isSelected ? "rgba(255,255,255,0.85)" : colors.text.muted,
                   }}
                 >
-                  {m.batteryLevel}% 🔋
+                  {m.batteryLevel}%
                 </AppText>
               </View>
             </PressableScale>
@@ -444,7 +755,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 {selectedMember.memberName} • {selectedMember.placeName}
               </AppText>
               <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 11 }} numberOfLines={1}>
-                {selectedMember.roomDetail} · {selectedMember.batteryLevel}% 🔋
+                {selectedMember.roomDetail} · {selectedMember.batteryLevel}%
               </AppText>
             </View>
             <PressableScale
@@ -490,7 +801,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             </PressableScale>
           </View>
 
-          {/* Unified Telemetry Bar (Battery + Google Fit Steps + Sleep) */}
+          {/* Unified Telemetry Bar (Battery + Steps + Sleep) */}
           <View style={[styles.telemetryBar, { backgroundColor: colors.surface2 }]}>
             <View style={styles.telemetryItem}>
               <Ionicons name="battery-charging" size={14} color={colors.primary} />
@@ -525,7 +836,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 Interactive Sanctuary Map
               </AppText>
               <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                Pinch or use zoom controls to explore family coordinates
+                Free OpenStreetMap · Zoom and pan family coordinates
               </AppText>
             </View>
             <PressableScale onPress={() => setFullscreenMapVisible(false)}>
@@ -535,7 +846,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
           <View style={styles.zoomableCanvasHolder}>
             <Animated.View style={[styles.zoomableCanvas, zoomAnimStyle]}>
-              {renderMapCanvas(SCREEN_WIDTH, SCREEN_HEIGHT * 0.65, true)}
+              {renderTileMap(SCREEN_WIDTH, SCREEN_HEIGHT * 0.65, true)}
             </Animated.View>
 
             {/* Floating Zoom Controls */}
@@ -554,17 +865,17 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         </View>
       </Modal>
 
-      {/* ── Modal: AI Family Meetup & Dine-Out Planner ── */}
+      {/* ── Modal: Family Gathering & Dine-Out Planner ── */}
       <Modal visible={dineoutModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.dineoutModalCard, { backgroundColor: colors.background }]}>
             <View style={styles.modalTopRow}>
               <View style={{ flex: 1 }}>
                 <AppText variant="h2" style={{ fontWeight: "800" }}>
-                  AI Family Dine-Out Planner
+                  Family Gathering & Dine-Out Planner
                 </AppText>
                 <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  Curated spots equidistant for all family members & elders
+                  Recommended community spots & accessible venues for multigenerational gatherings
                 </AppText>
               </View>
               <PressableScale onPress={() => setDineoutModalVisible(false)}>
@@ -579,7 +890,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                     <AppText variant="subheading" style={{ fontWeight: "800", flex: 1 }}>
                       {item.name}
                     </AppText>
-                    <Badge label={`★ ${item.rating}`} tone="success" size="small" />
+                    <Badge label={`Rating: ${item.rating}`} tone="success" size="small" />
                   </View>
 
                   <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}>
@@ -588,15 +899,15 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
                   <View style={styles.dineoutTagsRow}>
                     {item.elderFriendly && <Badge label="Elder Accessible" tone="neutral" size="small" />}
-                    {item.petFriendly && <Badge label="Simba Friendly 🐾" tone="neutral" size="small" />}
+                    {item.petFriendly && <Badge label="Pet Friendly" tone="neutral" size="small" />}
                   </View>
 
                   <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 6, lineHeight: 18 }}>
-                    💡 {item.aiReason}
+                    {item.aiReason}
                   </AppText>
 
                   <AppButton
-                    title="Schedule Family Function & Sync Calendar"
+                    title="Schedule Family Outing & Sync Calendar"
                     variant="primary"
                     size="sm"
                     onPress={() => handleScheduleDineOut(item)}
@@ -619,7 +930,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                   Pinpoint Phone Finder
                 </AppText>
                 <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  Locating {selectedMember?.memberName}'s phone
+                  Locating {selectedMember?.memberName}&apos;s phone
                 </AppText>
               </View>
               <PressableScale
@@ -634,27 +945,27 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
               </PressableScale>
             </View>
 
-            {/* Precision Radar Readout */}
+            {/* Honest Telemetry & Pinpoint Radar Readout */}
             <View style={[styles.radarBox, { backgroundColor: colors.surface2 }]}>
               <View style={styles.radarIconWrap}>
                 <Ionicons
                   name="radio-outline"
                   size={36}
-                  color={radarScan?.proximity === "burning_hot" ? "#EF4444" : colors.primary}
+                  color={radarScan?.status === "last_location_available" ? colors.primary : "#9CA3AF"}
                 />
               </View>
 
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <AppText variant="h3" style={{ fontWeight: "800", color: "#EF4444" }}>
-                    🔥 Burning Hot! (0.4m away)
+                  <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary }}>
+                    Accuracy: ±{radarScan?.accuracyMeters ?? 5}m
                   </AppText>
                 </View>
                 <AppText variant="body" style={{ fontWeight: "700", marginTop: 2 }}>
-                  {radarScan?.roomLocation}
+                  {radarScan?.areaDescription || "Last-Known Sanctuary Area"}
                 </AppText>
                 <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 4 }}>
-                  Acoustic & signal signature indicates phone is wedged between cushions on the sofa.
+                  GPS provides area-level coordinates. Trigger the siren and haptic pulse below to locate the device by ear.
                 </AppText>
               </View>
             </View>
@@ -662,7 +973,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             {/* Acoustic Siren & Strobe Controls */}
             <View style={styles.modalActionButtons}>
               <AppButton
-                title={isSirenActive ? "Stop Loud Siren" : "🔊 Sound Max Volume Siren"}
+                title={isSirenActive ? "Stop Loud Siren" : "Sound Audio & Haptic Siren"}
                 variant={isSirenActive ? "outline" : "primary"}
                 onPress={toggleSiren}
                 style={{ flex: 1 }}
@@ -673,7 +984,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
               <View style={[styles.sirenActiveBanner, { backgroundColor: "rgba(239, 68, 68, 0.12)" }]}>
                 <Ionicons name="warning" size={16} color="#EF4444" style={{ marginRight: 6 }} />
                 <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "700", flex: 1 }}>
-                  Bypassing silent mode! Maximum acoustic siren and screen strobe pulse are firing. Check under the cushions!
+                  Audible chirp and haptic pulses are active. Listen carefully nearby! Note: volume is bounded by Android system audio policy.
                 </AppText>
               </View>
             )}
@@ -692,48 +1003,192 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   titleWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    flex: 1,
   },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    marginRight: 6,
   },
   smallActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  offlineStatusBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  downloadMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 10,
-    gap: 4,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  progressDownloadBar: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 6,
+    alignItems: "center",
   },
   mapCanvasWrapper: {
-    borderRadius: 18,
+    borderRadius: 16,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  tileMapContainer: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 16,
+  },
+  mapTileImage: {
+    position: "absolute",
+  },
+  tileTintOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(125, 140, 125, 0.08)",
+  },
+  geofenceRing: {
+    position: "absolute",
+    borderWidth: 2,
+    borderStyle: "dashed",
+    backgroundColor: "rgba(125, 140, 125, 0.12)",
+  },
+  dineOutPinWrap: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  dineOutDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  pinLabelBox: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  memberPinMarker: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberHalo: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  memberPinHead: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  memberPinText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  memberPinTag: {
+    position: "absolute",
+    bottom: -13,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  memberPinTagText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#192216",
+  },
+  tileZoomBar: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: 8,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  tileZoomBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tileZoomDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.08)",
+  },
+  osmAttributionBadge: {
+    position: "absolute",
+    left: 8,
+    bottom: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  osmAttributionText: {
+    fontSize: 7.5,
+    fontWeight: "600",
+    color: "#4A5568",
   },
   memberChipsRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 10,
-    paddingRight: 16,
+    paddingBottom: 2,
+    marginBottom: 10,
   },
   memberChip: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
   },
   chipAvatar: {
     width: 20,
@@ -741,140 +1196,95 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 6,
   },
   compactMemberBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   compactFindBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   detailCard: {
-    marginTop: 10,
     padding: 14,
-    borderRadius: 16,
   },
   detailHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    marginBottom: 12,
   },
   locationSubtitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 3,
+    marginTop: 2,
   },
   findPhoneBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginLeft: 8,
   },
   findPhoneBtnText: {
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
+    marginLeft: 5,
   },
   telemetryBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
+    justifyContent: "space-around",
     paddingVertical: 8,
-    borderRadius: 12,
-    marginTop: 10,
+    paddingHorizontal: 6,
+    borderRadius: 8,
   },
   telemetryItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
   },
   telemetryText: {
     fontSize: 11,
     fontWeight: "600",
+    marginLeft: 4,
   },
   telemetryDivider: {
     width: 1,
     height: 14,
     backgroundColor: "rgba(0,0,0,0.08)",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  finderModalCard: {
-    width: "100%",
-    borderRadius: 24,
-    padding: 20,
-  },
-  modalTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  radarBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 18,
-    gap: 14,
-    marginBottom: 16,
-  },
-  radarIconWrap: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalActionButtons: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
-  },
-  sirenActiveBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 14,
-  },
   fullscreenModal: {
     flex: 1,
-    backgroundColor: "#FAFBF9",
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "flex-end",
   },
   fullscreenHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 54,
+    paddingTop: 48,
     paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,0,0,0.08)",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   zoomableCanvasHolder: {
-    flex: 1,
+    backgroundColor: "#FAF9F5",
+    height: SCREEN_HEIGHT * 0.75,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
+    position: "relative",
   },
   zoomableCanvas: {
     width: "100%",
@@ -884,35 +1294,41 @@ const styles = StyleSheet.create({
   },
   floatingZoomControls: {
     position: "absolute",
-    right: 20,
-    bottom: 40,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderRadius: 16,
-    padding: 6,
+    right: 16,
+    bottom: 24,
     gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
   },
   zoomControlBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F0F5EC",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   dineoutModalCard: {
-    width: "100%",
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: "85%",
+    paddingBottom: 36,
+  },
+  modalTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
   dineoutCard: {
     padding: 14,
-    borderRadius: 16,
     marginBottom: 12,
   },
   dineoutTagsRow: {
@@ -920,6 +1336,31 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
   },
+  finderModalCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+  },
+  radarBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  radarIconWrap: {
+    marginRight: 14,
+  },
+  modalActionButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  sirenActiveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 10,
+  },
 })
-
-export default FamilySanctuaryMap
