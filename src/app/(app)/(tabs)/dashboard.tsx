@@ -21,6 +21,9 @@ import { neevHeuristicEngine } from "@/services/ai/neevHeuristicEngine"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { notificationsService } from "@/services/notifications/notificationsService"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
+import { useFamilyLocationsQuery } from "@/hooks/useFamilyLocationQuery"
+import { useKnowledgeQuery } from "@/hooks/useKnowledgeQuery"
+import { useScheduleQuery } from "@/hooks/useScheduleQuery"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
@@ -62,10 +65,17 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets()
   const showToast = useRootStore((s) => s.showToast)
 
+  // TanStack React Query for offline-first caching & synchronization
+  const { data: scheduleData } = useScheduleQuery()
+  const { data: knowledgeData } = useKnowledgeQuery()
+  useFamilyLocationsQuery()
+
   const household = useFamilyStore((s) => s.household)
   const members = useFamilyStore((s) => s.members)
-  const functions = useScheduleStore((s) => s.functions)
-  const entries = useKnowledgeStore((s) => s.entries)
+  const rawFunctions = useScheduleStore((s) => s.functions)
+  const rawEntries = useKnowledgeStore((s) => s.entries)
+  const functions = scheduleData ?? rawFunctions
+  const entries = knowledgeData ?? rawEntries
   const pinnedEntries = React.useMemo(() => entries.filter((e) => e.isPinned), [entries])
 
   const { routines, toggleRoutine } = useRoutineStore(
@@ -140,7 +150,7 @@ export default function DashboardScreen() {
   const handleTestLiveNotification = async () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     await notificationsService.dispatchImmediateNotification(
-      "🔔 [Neev Escalating Nudge]",
+      "[Neev Escalating Nudge]",
       "Child school milestone & interview prep reminder active. 0 AI tokens consumed.",
     )
     showToast({ message: "Escalating reminder dispatched to device tray!", type: "success" })
@@ -624,7 +634,7 @@ export default function DashboardScreen() {
         {/* ── Active Family Intentions & Pet Projects ── */}
         <SectionHeader
           title="Intentions & Pet Projects"
-          subtitle="Shared Sankalpas & weekend bonding"
+          subtitle="Shared family intentions & weekend bonding"
         />
 
         <ScrollView
@@ -647,7 +657,7 @@ export default function DashboardScreen() {
                     cheerIntention(item.id)
                   }}
                 >
-                  <AppText style={{ fontSize: 13 }}>👏</AppText>
+                  <Ionicons name="heart" size={13} color={colors.primary} />
                   <AppText
                     variant="caption"
                     style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}
@@ -697,7 +707,7 @@ export default function DashboardScreen() {
               variant="body"
               style={{ fontWeight: "700", color: colors.text.primary, flex: 1, marginLeft: 8 }}
             >
-              Today's Gentle Movement Pulse
+              Today&apos;s Gentle Movement Pulse
             </AppText>
             <Badge label="Google Fit Sync" tone="success" size="small" />
           </View>
@@ -754,7 +764,7 @@ export default function DashboardScreen() {
                     />
                     {nextFunction.invitationsCount ? (
                       <Badge
-                        label={`✉️ ${nextFunction.rsvpConfirmed || nextFunction.invitationsCount} Attending`}
+                        label={`${nextFunction.rsvpConfirmed || nextFunction.invitationsCount} Attending`}
                         tone="success"
                         size="small"
                       />
@@ -787,7 +797,7 @@ export default function DashboardScreen() {
 
               <View style={[styles.eventFooterRow, { borderTopColor: colors.surface2 }]}>
                 <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  {nextFunction.tasks.filter((t) => t.isDone).length} of {nextFunction.tasks.length}{" "}
+                  {nextFunction.tasks.filter((t: { isDone: boolean }) => t.isDone).length} of {nextFunction.tasks.length}{" "}
                   preparations ready
                 </AppText>
                 <PressableScale
@@ -865,7 +875,7 @@ export default function DashboardScreen() {
               {pinnedEntries[0].title}
             </AppText>
             <AppText variant="body" style={styles.wisdomBody}>
-              "{pinnedEntries[0].excerpt}"
+              &ldquo;{pinnedEntries[0].excerpt}&rdquo;
             </AppText>
             <AppText variant="caption" style={styles.wisdomAuthor}>
               — {pinnedEntries[0].authorName} ({pinnedEntries[0].authorRole})
@@ -877,43 +887,6 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    zIndex: 10,
-  },
-  topBarLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  topBarTitle: {
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  mottoSection: {
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  heroTitle: {
-    fontWeight: "800",
-    fontSize: 22,
-    letterSpacing: -0.3,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    marginTop: 3,
-    lineHeight: 18,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
   cloudBar: {
     flexDirection: "row",
     alignItems: "center",

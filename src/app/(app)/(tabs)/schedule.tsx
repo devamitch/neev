@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { ScrollView, StyleSheet, View } from "react-native"
+import React, { useCallback, useMemo, useState } from "react"
+import { FlatList, ScrollView, StyleSheet, View } from "react-native"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
@@ -14,18 +14,19 @@ import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
-import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleStore"
+import { useScheduleStore, type FunctionCategory, type FamilyFunction, type FunctionTask } from "@/stores/useScheduleStore"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 
 import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
+import { useScheduleQuery, useToggleScheduleTaskMutation } from "@/hooks/useScheduleQuery"
 
 const CATEGORIES: { key: FunctionCategory | "all"; label: string }[] = [
   { key: "all", label: "All Functions" },
   { key: "celebration", label: "Celebrations" },
   { key: "gathering", label: "Family Gatherings" },
   { key: "outing", label: "Outings & Picnics" },
-  { key: "ritual", label: "Pujas & Rituals" },
+  { key: "ritual", label: "Traditions & Observances" },
   { key: "project", label: "Pet & House Projects" },
 ]
 
@@ -34,17 +35,26 @@ export default function ScheduleScreen() {
   const bottomInset = useTabBarInset()
   const [selectedCat, setSelectedCat] = useState<FunctionCategory | "all">("all")
 
-  const { functions, toggleTask } = useScheduleStore(
-    useShallow((s) => ({ functions: s.functions, toggleTask: s.toggleTask })),
+  const { data: queryFunctions } = useScheduleQuery()
+  const toggleTaskMutation = useToggleScheduleTaskMutation()
+  const storeFunctions = useScheduleStore((s) => s.functions)
+  const functions = queryFunctions || storeFunctions
+
+  const toggleTask = useCallback(
+    (functionId: string, taskId: string) => {
+      toggleTaskMutation.mutate({ functionId, taskId })
+    },
+    [toggleTaskMutation],
   )
+
   const members = useFamilyStore((s) => s.members)
 
-  const memberMap = React.useMemo(
+  const memberMap = useMemo(
     () => new Map(members.map((m) => [m.id, m.name.split(" ")[0]])),
     [members],
   )
 
-  const filteredFunctions = React.useMemo(
+  const filteredFunctions = useMemo(
     () =>
       selectedCat === "all"
         ? functions
@@ -52,27 +62,100 @@ export default function ScheduleScreen() {
     [selectedCat, functions],
   )
 
-  return (
-    <ScreenContainer
-      safeArea
-      scrollable
-      header={
-        <AppHeader
-          sticky
-          title="Family Functions"
-          subtitle="Shared Schedulers, Rituals & Delegations"
-          showBack={false}
-          rightAction={
-            <HeaderIconButton
-              icon="add"
-              label="Schedule Function"
-              onPress={() => router.push("/modal/add-event")}
-            />
-          }
-        />
-      }
-    >
-        {/* Category Filter Pills (Zero Borders) */}
+  const renderItem = useCallback(
+    ({ item: event }: { item: FamilyFunction }) => {
+      const daysLeft = Math.ceil(
+        (new Date(event.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+      )
+
+      return (
+        <Card style={[styles.eventCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.badgeGroup}>
+              <Badge
+                label={event.category.toUpperCase()}
+                tone={event.category === "ritual" ? "warning" : "info"}
+                size="small"
+              />
+              {daysLeft >= 0 && (
+                <View style={[styles.countdownPill, { backgroundColor: colors.primaryAlpha }]}>
+                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700" }}>
+                    {daysLeft === 0 ? "TODAY" : `${daysLeft} DAYS AWAY`}
+                  </AppText>
+                </View>
+              )}
+            </View>
+            <AppText variant="caption" style={{ color: colors.text.muted }}>
+              {event.date}
+            </AppText>
+          </View>
+
+          <AppText variant="subheading" style={styles.eventTitle}>
+            {event.title}
+          </AppText>
+
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={14} color={colors.text.muted} />
+            <AppText variant="caption" style={styles.metaText}>
+              {event.time}
+            </AppText>
+            <Ionicons name="location-outline" size={14} color={colors.text.muted} style={{ marginLeft: 10 }} />
+            <AppText variant="caption" style={styles.metaText} numberOfLines={1}>
+              {event.location}
+            </AppText>
+          </View>
+
+          <AppText variant="body" style={styles.description}>
+            {event.description}
+          </AppText>
+
+          {/* Family Preparations / Delegated Tasks */}
+          {event.tasks && event.tasks.length > 0 && (
+            <View style={styles.tasksSection}>
+              <AppText variant="caption" style={styles.tasksHeader}>
+                FAMILY RESPONSIBILITIES ({event.tasks.filter((t: FunctionTask) => t.isDone).length}/{event.tasks.length})
+              </AppText>
+
+              {event.tasks.map((task: FunctionTask) => (
+                <PressableScale
+                  key={task.id}
+                  style={styles.taskItem}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    toggleTask(event.id, task.id)
+                  }}
+                >
+                  <Ionicons
+                    name={task.isDone ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={task.isDone ? colors.success : colors.text.muted}
+                  />
+                  <AppText
+                    style={[
+                      styles.taskTitle,
+                      task.isDone && { textDecorationLine: "line-through", color: colors.text.muted },
+                    ]}
+                  >
+                    {task.title}
+                  </AppText>
+                  <View style={[styles.assigneeChip, { backgroundColor: colors.surface2 }]}>
+                    <AppText variant="caption" style={styles.assigneeText}>
+                      {memberMap.get(task.assignedToMemberId) || "Family"}
+                    </AppText>
+                  </View>
+                </PressableScale>
+              ))}
+            </View>
+          )}
+        </Card>
+      )
+    },
+    [colors, memberMap, toggleTask],
+  )
+
+  const listHeader = useMemo(
+    () => (
+      <View style={{ marginBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
             const active = selectedCat === cat.key
@@ -100,117 +183,73 @@ export default function ScheduleScreen() {
             )
           })}
         </ScrollView>
+      </View>
+    ),
+    [colors, selectedCat],
+  )
 
-        {/* Schedule List */}
-        <View style={styles.eventsList}>
-          {filteredFunctions.map((event) => {
-            const daysLeft = Math.ceil(
-              (new Date(event.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-            )
-
-            return (
-              <Card key={event.id} style={[styles.eventCard, { backgroundColor: colors.surface }]}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.badgeGroup}>
-                    <Badge
-                      label={event.category.toUpperCase()}
-                      tone={event.category === "ritual" ? "warning" : "info"}
-                      size="small"
-                    />
-                    {daysLeft >= 0 && (
-                      <View style={[styles.countdownPill, { backgroundColor: colors.primaryAlpha }]}>
-                        <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700" }}>
-                          {daysLeft === 0 ? "TODAY" : `${daysLeft} DAYS AWAY`}
-                        </AppText>
-                      </View>
-                    )}
-                  </View>
-                  <AppText variant="caption" style={{ color: colors.text.muted }}>
-                    {event.date}
-                  </AppText>
-                </View>
-
-                <AppText variant="subheading" style={styles.eventTitle}>
-                  {event.title}
-                </AppText>
-
-                <View style={styles.metaRow}>
-                  <Ionicons name="time-outline" size={14} color={colors.text.muted} />
-                  <AppText variant="caption" style={styles.metaText}>
-                    {event.time}
-                  </AppText>
-                  <Ionicons name="location-outline" size={14} color={colors.text.muted} style={{ marginLeft: 10 }} />
-                  <AppText variant="caption" style={styles.metaText} numberOfLines={1}>
-                    {event.location}
-                  </AppText>
-                </View>
-
-                <AppText variant="body" style={styles.description}>
-                  {event.description}
-                </AppText>
-
-                {/* Family Preparations / Delegated Tasks */}
-                <View style={styles.tasksSection}>
-                  <AppText variant="caption" style={styles.tasksHeader}>
-                    FAMILY RESPONSIBILITIES ({event.tasks.filter((t) => t.isDone).length}/{event.tasks.length})
-                  </AppText>
-
-                  {event.tasks.map((task) => (
-                    <PressableScale
-                      key={task.id}
-                      style={styles.taskItem}
-                      onPress={() => {
-                        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                        toggleTask(event.id, task.id)
-                      }}
-                    >
-                      <Ionicons
-                        name={task.isDone ? "checkbox" : "square-outline"}
-                        size={20}
-                        color={task.isDone ? colors.success : colors.text.muted}
-                      />
-                      <AppText
-                        style={[
-                          styles.taskTitle,
-                          task.isDone && { textDecorationLine: "line-through", color: colors.text.muted },
-                        ]}
-                      >
-                        {task.title}
-                      </AppText>
-                      <View style={[styles.assigneeChip, { backgroundColor: colors.surface2 }]}>
-                        <AppText variant="caption" style={styles.assigneeText}>
-                          {memberMap.get(task.assignedToMemberId) || "Family"}
-                        </AppText>
-                      </View>
-                    </PressableScale>
-                  ))}
-                </View>
-              </Card>
-            )
-          })}
-        </View>
-
-        {/* ── Real Weekly Multigenerational Family Games ── */}
-        <View style={{ marginTop: 20 }}>
-          <FamilyWeeklyGamesCard />
-        </View>
-
-        {/* Schedule a new function button */}
+  const listFooter = useMemo(
+    () => (
+      <View style={{ paddingTop: 16, paddingBottom: bottomInset + 32 }}>
+        <FamilyWeeklyGamesCard />
         <AppButton
           title="+ Schedule New Family Function"
           variant="primary"
           onPress={() => router.push("/modal/add-event")}
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 20 }}
         />
+      </View>
+    ),
+    [bottomInset],
+  )
+
+  const emptyComponent = useMemo(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="calendar-outline" size={40} color={colors.text.muted} />
+        <AppText variant="subheading" style={{ marginTop: 8, color: colors.text.secondary }}>
+          No functions scheduled in this category
+        </AppText>
+      </View>
+    ),
+    [colors],
+  )
+
+  return (
+    <ScreenContainer
+      safeArea
+      scrollable={false}
+      header={
+        <AppHeader
+          sticky
+          title="Family Functions"
+          subtitle="Shared Schedulers, Rituals & Delegations"
+          showBack={false}
+          rightAction={
+            <HeaderIconButton
+              icon="add"
+              label="Schedule Function"
+              onPress={() => router.push("/modal/add-event")}
+            />
+          }
+        />
+      }
+    >
+      <FlatList
+        data={filteredFunctions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        ListEmptyComponent={emptyComponent}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      />
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
   filterRow: {
     gap: 8,
     marginBottom: 16,
@@ -224,12 +263,15 @@ const styles = StyleSheet.create({
   filterPillText: {
     fontWeight: "600",
   },
-  eventsList: {
-    gap: 16,
-  },
   eventCard: {
     padding: 16,
     borderRadius: 18,
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
   },
   cardHeader: {
     flexDirection: "row",

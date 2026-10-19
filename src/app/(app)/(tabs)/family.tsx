@@ -21,6 +21,12 @@ import {
   type ClusterType,
   type KinshipType,
 } from "@/stores/useFamilyNetworkStore"
+import {
+  useFamilyRealmsQuery,
+  useKinshipGraphQuery,
+  useFamilyClustersQuery,
+  useFamilyBridgesQuery,
+} from "@/hooks/useFamilyNetworkQuery"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 
@@ -38,6 +44,13 @@ const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
 export default function FamilyScreen() {
   const colors = useColors()
   const bottomInset = useTabBarInset()
+
+  // TanStack React Query for offline-first caching & background sync
+  useFamilyRealmsQuery()
+  useKinshipGraphQuery()
+  useFamilyClustersQuery()
+  useFamilyBridgesQuery()
+
   const members = useFamilyStore((s) => s.members)
   const updateMember = useFamilyStore((s) => s.updateMember)
 
@@ -128,7 +141,7 @@ export default function FamilyScreen() {
     void familyNetworkService.syncInvitation(inv)
     showAlert({
       title: "Sanctuary Invitation Generated",
-      message: `Share this private one-time claim code with ${memberName}:\n\n🔑 ${inv.inviteCode}\n\nValid for 30 days. Allows claiming their sanctuary profile without sharing unsolicited messages.`,
+      message: `Share this private one-time claim code with ${memberName}:\n\nCode: ${inv.inviteCode}\n\nValid for 30 days. Allows claiming their sanctuary profile without sharing unsolicited messages.`,
       confirmText: "Copy & Done",
       onConfirm: async () => {
         showToast({ message: "Invite code ready to share!", type: "success" })
@@ -161,7 +174,7 @@ export default function FamilyScreen() {
     setClaimModalVisible(false)
     setEnteredClaimCode("")
     showAlert({
-      title: "Sanctuary Profile Linked! 🕊️",
+      title: "Sanctuary Profile Linked!",
       message: res.message,
       confirmText: "Enter Sanctuary",
     })
@@ -284,7 +297,7 @@ export default function FamilyScreen() {
                 variant="caption"
                 style={{ color: m.phone ? "#10B981" : colors.text.muted, fontWeight: "600" }}
               >
-                {m.phone ? "📱 Linked Account" : "🕊️ Sanctuary Profile (No phone)"}
+                {m.phone ? "Linked Account" : "Sanctuary Profile (No phone)"}
               </AppText>
             </View>
           </View>
@@ -341,7 +354,7 @@ export default function FamilyScreen() {
           <View style={styles.traitsBox}>
             {m.superpower && (
               <View style={styles.traitRow}>
-                <Ionicons name="sparkles" size={13} color="#D97706" style={{ marginRight: 6 }} />
+                <Ionicons name="star-outline" size={13} color="#D97706" style={{ marginRight: 6 }} />
                 <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
                   {m.superpower}
                 </AppText>
@@ -422,7 +435,7 @@ export default function FamilyScreen() {
               </View>
             </View>
             <AppText variant="body" style={styles.householdMotto}>
-              "{activeRealm.motto}"
+              &ldquo;{activeRealm.motto}&rdquo;
             </AppText>
           </Card>
         </PressableScale>
@@ -716,7 +729,7 @@ export default function FamilyScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
               <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Claim Sanctuary Profile 🕊️
+                Claim Sanctuary Profile
               </AppText>
               <PressableScale onPress={() => setClaimModalVisible(false)}>
                 <Ionicons name="close" size={22} color={colors.text.secondary} />
@@ -925,10 +938,6 @@ export default function FamilyScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    padding: 16,
-    gap: 16,
-  },
   householdCard: {
     padding: 16,
     borderRadius: 16,

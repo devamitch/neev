@@ -26,7 +26,8 @@ import type {
 // ==========================================
 
 export function useFamilyRealmsQuery(userId?: string) {
-  const currentUserId = userId || useRootStore((s) => s.user?.uid) || "demo_guardian_01"
+  const storeUserId = useRootStore((s) => s.user?.uid)
+  const currentUserId = userId || storeUserId || "demo_guardian_01"
   const setRealms = useRootStore((s) => s.setRealms)
 
   const query = useQuery({
@@ -71,7 +72,8 @@ export function useCreateRealmMutation() {
 // ==========================================
 
 export function useKinshipGraphQuery(realmId?: string) {
-  const activeRealmId = realmId || useRootStore((s) => s.activeRealmId) || "realm_sharma_root"
+  const storeRealmId = useRootStore((s) => s.activeRealmId)
+  const activeRealmId = realmId || storeRealmId || "realm_sharma_root"
   const setKinshipEdges = useRootStore((s) => s.setKinshipEdges)
 
   const query = useQuery({
@@ -113,7 +115,8 @@ export function useUpsertKinshipEdgeMutation() {
 // ==========================================
 
 export function useFamilyClustersQuery(realmId?: string) {
-  const activeRealmId = realmId || useRootStore((s) => s.activeRealmId) || "realm_sharma_root"
+  const storeRealmId = useRootStore((s) => s.activeRealmId)
+  const activeRealmId = realmId || storeRealmId || "realm_sharma_root"
   const setClusters = useRootStore((s) => s.setClusters)
 
   const query = useQuery({
@@ -155,7 +158,8 @@ export function useUpsertClusterMutation() {
 // ==========================================
 
 export function useFamilyBridgesQuery(realmId?: string) {
-  const activeRealmId = realmId || useRootStore((s) => s.activeRealmId) || "realm_sharma_root"
+  const storeRealmId = useRootStore((s) => s.activeRealmId)
+  const activeRealmId = realmId || storeRealmId || "realm_sharma_root"
   const setBridges = useRootStore((s) => s.setBridges)
 
   const query = useQuery({
@@ -197,7 +201,8 @@ export function useCreateBridgeMutation() {
 // ==========================================
 
 export function useFamilyInvitationsQuery(realmId?: string) {
-  const activeRealmId = realmId || useRootStore((s) => s.activeRealmId) || "realm_sharma_root"
+  const storeRealmId = useRootStore((s) => s.activeRealmId)
+  const activeRealmId = realmId || storeRealmId || "realm_sharma_root"
   const setInvitations = useRootStore((s) => s.setInvitations)
 
   const query = useQuery({
