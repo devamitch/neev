@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A message notification's Reply action.
+
+  Every action in every Setu notification was a stock android.R.drawable icon - ic_menu_send,
+  ic_menu_view, ic_input_add, ic_delete - early-Android framework glyphs that belong to no app in
+  particular and do not match the small-icon mark this module already draws. Android 7+ renders an
+  action icon as a silhouette regardless, so detail beyond the shape is wasted; this is white on
+  transparent, like ic_setu_notification.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M10,8 L5,12 L10,16" />
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,12 L15,12 C17.2,12 19,13.8 19,16 L19,17" />
+</vector>

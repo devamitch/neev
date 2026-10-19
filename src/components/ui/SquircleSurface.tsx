@@ -19,6 +19,7 @@ import {
   Platform,
   processColor,
   StyleSheet,
+  UIManager,
   View,
   type LayoutChangeEvent,
   type StyleProp,
@@ -49,7 +50,14 @@ type NativeSquircleProps = ViewProps & {
 let NativeSquircleView: ComponentType<NativeSquircleProps> | null = null
 if (Platform.OS === "android") {
   try {
-    NativeSquircleView = requireNativeView<NativeSquircleProps>("ExpoSquircleView")
+    const hasViewManager =
+      typeof UIManager.getViewManagerConfig === "function"
+        ? Boolean(UIManager.getViewManagerConfig("ExpoSquircleView"))
+        : Boolean((UIManager as any)?.ExpoSquircleView)
+
+    if (hasViewManager) {
+      NativeSquircleView = requireNativeView<NativeSquircleProps>("ExpoSquircleView")
+    }
   } catch {
     NativeSquircleView = null
   }
