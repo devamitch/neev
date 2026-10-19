@@ -8,6 +8,7 @@
  * - Overlapping Family Clusters
  * - Bilateral Family Bridges
  * - Invitations and Account Claims
+ * - Edge Functions Invocation
  */
 
 import { supabase } from "@/services/supabase/supabaseClient"
@@ -17,8 +18,7 @@ import type {
   FamilyCluster,
   FamilyBridge,
   FamilyInvitation,
-} from "@/stores/useFamilyNetworkStore"
-import type { FamilyMember } from "@/stores/slices/createFamilySlice"
+} from "@/stores/slices/createFamilyNetworkSlice"
 
 export const familyNetworkService = {
   /**
@@ -114,4 +114,57 @@ export const familyNetworkService = {
       console.warn("[NetworkService] syncInvitation error:", error.message)
     }
   },
+
+  /**
+   * Invoke Supabase Edge Function with fallback
+   */
+  async invokeEdgeFunction<T = unknown>(
+    functionName: string,
+    body?: unknown,
+  ): Promise<{ data: T | null; error: string | null }> {
+    try {
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: body as Record<string, unknown>,
+      })
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      return { data: data as T, error: null }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Edge function call failed"
+      return { data: null, error: msg }
+    }
+  },
+
+  /**
+   * Claim invitation code via server-side Edge Function
+   */
+  async claimInvitationViaEdge(inviteCode: string) {
+    return this.invokeEdgeFunction("claim-invitation", { inviteCode })
+  },
+
+  /**
+   * Calculate deterministic plan via server-side Edge Function
+   */
+  async generatePlanViaEdge(tasks: unknown[]) {
+    return this.invokeEdgeFunction("generate-plan", { tasks })
+  },
+
+  /**
+   * Request sanctuary-protected AI guidance via Edge Function
+   */
+  async requestAiViaEdge(prompt: string, contextType = "family_plan", realmId?: string) {
+    return this.invokeEdgeFunction("ai-request", { prompt, contextType, realmId })
+  },
+
+  /**
+   * Perform privacy-preserving data deletion via Edge Function
+   */
+  async deleteUserDataViaEdge(scope: "all" | "personal_space_only" = "personal_space_only") {
+    return this.invokeEdgeFunction("delete-user-data", {
+      confirmation: "PERMANENTLY_DELETE_MY_DATA",
+      scope,
+    })
+  },
 }
+

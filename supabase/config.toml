@@ -1,0 +1,13 @@
+project_id = "kwrdugillyakxgvgbrsu"
+
+[functions]
+  [functions.family-realms]
+    verify_jwt = false
+  [functions.claim-invitation]
+    verify_jwt = false
+  [functions.kinship-graph]
+    verify_jwt = false
+  [functions.family-bridge]
+    verify_jwt = false
+  [functions.generate-plan]
+    verify_jwt = false
