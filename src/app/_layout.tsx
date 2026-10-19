@@ -41,6 +41,12 @@ const BOOT_TIMEOUT_MS = 6000
 /** Safety net: hide the native splash even if the animated one never reports ready. */
 const NATIVE_SPLASH_FALLBACK_MS = 1500
 
+import {
+  persistNavigationPath,
+  getPersistedNavigationPath,
+  clearPersistedNavigationPath,
+} from "@/utils/useNavigationPersistence"
+
 function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
   const { hasCompletedOnboarding, isAuthenticated } = useRootStore(
     useShallow((s) => ({
@@ -50,6 +56,7 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
   )
   const segments = useSegments()
   const router = useRouter()
+  const hasRestoredInitialNav = useRef(false)
 
   useEffect(() => {
     if (!loaded) return
@@ -60,13 +67,29 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
 
     // 1. Show intro / onboarding sliders first if never completed
     if (!hasCompletedOnboarding) {
+      clearPersistedNavigationPath()
       if (!inOnboarding) router.replace("/onboarding")
     // 2. Once completed, check if user is signed in
     } else if (!isAuthenticated) {
+      clearPersistedNavigationPath()
       if (!inAuthGroup) router.replace("/(auth)/sign-in" as any)
-    // 3. User is signed in and has completed onboarding -> go to dashboard
-    } else if (inOnboarding || inAuthGroup) {
-      router.replace("/(app)/(tabs)/dashboard")
+    // 3. User is signed in and has completed onboarding -> restore last saved route or go to dashboard
+    } else if (inOnboarding || inAuthGroup || !hasRestoredInitialNav.current) {
+      hasRestoredInitialNav.current = true
+      const savedRoute = getPersistedNavigationPath()
+      if (savedRoute && savedRoute !== "/(app)/(tabs)/dashboard") {
+        try {
+          router.replace(savedRoute as any)
+        } catch {
+          router.replace("/(app)/(tabs)/dashboard")
+        }
+      } else {
+        router.replace("/(app)/(tabs)/dashboard")
+      }
+    } else {
+      // 4. Save active route continuously (Ignite Navigation Persistence Pattern)
+      const currentPath = `/${segments.join("/")}`
+      persistNavigationPath(currentPath)
     }
   }, [loaded, hasCompletedOnboarding, isAuthenticated, segments, router])
 

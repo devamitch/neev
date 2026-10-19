@@ -92,6 +92,15 @@ export interface FamilyNetworkSlice {
   addBridge: (targetRealmName: string, purpose: string, sharedCategories: string[]) => void
   toggleBridgeStatus: (bridgeId: string) => void
   revokeBridge: (bridgeId: string) => void
+
+  setRealms: (realms: FamilyRealm[]) => void
+  addRealm: (realm: FamilyRealm) => void
+  setKinshipEdges: (edges: KinshipEdge[]) => void
+  setClusters: (clusters: FamilyCluster[]) => void
+  setBridges: (bridges: FamilyBridge[]) => void
+  addBridgeRecord: (bridge: FamilyBridge) => void
+  setInvitations: (invitations: FamilyInvitation[]) => void
+  addInvitationRecord: (invitation: FamilyInvitation) => void
 }
 
 export const INITIAL_REALMS: FamilyRealm[] = [
@@ -382,5 +391,60 @@ export const createFamilyNetworkSlice: ImmerStateCreator<FamilyNetworkSlice> = (
   revokeBridge: (bridgeId) =>
     set((state) => {
       state.bridges = state.bridges.filter((b) => b.id !== bridgeId)
+    }),
+
+  setRealms: (realms) =>
+    set((state) => {
+      state.realms = realms
+    }),
+
+  addRealm: (realm) =>
+    set((state) => {
+      const idx = state.realms.findIndex((r) => r.id === realm.id)
+      if (idx >= 0) {
+        state.realms[idx] = realm
+      } else {
+        state.realms.push(realm)
+      }
+    }),
+
+  setKinshipEdges: (edges) =>
+    set((state) => {
+      state.kinshipEdges = edges
+    }),
+
+  setClusters: (clusters) =>
+    set((state) => {
+      state.clusters = clusters
+    }),
+
+  setBridges: (bridges) =>
+    set((state) => {
+      state.bridges = bridges
+    }),
+
+  addBridgeRecord: (bridge) =>
+    set((state) => {
+      const idx = state.bridges.findIndex((b) => b.id === bridge.id)
+      if (idx >= 0) {
+        state.bridges[idx] = bridge
+      } else {
+        state.bridges.push(bridge)
+      }
+    }),
+
+  setInvitations: (invitations) =>
+    set((state) => {
+      state.invitations = invitations
+    }),
+
+  addInvitationRecord: (invitation) =>
+    set((state) => {
+      const idx = state.invitations.findIndex((i) => i.id === invitation.id)
+      if (idx >= 0) {
+        state.invitations[idx] = invitation
+      } else {
+        state.invitations.push(invitation)
+      }
     }),
 })

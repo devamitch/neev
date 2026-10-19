@@ -18,6 +18,7 @@ export interface FamilyMember {
 }
 
 export interface HouseholdInfo {
+  id?: string
   name: string
   motto: string
   city: string
