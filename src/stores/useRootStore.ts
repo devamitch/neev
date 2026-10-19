@@ -20,6 +20,7 @@ import { createKnowledgeSlice } from "./slices/createKnowledgeSlice"
 import { createRoutineSlice } from "./slices/createRoutineSlice"
 import { createSpacesSlice } from "./slices/createSpacesSlice"
 import { createFamilyNetworkSlice } from "./slices/createFamilyNetworkSlice"
+import { createNavigationSlice } from "./slices/createNavigationSlice"
 
 import type { RootStoreState } from "./types"
 export { useShallow } from "zustand/react/shallow"
@@ -45,6 +46,7 @@ export const useRootStore = create<RootStoreState>()(
       ...createRoutineSlice(...a),
       ...createSpacesSlice(...a),
       ...createFamilyNetworkSlice(...a),
+      ...createNavigationSlice(...a),
     })),
     {
       name: "neev_root_v2",
@@ -95,6 +97,13 @@ export const useRootStore = create<RootStoreState>()(
         kinshipEdges: state.kinshipEdges,
         bridges: state.bridges,
         invitations: state.invitations,
+
+        // Navigation History & State
+        currentPath: state.currentPath,
+        segments: state.segments,
+        routeParams: state.routeParams,
+        navigationHistory: state.navigationHistory,
+        lastNavigatedAt: state.lastNavigatedAt,
       }),
     },
   ),
