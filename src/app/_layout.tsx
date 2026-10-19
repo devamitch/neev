@@ -42,9 +42,9 @@ const BOOT_TIMEOUT_MS = 6000
 const NATIVE_SPLASH_FALLBACK_MS = 1500
 
 import {
-  persistNavigationPath,
+  recordNavigationTransition,
   getPersistedNavigationPath,
-  clearPersistedNavigationPath,
+  clearCompleteNavigationData,
 } from "@/utils/useNavigationPersistence"
 
 function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
@@ -67,11 +67,11 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
 
     // 1. Show intro / onboarding sliders first if never completed
     if (!hasCompletedOnboarding) {
-      clearPersistedNavigationPath()
+      clearCompleteNavigationData()
       if (!inOnboarding) router.replace("/onboarding")
     // 2. Once completed, check if user is signed in
     } else if (!isAuthenticated) {
-      clearPersistedNavigationPath()
+      clearCompleteNavigationData()
       if (!inAuthGroup) router.replace("/(auth)/sign-in" as any)
     // 3. User is signed in and has completed onboarding -> restore last saved route or go to dashboard
     } else if (inOnboarding || inAuthGroup || !hasRestoredInitialNav.current) {
@@ -87,9 +87,9 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
         router.replace("/(app)/(tabs)/dashboard")
       }
     } else {
-      // 4. Save active route continuously (Ignite Navigation Persistence Pattern)
+      // 4. Save entire navigation path & history stack (Ignite Boilerplate Standard)
       const currentPath = `/${segments.join("/")}`
-      persistNavigationPath(currentPath)
+      recordNavigationTransition(currentPath, segments as string[])
     }
   }, [loaded, hasCompletedOnboarding, isAuthenticated, segments, router])
 
