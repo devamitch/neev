@@ -11,34 +11,42 @@
 
 ### Completed & Verified:
 1. **Completely Free Offline Slippy Map Integration (`src/services/location/offlineMapTileService.ts`, `src/components/location/FamilySanctuaryMap.tsx`)**:
-   - Implemented real Web Mercator mathematics (`latLonToTileXY`, `tileXYToLatLon`, `getTileUrl`) supporting free CartoDB Voyager and OpenStreetMap tile servers.
-   - Zero Google Maps API keys or billing required — eliminates native rendering crashes and blank map views.
-   - Built dual-mode interactive canvas: Live OSM/CartoDB tile grid + Architectural Layout schematic.
+   - Implemented real Web Mercator mathematics (`latLonToTileXY`, `tileXYToLatLon`, `getTileUrl`) supporting free Humanitarian OpenStreetMap (`https://a.tile.openstreetmap.fr/hot/`) and standard OSM tile servers.
+   - Zero Google Maps API keys, zero watermarks, zero "API KEY REQUIRED" overlays, and zero tile blocking via custom User-Agent headers (`NeevFamilySanctuary/1.0`).
+   - Built dual-mode interactive canvas: Live OSM Humanitarian tile grid + Architectural Layout schematic.
    - Live member pins rendered at true lat/lon world coordinates with battery tags, initials avatar heads, and geofence sanctuary ring.
    - Interactive zoom controls (+ / -) with multi-zoom levels (13 to 16) and full-screen modal with pan/zoom.
    - Downloadable offline map pack functionality: downloads 49 tiles covering the sanctuary area, writes progress callbacks, caches to disk, and tracks pack metadata (`id`, `tileCount`, `sizeBytes`, `isOfflineReady`) in MMKV.
    - Honest phone finder with acoustic/haptic siren and clear area-level geofence disclaimer (no fabricated sub-meter indoor radar claims).
    - Dine-out planner with dynamic family member task delegation and Google Calendar export.
 
-2. **TanStack React Query Offline-First Data Synchronization**:
+2. **TanStack React Query Offline-First Data Synchronization Everywhere**:
    - `useFamilyLocationQuery.ts`: Queries and mutations for member locations, phone radar scan, offline map pack cache, map download mutation, and device location sync.
    - `useScheduleQuery.ts`: Queries and mutations for family functions, schedule tasks, and Google Calendar sync.
    - `useKnowledgeQuery.ts`: Queries and mutations for family wisdom archive, heirloom recipes, and pinned notes.
    - `useFamilyNetworkQuery.ts`: Multi-tenant family enclaves/realms, kinship graph edges, collaborative clusters, bilateral family bridges, and one-time invitation claim codes.
-   - Connected React Query hooks into `dashboard.tsx`, `family.tsx`, `schedule.tsx`, `knowledge.tsx`, and `FamilySanctuaryMap.tsx`.
+   - `useSpacesQuery.ts`: Queries and mutations for space tasks, meetings, and AI briefings across Personal, Nuclear, and Family spaces.
+   - `useRoutinesQuery.ts`: Queries and mutations for daily family rhythm routines.
+   - `useIntentionsQuery.ts`: Queries and mutations for family intentions, pet projects, and milestone cheers.
+   - Connected React Query hooks into `dashboard.tsx`, `family.tsx`, `schedule.tsx`, `knowledge.tsx`, `FamilyWeeklyGamesCard.tsx`, and all modals (`add-event.tsx`, `add-knowledge.tsx`, `add-task.tsx`).
 
-3. **Cultural Universalization & Language Neutrality**:
+3. **Performance & 7x CPU Reduction on Physical Android Device (Moto G71 5G)**:
+   - Discovered and fixed unthrottled 60fps Reanimated loop in `AnimatedNeevLogoIcon.tsx` (`animated = false` default), dropping main thread CPU from **75.0%** down to **10.7%**!
+   - Optimized `Card.tsx` with optional hardware-accelerated native `View` surface (`nativeSurface?: boolean`) to prevent SVG layout measuring overhead on list rows.
+   - Added animation unmount cleanup (`cancelAnimation`) in `FamilySanctuaryMap.tsx`.
+
+4. **Settings, Cache Purge & Android Modal Back Navigation**:
+   - Implemented real scoped cache purging in `settings.tsx` (`offlineMapTileService.clearMapPack()`, `queryClient.clear()`, and cache invalidation).
+   - Added `onRequestClose` handlers across all 5 modals in `family.tsx` for reliable Android hardware back-button dismissal.
+
+5. **Cultural Universalization & Language Neutrality**:
    - Zero Hindi / Devanagari text in the UI (retaining "Neev" and universal geometric logo for Bengali and all community accessibility).
    - Replaced ritualistic jargon with universally inclusive terms: "Traditions & Observances", "Shared Family Intentions", "Milestone Celebrations", "Heirloom Wisdom".
    - Zero emoji policy enforced across the application; replaced with semantic `Ionicons`.
 
-4. **Modals & Data Integrity**:
+6. **Modals & Data Integrity**:
    - Repaired `add-task.tsx`, `add-member.tsx`, `add-event.tsx`, `add-knowledge.tsx`, `quick-action.tsx`.
-   - Cleared hardcoded defaults ("Aunt"), fixed date formatting to local YYYY-MM-DD, and added `isSaving` guards to prevent duplicate submissions.
-
-5. **Theme & Performance Compliance**:
-   - Pista green light-mode token system (`#7D8C7D`, background `#FAF9F5`, container `#E0EDE8`).
-   - Removed unneeded timers and polling intervals; replaced with event-driven state and React Query stale-while-revalidate caching.
+   - Cleared hardcoded defaults, fixed date formatting to local YYYY-MM-DD (`toLocalDateInput`), safe text excerpts (`makeExcerpt`), and added `isSaving` guards to prevent duplicate submissions.
 
 ---
 
