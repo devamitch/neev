@@ -1,6 +1,6 @@
-import { isValidElement, useContext, type ReactNode } from "react"
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native"
 import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs"
+import { isValidElement, useContext, useEffect, type ReactNode } from "react"
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native"
 import Animated, {
   useAnimatedScrollHandler,
   useReducedMotion,
@@ -49,10 +49,24 @@ export interface ScreenContainerProps {
    * safe-area bottom padding and a frosted background.
    */
   footer?: ReactNode
+  /**
+   * Explicit scrolling ownership:
+   * - 'shell-scroll-view': Shell wraps children in an Animated.ScrollView (short/static pages only).
+   * - 'external': Shell provides bounded flex: 1 body and ScreenScrollContext; one root list scroller owns scroll.
+   * - 'none': Fixed views, maps or custom layouts.
+   */
+  scrollMode?: "shell-scroll-view" | "external" | "none"
+  /** Header presentation mode: compact pinned toolbar, collapsing large title, or none. */
+  headerMode?: "compact" | "collapsing" | "none" | "custom"
+  /** Bottom dock policy. */
+  dockBehavior?: "always" | "auto-hide" | "hidden"
 }
 
 /** Horizontal page gutter shared by every screen. */
 export const SCREEN_GUTTER = 20
+
+import { hideTabBar, showTabBar } from "@/components/navigation/useScrollAwareDock"
+import { ScreenScrollContext } from "./ScreenScrollContext"
 
 /**
  * Universal screen wrapper — the single place screen chrome behaves, so every
@@ -76,6 +90,9 @@ export function ScreenContainer({
   autoHideTabBar = true,
   bottomInset,
   footer,
+  scrollMode,
+  headerMode,
+  dockBehavior,
 }: ScreenContainerProps) {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
@@ -84,6 +101,16 @@ export function ScreenContainer({
   const reduceMotion = useReducedMotion()
   const layout = useLayout()
   useShowChromeOnFocus()
+
+  // Handle dockBehavior
+  useEffect(() => {
+    if (dockBehavior === "hidden") {
+      hideTabBar(true)
+    } else if (dockBehavior === "always") {
+      showTabBar(true)
+    }
+  }, [dockBehavior])
+
   // Phones use the full width; tablets centre a readable column.
   const column: ViewStyle = {
     alignSelf: "center",
@@ -95,8 +122,7 @@ export function ScreenContainer({
   // A footer is a real flex sibling below the scroll area and carries its own
   // safe-area padding, so the scroll content only needs its own breathing
   // room — not the dock/safe-area clearance the footer already absorbs.
-  const clearance =
-    bottomInset ?? (footer ? 24 : isTabScreen ? dockInset : insets.bottom + 32)
+  const clearance = bottomInset ?? (footer ? 24 : isTabScreen ? dockInset : insets.bottom + 32)
   const userContent = (StyleSheet.flatten(contentContainerStyle) ?? {}) as ViewStyle
   const paddingBottom = Math.max(
     typeof userContent.paddingBottom === "number" ? userContent.paddingBottom : 0,
@@ -124,19 +150,26 @@ export function ScreenContainer({
   const headerProps =
     stickyHeader &&
     isValidElement(header) &&
-    (header.type === AppHeader ||
-      typeof (header.props as AppHeaderProps)?.title === "string")
+    (header.type === AppHeader || typeof (header.props as AppHeaderProps)?.title === "string")
       ? (header.props as AppHeaderProps)
       : null
   const statusInset = safeArea ? insets.top : 0
 
   const scrollY = useSharedValue(0)
   const lastY = useSharedValue(0)
-  const hideDock = autoHideTabBar && !reduceMotion
+  const shouldAutoHide =
+    dockBehavior === "hidden"
+      ? false
+      : dockBehavior === "always"
+        ? false
+        : dockBehavior === "auto-hide"
+          ? !reduceMotion
+          : autoHideTabBar && !reduceMotion
+
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y
-      if (hideDock) updateDockOnScroll(e.contentOffset.y, lastY)
+      if (shouldAutoHide) updateDockOnScroll(e.contentOffset.y, lastY)
     },
   })
   const { titleHeight, progress } = useCollapsingHeader(scrollY)
@@ -148,62 +181,19 @@ export function ScreenContainer({
     : {}
   const rootStyle = [styles.root, { backgroundColor: colors.background }, style]
 
-  /* ── Collapsing large-title header (every AppHeader) ─────────────── */
-  if (headerProps) {
-    const contentTop = headerContentTop(headerProps, statusInset)
-    const largeTitle = (
-      <CollapsingLargeTitle props={headerProps} scrollY={scrollY} titleHeight={titleHeight} />
-    )
-    return (
-      <ContainerComponent {...containerProps} style={rootStyle}>
-        {scrollable ? (
-          <Animated.ScrollView
-            style={styles.scroll}
-            contentContainerStyle={[
-              styles.scrollContent,
-              column,
-              userContent,
-              { paddingTop: contentTop, paddingBottom },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            nestedScrollEnabled
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            {largeTitle}
-            {children}
-          </Animated.ScrollView>
-        ) : (
-          <View style={[styles.fixedColumn, column, { paddingTop: contentTop }]}>
-            <View>{largeTitle}</View>
-            <View
-              style={[
-                styles.nonScrollContent,
-                styles.noTop,
-                styles.noSide,
-                userContent,
-                { paddingBottom },
-              ]}
-            >
-              {children}
-            </View>
-          </View>
-        )}
-        {footerNode}
-        <CollapsingHeaderBar
-          props={headerProps}
-          progress={progress}
-          statusInset={statusInset}
-          gutter={layout.sideInset}
-        />
-      </ContainerComponent>
-    )
+  const resolvedScrollMode = scrollMode ?? (scrollable ? "shell-scroll-view" : "external")
+  const isCompactHeader =
+    headerMode === "compact" || (headerProps?.sticky && headerMode !== "collapsing")
+
+  const contextValue = {
+    scrollY,
+    onRootScroll: onScroll,
+    clearance,
+    gutter: layout.gutter,
   }
 
-  /* ── Any other header node: pinned above the content ─────────────── */
-  const pinned =
+  /* ── Header: Pinned compact or custom node ─────────────── */
+  const pinnedHeaderNode =
     header && stickyHeader ? (
       <View
         style={[
@@ -216,41 +206,105 @@ export function ScreenContainer({
       </View>
     ) : null
 
-  if (scrollable) {
+  /* ── Collapsing large-title header (when not compact) ─────────────── */
+  if (headerProps && !isCompactHeader) {
+    const contentTop = headerContentTop(headerProps, statusInset)
+    const largeTitle = (
+      <CollapsingLargeTitle props={headerProps} scrollY={scrollY} titleHeight={titleHeight} />
+    )
     return (
-      <ContainerComponent {...containerProps} style={rootStyle}>
-        {pinned}
-        <Animated.ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, column, userContent, { paddingBottom }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          nestedScrollEnabled
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-        >
-          {stickyHeader ? null : header}
-          {children}
-        </Animated.ScrollView>
-        {footerNode}
-      </ContainerComponent>
+      <ScreenScrollContext.Provider value={contextValue}>
+        <ContainerComponent {...containerProps} style={rootStyle}>
+          {resolvedScrollMode === "shell-scroll-view" ? (
+            <Animated.ScrollView
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.scrollContent,
+                column,
+                userContent,
+                { paddingTop: contentTop, paddingBottom },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+            >
+              {largeTitle}
+              {children}
+            </Animated.ScrollView>
+          ) : resolvedScrollMode === "external" ? (
+            <View style={[styles.externalBody, column, { paddingTop: contentTop }]}>
+              {children}
+            </View>
+          ) : (
+            <View style={[styles.fixedColumn, column, { paddingTop: contentTop }]}>
+              <View>{largeTitle}</View>
+              <View
+                style={[
+                  styles.nonScrollContent,
+                  styles.noTop,
+                  styles.noSide,
+                  userContent,
+                  { paddingBottom },
+                ]}
+              >
+                {children}
+              </View>
+            </View>
+          )}
+          {footerNode}
+          <CollapsingHeaderBar
+            props={headerProps}
+            progress={progress}
+            statusInset={statusInset}
+            gutter={layout.sideInset}
+          />
+        </ContainerComponent>
+      </ScreenScrollContext.Provider>
     )
   }
 
+  /* ── Standard / Compact Header Flow ─────────────── */
   return (
-    <ContainerComponent {...containerProps} style={rootStyle}>
-      {pinned}
-      <View style={[styles.nonScrollContent, column, userContent, { paddingBottom }]}>
-        {stickyHeader ? null : header}
-        {children}
-      </View>
-      {footerNode}
-    </ContainerComponent>
+    <ScreenScrollContext.Provider value={contextValue}>
+      <ContainerComponent {...containerProps} style={rootStyle}>
+        {pinnedHeaderNode}
+        {resolvedScrollMode === "shell-scroll-view" ? (
+          <Animated.ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, column, userContent, { paddingBottom }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+          >
+            {stickyHeader ? null : header}
+            {children}
+          </Animated.ScrollView>
+        ) : resolvedScrollMode === "external" ? (
+          <View style={[styles.externalBody, column]}>{children}</View>
+        ) : (
+          <View style={[styles.nonScrollContent, column, userContent, { paddingBottom }]}>
+            {stickyHeader ? null : header}
+            {children}
+          </View>
+        )}
+        {footerNode}
+      </ContainerComponent>
+    </ScreenScrollContext.Provider>
   )
 }
 
 const styles = StyleSheet.create({
+  externalBody: {
+    flex: 1,
+    minHeight: 0,
+    width: "100%",
+  },
   fixedColumn: { flex: 1 },
   footerContent: {
     paddingHorizontal: SCREEN_GUTTER,

@@ -40,7 +40,7 @@ const clamp = Extrapolation.CLAMP
 /** Where content starts below the status bar for a given header. */
 export function headerContentTop(props: AppHeaderProps, statusInset: number): number {
   const hasControls = Boolean(props.showBack || props.rightAction)
-  return statusInset + (hasControls ? 46 : 4)
+  return statusInset + (hasControls ? HEADER_BAR_HEIGHT : 4)
 }
 
 export function useCollapsingHeader(scrollY: SharedValue<number>) {

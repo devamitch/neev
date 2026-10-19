@@ -1,34 +1,30 @@
-import React, { useState } from "react"
-import { Linking, Modal, ScrollView, StyleSheet, View } from "react-native"
-import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { router } from "expo-router"
+import React, { useState } from "react"
+import { Linking, Modal, ScrollView, StyleSheet, View } from "react-native"
 
+import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
+import { useTabBarInset } from "@/components/navigation/CustomTabBar"
+import { AppButton } from "@/components/ui/AppButton"
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
-import { AppButton } from "@/components/ui/AppButton"
-import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
-import { TextField } from "@/components/ui/TextField"
+import { Card } from "@/components/ui/Card"
 import { PressableScale } from "@/components/ui/PressableScale"
-import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
-import { useColors } from "@/theme/useTheme"
-import { useTabBarInset } from "@/components/navigation/CustomTabBar"
-import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
+import { TextField } from "@/components/ui/TextField"
 import {
-  useFamilyNetworkStore,
-  type ClusterType,
-  type KinshipType,
-} from "@/stores/useFamilyNetworkStore"
-import {
+  useFamilyBridgesQuery,
+  useFamilyClustersQuery,
   useFamilyRealmsQuery,
   useKinshipGraphQuery,
-  useFamilyClustersQuery,
-  useFamilyBridgesQuery,
 } from "@/hooks/useFamilyNetworkQuery"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
+import { useFamilyNetworkStore, type KinshipType } from "@/stores/useFamilyNetworkStore"
+import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
+import { useColors } from "@/theme/useTheme"
 
 const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
   { relation: "parent", label: "Parent of" },
@@ -283,7 +279,9 @@ export default function FamilyScreen() {
               </AppText>
               {m.nickname && (
                 <View style={[styles.nicknameChip, { backgroundColor: colors.primaryAlpha }]}>
-                  <AppText style={[styles.nicknameText, { color: colors.primary }]}>{m.nickname}</AppText>
+                  <AppText style={[styles.nicknameText, { color: colors.primary }]}>
+                    {m.nickname}
+                  </AppText>
                 </View>
               )}
             </View>
@@ -326,8 +324,16 @@ export default function FamilyScreen() {
           <View style={styles.kinshipPillsRow}>
             {memberEdges.map((e) => (
               <View key={e.id} style={[styles.kinshipBadge, { backgroundColor: colors.surface2 }]}>
-                <Ionicons name="git-branch-outline" size={11} color={colors.primary} style={{ marginRight: 4 }} />
-                <AppText variant="caption" style={{ fontSize: 11, color: colors.text.primary, fontWeight: "500" }}>
+                <Ionicons
+                  name="git-branch-outline"
+                  size={11}
+                  color={colors.primary}
+                  style={{ marginRight: 4 }}
+                />
+                <AppText
+                  variant="caption"
+                  style={{ fontSize: 11, color: colors.text.primary, fontWeight: "500" }}
+                >
                   {e.label}
                 </AppText>
               </View>
@@ -354,7 +360,12 @@ export default function FamilyScreen() {
           <View style={styles.traitsBox}>
             {m.superpower && (
               <View style={styles.traitRow}>
-                <Ionicons name="star-outline" size={13} color="#D97706" style={{ marginRight: 6 }} />
+                <Ionicons
+                  name="star-outline"
+                  size={13}
+                  color="#D97706"
+                  style={{ marginRight: 6 }}
+                />
                 <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
                   {m.superpower}
                 </AppText>
@@ -373,7 +384,12 @@ export default function FamilyScreen() {
 
         {m.notes && (
           <View style={[styles.notesBox, { backgroundColor: colors.surface2 }]}>
-            <Ionicons name="information-circle-outline" size={14} color={colors.text.muted} style={{ marginRight: 6 }} />
+            <Ionicons
+              name="information-circle-outline"
+              size={14}
+              color={colors.text.muted}
+              style={{ marginRight: 6 }}
+            />
             <AppText variant="caption" style={styles.notesText}>
               {m.notes}
             </AppText>
@@ -410,224 +426,261 @@ export default function FamilyScreen() {
         />
       }
     >
-        {/* Active Realm Enclave Header (Interactive Switcher) */}
-        <PressableScale onPress={() => setRealmModalVisible(true)}>
-          <Card style={[styles.householdCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.householdIconRow}>
-              <View style={[styles.shieldIcon, { backgroundColor: colors.primaryAlpha }]}>
-                <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <AppText variant="subheading" style={styles.householdName}>
-                    {activeRealm.name}
-                  </AppText>
-                  <View style={styles.switcherPill}>
-                    <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginRight: 4 }}>
-                      Switch Enclave
-                    </AppText>
-                    <Ionicons name="chevron-down" size={12} color={colors.primary} />
-                  </View>
-                </View>
-                <AppText variant="caption" style={{ color: colors.text.muted, marginTop: 2 }}>
-                  {activeRealm.city} · Est. {activeRealm.establishedYear} · Multi-Tenant Isolation
-                </AppText>
-              </View>
+      {/* Active Realm Enclave Header (Interactive Switcher) */}
+      <PressableScale onPress={() => setRealmModalVisible(true)}>
+        <Card style={[styles.householdCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.householdIconRow}>
+            <View style={[styles.shieldIcon, { backgroundColor: colors.primaryAlpha }]}>
+              <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
             </View>
-            <AppText variant="body" style={styles.householdMotto}>
-              &ldquo;{activeRealm.motto}&rdquo;
-            </AppText>
-          </Card>
-        </PressableScale>
-
-        {/* ── Live Free Family Sanctuary Map & Telemetry ── */}
-        <FamilySanctuaryMap />
-
-        {/* ── Kinship Clusters Bar (Overlapping Circles) ── */}
-        <View style={styles.clusterSelectorContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clusterPillsScroll}>
-            <PressableScale
-              style={[
-                styles.clusterPill,
-                activeClusterType === "all"
-                  ? [styles.clusterPillActive, { backgroundColor: colors.primary }]
-                  : [styles.clusterPillInactive, { backgroundColor: colors.surface }],
-              ]}
-              onPress={() => {
-                void Haptics.selectionAsync()
-                setActiveCluster("all")
-              }}
-            >
-              <Ionicons
-                name="people"
-                size={14}
-                color={activeClusterType === "all" ? "#FFFFFF" : colors.text.secondary}
-                style={{ marginRight: 6 }}
-              />
-              <AppText
-                variant="caption"
+            <View style={{ flex: 1 }}>
+              <View
                 style={{
-                  fontWeight: "600",
-                  color: activeClusterType === "all" ? "#FFFFFF" : colors.text.primary,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                All Kinship ({members.length})
-              </AppText>
-            </PressableScale>
-
-            {clusters.map((c) => {
-              const isActive = activeClusterType === c.type
-              return (
-                <PressableScale
-                  key={c.id}
-                  style={[
-                    styles.clusterPill,
-                    isActive
-                      ? [styles.clusterPillActive, { backgroundColor: c.color }]
-                      : [styles.clusterPillInactive, { backgroundColor: colors.surface }],
-                  ]}
-                  onPress={() => {
-                    void Haptics.selectionAsync()
-                    setActiveCluster(c.type)
-                  }}
-                >
-                  <Ionicons
-                    name={c.icon as any}
-                    size={14}
-                    color={isActive ? "#FFFFFF" : c.color}
-                    style={{ marginRight: 6 }}
-                  />
+                <AppText variant="subheading" style={styles.householdName}>
+                  {activeRealm.name}
+                </AppText>
+                <View style={styles.switcherPill}>
                   <AppText
                     variant="caption"
-                    style={{
-                      fontWeight: "600",
-                      color: isActive ? "#FFFFFF" : colors.text.primary,
-                    }}
+                    style={{ color: colors.primary, fontWeight: "700", marginRight: 4 }}
                   >
-                    {c.name} ({c.memberIds.length})
+                    Switch Enclave
                   </AppText>
-                </PressableScale>
-              )
-            })}
-
-            {/* Add Cluster Pill */}
-            <PressableScale
-              style={[styles.clusterPill, styles.addClusterPill, { backgroundColor: colors.surface2 }]}
-              onPress={() => setClusterModalVisible(true)}
-            >
-              <Ionicons name="add" size={14} color={colors.primary} style={{ marginRight: 4 }} />
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700" }}>
-                New Circle
+                  <Ionicons name="chevron-down" size={12} color={colors.primary} />
+                </View>
+              </View>
+              <AppText variant="caption" style={{ color: colors.text.muted, marginTop: 2 }}>
+                {activeRealm.city} · Est. {activeRealm.establishedYear} · Multi-Tenant Isolation
               </AppText>
-            </PressableScale>
-          </ScrollView>
-        </View>
+            </View>
+          </View>
+          <AppText variant="body" style={styles.householdMotto}>
+            &ldquo;{activeRealm.motto}&rdquo;
+          </AppText>
+        </Card>
+      </PressableScale>
 
-        {/* Cluster Context Banner */}
-        {activeClusterType !== "all" && currentCluster && (
-          <View style={[styles.clusterBanner, { backgroundColor: currentCluster.color + "15", borderColor: currentCluster.color + "30" }]}>
-            <Ionicons name={currentCluster.icon as any} size={18} color={currentCluster.color} style={{ marginRight: 8 }} />
+      {/* ── Live Free Family Sanctuary Map & Telemetry ── */}
+      <FamilySanctuaryMap />
+
+      {/* ── Kinship Clusters Bar (Overlapping Circles) ── */}
+      <View style={styles.clusterSelectorContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.clusterPillsScroll}
+        >
+          <PressableScale
+            style={[
+              styles.clusterPill,
+              activeClusterType === "all"
+                ? [styles.clusterPillActive, { backgroundColor: colors.primary }]
+                : [styles.clusterPillInactive, { backgroundColor: colors.surface }],
+            ]}
+            onPress={() => {
+              void Haptics.selectionAsync()
+              setActiveCluster("all")
+            }}
+          >
+            <Ionicons
+              name="people"
+              size={14}
+              color={activeClusterType === "all" ? "#FFFFFF" : colors.text.secondary}
+              style={{ marginRight: 6 }}
+            />
+            <AppText
+              variant="caption"
+              style={{
+                fontWeight: "600",
+                color: activeClusterType === "all" ? "#FFFFFF" : colors.text.primary,
+              }}
+            >
+              All Kinship ({members.length})
+            </AppText>
+          </PressableScale>
+
+          {clusters.map((c) => {
+            const isActive = activeClusterType === c.type
+            return (
+              <PressableScale
+                key={c.id}
+                style={[
+                  styles.clusterPill,
+                  isActive
+                    ? [styles.clusterPillActive, { backgroundColor: c.color }]
+                    : [styles.clusterPillInactive, { backgroundColor: colors.surface }],
+                ]}
+                onPress={() => {
+                  void Haptics.selectionAsync()
+                  setActiveCluster(c.type)
+                }}
+              >
+                <Ionicons
+                  name={c.icon as any}
+                  size={14}
+                  color={isActive ? "#FFFFFF" : c.color}
+                  style={{ marginRight: 6 }}
+                />
+                <AppText
+                  variant="caption"
+                  style={{
+                    fontWeight: "600",
+                    color: isActive ? "#FFFFFF" : colors.text.primary,
+                  }}
+                >
+                  {c.name} ({c.memberIds.length})
+                </AppText>
+              </PressableScale>
+            )
+          })}
+
+          {/* Add Cluster Pill */}
+          <PressableScale
+            style={[
+              styles.clusterPill,
+              styles.addClusterPill,
+              { backgroundColor: colors.surface2 },
+            ]}
+            onPress={() => setClusterModalVisible(true)}
+          >
+            <Ionicons name="add" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700" }}>
+              New Circle
+            </AppText>
+          </PressableScale>
+        </ScrollView>
+      </View>
+
+      {/* Cluster Context Banner */}
+      {activeClusterType !== "all" && currentCluster && (
+        <View
+          style={[
+            styles.clusterBanner,
+            {
+              backgroundColor: currentCluster.color + "15",
+              borderColor: currentCluster.color + "30",
+            },
+          ]}
+        >
+          <Ionicons
+            name={currentCluster.icon as any}
+            size={18}
+            color={currentCluster.color}
+            style={{ marginRight: 8 }}
+          />
+          <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
+            {currentCluster.description}
+          </AppText>
+        </View>
+      )}
+
+      {/* ── Toolbar: Quick Kinship Link & Claim ── */}
+      <View style={styles.quickToolsRow}>
+        <PressableScale
+          style={[styles.toolBtn, { backgroundColor: colors.surface }]}
+          onPress={() => setKinshipModalVisible(true)}
+        >
+          <Ionicons name="git-branch" size={15} color={colors.primary} style={{ marginRight: 6 }} />
+          <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
+            Connect Kinship Edge
+          </AppText>
+        </PressableScale>
+
+        <PressableScale
+          style={[styles.toolBtn, { backgroundColor: colors.surface }]}
+          onPress={() => setClaimModalVisible(true)}
+        >
+          <Ionicons name="key" size={15} color="#D97706" style={{ marginRight: 6 }} />
+          <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
+            Claim Profile with Code
+          </AppText>
+        </PressableScale>
+      </View>
+
+      {/* ── Member List (Scoped to active cluster) ── */}
+      <View style={styles.sectionHeader}>
+        <AppText variant="subheading" style={styles.sectionTitle}>
+          {activeClusterType === "all" ? "Sanctuary Graph" : currentCluster?.name} (
+          {displayedMembers.length})
+        </AppText>
+        <Badge label="Privacy Graph Protected" tone="success" size="small" />
+      </View>
+
+      <View style={styles.membersList}>
+        {displayedMembers.length > 0 ? (
+          displayedMembers.map(renderMemberCard)
+        ) : (
+          <Card style={styles.emptyCard}>
+            <AppText variant="caption" style={{ color: colors.text.muted, textAlign: "center" }}>
+              No members assigned to this cluster yet.
+            </AppText>
+          </Card>
+        )}
+      </View>
+
+      {/* ── Bilateral Family Bridges Section (Section 51) ── */}
+      <View style={styles.sectionHeader}>
+        <AppText variant="subheading" style={styles.sectionTitle}>
+          Bilateral Family Bridges ({bridges.length})
+        </AppText>
+        <PressableScale onPress={() => setBridgeModalVisible(true)}>
+          <Badge label="+ Add Bridge" tone="info" size="small" />
+        </PressableScale>
+      </View>
+
+      {bridges.map((b) => (
+        <Card key={b.id} style={[styles.bridgeCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.bridgeHeader}>
+            <View style={[styles.bridgeIconBox, { backgroundColor: "#8B5CF620" }]}>
+              <Ionicons name="git-network-outline" size={20} color="#8B5CF6" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <AppText variant="subheading" style={{ fontSize: 15, fontWeight: "700" }}>
+                {b.targetRealmName}
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.text.muted }}>
+                {b.purpose}
+              </AppText>
+            </View>
+            <PressableScale onPress={() => toggleBridgeStatus(b.id)}>
+              <Badge
+                label={b.status === "active" ? "Active Bridge" : "Paused"}
+                tone={b.status === "active" ? "success" : "warning"}
+                size="small"
+              />
+            </PressableScale>
+          </View>
+
+          <View style={styles.bridgeInfoBox}>
+            <Ionicons
+              name="shield-outline"
+              size={13}
+              color={colors.primary}
+              style={{ marginRight: 6 }}
+            />
             <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
-              {currentCluster.description}
+              Bilateral coordination enabled for wedding muhurats and shared events. Personal space
+              diaries, finances & health remain 100% private.
             </AppText>
           </View>
-        )}
 
-        {/* ── Toolbar: Quick Kinship Link & Claim ── */}
-        <View style={styles.quickToolsRow}>
-          <PressableScale
-            style={[styles.toolBtn, { backgroundColor: colors.surface }]}
-            onPress={() => setKinshipModalVisible(true)}
-          >
-            <Ionicons name="git-branch" size={15} color={colors.primary} style={{ marginRight: 6 }} />
-            <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-              Connect Kinship Edge
+          <View style={styles.bridgeActionsRow}>
+            <AppText variant="caption" style={{ color: colors.text.muted }}>
+              Grants: Functions & Rituals only
             </AppText>
-          </PressableScale>
-
-          <PressableScale
-            style={[styles.toolBtn, { backgroundColor: colors.surface }]}
-            onPress={() => setClaimModalVisible(true)}
-          >
-            <Ionicons name="key" size={15} color="#D97706" style={{ marginRight: 6 }} />
-            <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-              Claim Profile with Code
-            </AppText>
-          </PressableScale>
-        </View>
-
-        {/* ── Member List (Scoped to active cluster) ── */}
-        <View style={styles.sectionHeader}>
-          <AppText variant="subheading" style={styles.sectionTitle}>
-            {activeClusterType === "all" ? "Sanctuary Graph" : currentCluster?.name} ({displayedMembers.length})
-          </AppText>
-          <Badge label="Privacy Graph Protected" tone="success" size="small" />
-        </View>
-
-        <View style={styles.membersList}>
-          {displayedMembers.length > 0 ? (
-            displayedMembers.map(renderMemberCard)
-          ) : (
-            <Card style={styles.emptyCard}>
-              <AppText variant="caption" style={{ color: colors.text.muted, textAlign: "center" }}>
-                No members assigned to this cluster yet.
+            <PressableScale onPress={() => revokeBridge(b.id)}>
+              <AppText variant="caption" style={{ color: "#EF4444", fontWeight: "600" }}>
+                Revoke Bridge
               </AppText>
-            </Card>
-          )}
-        </View>
-
-        {/* ── Bilateral Family Bridges Section (Section 51) ── */}
-        <View style={styles.sectionHeader}>
-          <AppText variant="subheading" style={styles.sectionTitle}>
-            Bilateral Family Bridges ({bridges.length})
-          </AppText>
-          <PressableScale onPress={() => setBridgeModalVisible(true)}>
-            <Badge label="+ Add Bridge" tone="info" size="small" />
-          </PressableScale>
-        </View>
-
-        {bridges.map((b) => (
-          <Card key={b.id} style={[styles.bridgeCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.bridgeHeader}>
-              <View style={[styles.bridgeIconBox, { backgroundColor: "#8B5CF620" }]}>
-                <Ionicons name="git-network-outline" size={20} color="#8B5CF6" />
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <AppText variant="subheading" style={{ fontSize: 15, fontWeight: "700" }}>
-                  {b.targetRealmName}
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.muted }}>
-                  {b.purpose}
-                </AppText>
-              </View>
-              <PressableScale onPress={() => toggleBridgeStatus(b.id)}>
-                <Badge
-                  label={b.status === "active" ? "Active Bridge" : "Paused"}
-                  tone={b.status === "active" ? "success" : "warning"}
-                  size="small"
-                />
-              </PressableScale>
-            </View>
-
-            <View style={styles.bridgeInfoBox}>
-              <Ionicons name="shield-outline" size={13} color={colors.primary} style={{ marginRight: 6 }} />
-              <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
-                Bilateral coordination enabled for wedding muhurats and shared events. Personal space diaries, finances & health remain 100% private.
-              </AppText>
-            </View>
-
-            <View style={styles.bridgeActionsRow}>
-              <AppText variant="caption" style={{ color: colors.text.muted }}>
-                Grants: Functions & Rituals only
-              </AppText>
-              <PressableScale onPress={() => revokeBridge(b.id)}>
-                <AppText variant="caption" style={{ color: "#EF4444", fontWeight: "600" }}>
-                  Revoke Bridge
-                </AppText>
-              </PressableScale>
-            </View>
-          </Card>
-        ))}
+            </PressableScale>
+          </View>
+        </Card>
+      ))}
 
       {/* ── Modal: Multi-Realm Switcher ── */}
       <Modal
@@ -678,7 +731,9 @@ export default function FamilyScreen() {
                       {r.city} · Est. {r.establishedYear}
                     </AppText>
                   </View>
-                  {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
                 </PressableScale>
               )
             })}
@@ -721,7 +776,11 @@ export default function FamilyScreen() {
               </View>
 
               <View style={{ marginTop: 14 }}>
-                <AppButton title="Establish New Realm" onPress={handleCreateRealm} variant="primary" />
+                <AppButton
+                  title="Establish New Realm"
+                  onPress={handleCreateRealm}
+                  variant="primary"
+                />
               </View>
             </View>
           </View>
@@ -747,7 +806,8 @@ export default function FamilyScreen() {
             </View>
 
             <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 14 }}>
-              Enter the single-use invitation code provided by your family organizer to claim your profile.
+              Enter the single-use invitation code provided by your family organizer to claim your
+              profile.
             </AppText>
 
             <TextField
@@ -758,7 +818,11 @@ export default function FamilyScreen() {
             />
 
             <View style={{ marginTop: 20 }}>
-              <AppButton title="Verify & Claim Profile" onPress={handleClaimProfile} variant="primary" />
+              <AppButton
+                title="Verify & Claim Profile"
+                onPress={handleClaimProfile}
+                variant="primary"
+              />
             </View>
           </View>
         </View>
@@ -789,7 +853,11 @@ export default function FamilyScreen() {
             <AppText variant="caption" style={styles.inputLabel}>
               FROM MEMBER:
             </AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChipsScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.memberChipsScroll}
+            >
               {members.map((m) => (
                 <PressableScale
                   key={m.id}
@@ -801,7 +869,10 @@ export default function FamilyScreen() {
                   ]}
                   onPress={() => setSourceMemberId(m.id)}
                 >
-                  <AppText variant="caption" style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}>
+                  <AppText
+                    variant="caption"
+                    style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+                  >
                     {m.name.split(" ")[0]}
                   </AppText>
                 </PressableScale>
@@ -818,8 +889,14 @@ export default function FamilyScreen() {
                   style={[
                     styles.relChip,
                     selectedRelation === k.relation
-                      ? [styles.relChipActive, { backgroundColor: colors.primaryAlpha, borderColor: colors.primary }]
-                      : [styles.relChipInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
+                      ? [
+                          styles.relChipActive,
+                          { backgroundColor: colors.primaryAlpha, borderColor: colors.primary },
+                        ]
+                      : [
+                          styles.relChipInactive,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                        ],
                   ]}
                   onPress={() => setSelectedRelation(k.relation)}
                 >
@@ -828,7 +905,8 @@ export default function FamilyScreen() {
                     style={{
                       fontSize: 11,
                       fontWeight: selectedRelation === k.relation ? "700" : "500",
-                      color: selectedRelation === k.relation ? colors.primary : colors.text.secondary,
+                      color:
+                        selectedRelation === k.relation ? colors.primary : colors.text.secondary,
                     }}
                   >
                     {k.label}
@@ -840,7 +918,11 @@ export default function FamilyScreen() {
             <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
               TO MEMBER:
             </AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChipsScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.memberChipsScroll}
+            >
               {members.map((m) => (
                 <PressableScale
                   key={m.id}
@@ -852,7 +934,10 @@ export default function FamilyScreen() {
                   ]}
                   onPress={() => setTargetMemberId(m.id)}
                 >
-                  <AppText variant="caption" style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}>
+                  <AppText
+                    variant="caption"
+                    style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+                  >
                     {m.name.split(" ")[0]}
                   </AppText>
                 </PressableScale>
@@ -885,7 +970,8 @@ export default function FamilyScreen() {
             </View>
 
             <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 12 }}>
-              A bilateral bridge allows safe, cross-family collaboration for weddings or ceremonies without merging trees or leaking private journals.
+              A bilateral bridge allows safe, cross-family collaboration for weddings or ceremonies
+              without merging trees or leaking private journals.
             </AppText>
 
             <TextField
@@ -905,9 +991,15 @@ export default function FamilyScreen() {
             </View>
 
             <View style={[styles.bridgeNoticeBox, { backgroundColor: colors.surface2 }]}>
-              <Ionicons name="lock-closed" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+              <Ionicons
+                name="lock-closed"
+                size={14}
+                color={colors.primary}
+                style={{ marginRight: 6 }}
+              />
               <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
-                Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays 100% hidden.
+                Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays
+                100% hidden.
               </AppText>
             </View>
 

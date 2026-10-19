@@ -16,6 +16,7 @@ import { useFamilyStore, type FamilyRole } from "@/stores/useFamilyStore"
 import { useFamilyNetworkStore, type KinshipType } from "@/stores/useFamilyNetworkStore"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
 import { useRootStore } from "@/stores/useRootStore"
+import { useAddFamilyMemberMutation } from "@/hooks/useFamilyMembersQuery"
 
 const ROLES: { key: FamilyRole; label: string; description: string; defaultColor: string }[] = [
   { key: "elder", label: "Elder", description: "Pillar of wisdom & traditions", defaultColor: "#C27835" },
@@ -40,7 +41,7 @@ const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
 export default function AddMemberModal() {
   const colors = useColors()
   const members = useFamilyStore((s) => s.members)
-  const addMember = useFamilyStore((s) => s.addMember)
+  const addMemberMutation = useAddFamilyMemberMutation()
   const { clusters, addKinshipEdge, assignMemberToCluster, createInvitation } = useFamilyNetworkStore()
   const showToast = useRootStore((s) => s.showToast)
   const showAlert = useRootStore((s) => s.showAlert)
@@ -71,7 +72,7 @@ export default function AddMemberModal() {
     )
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isSaving) return
     if (!name.trim()) {
       showToast({ message: "Please enter the member's full name.", type: "error" })
@@ -91,7 +92,7 @@ export default function AddMemberModal() {
 
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    const newMemberId = addMember({
+    const saved = await addMemberMutation.mutateAsync({
       name: name.trim(),
       nickname: nickname.trim() || undefined,
       relationship: relationship.trim() || "Family Member",
@@ -103,6 +104,7 @@ export default function AddMemberModal() {
       favoriteTreat: favoriteTreat.trim() || undefined,
       notes: notes.trim() || undefined,
     })
+    const newMemberId = saved.id
 
     if (selectedRelativeId) {
       const targetRelative = members.find((m) => m.id === selectedRelativeId)

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react"
-import { FlatList, ScrollView, StyleSheet, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
+import { ScreenFlatList } from "@/components/ui/ScreenFlatList"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useKnowledgeStore, type KnowledgeCategory, type KnowledgeEntry } from "@/stores/useKnowledgeStore"
@@ -163,7 +164,7 @@ export default function KnowledgeScreen() {
 
   const listFooter = useMemo(
     () => (
-      <View style={{ paddingTop: 16, paddingBottom: bottomInset + 32 }}>
+      <View style={{ paddingTop: 16 }}>
         <AppButton
           title="+ Add Knowledge or Recipe to Sanctuary"
           variant="outline"
@@ -171,7 +172,7 @@ export default function KnowledgeScreen() {
         />
       </View>
     ),
-    [bottomInset],
+    [],
   )
 
   const emptyComponent = useMemo(
@@ -189,7 +190,9 @@ export default function KnowledgeScreen() {
   return (
     <ScreenContainer
       safeArea
-      scrollable={false}
+      scrollMode="external"
+      headerMode="compact"
+      dockBehavior="auto-hide"
       header={
         <AppHeader
           sticky
@@ -206,7 +209,7 @@ export default function KnowledgeScreen() {
         />
       }
     >
-      <FlatList
+      <ScreenFlatList
         data={filteredEntries}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -214,7 +217,6 @@ export default function KnowledgeScreen() {
         ListFooterComponent={listFooter}
         ListEmptyComponent={emptyComponent}
         contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
       />
     </ScreenContainer>
   )

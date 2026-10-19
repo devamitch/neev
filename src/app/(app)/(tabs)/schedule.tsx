@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react"
-import { FlatList, ScrollView, StyleSheet, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
+import { ScreenSectionList } from "@/components/ui/ScreenSectionList"
 import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
@@ -188,9 +189,48 @@ export default function ScheduleScreen() {
     [colors, selectedCat],
   )
 
+  const sections = useMemo(() => {
+    const upcoming: FamilyFunction[] = []
+    const later: FamilyFunction[] = []
+    const now = new Date().getTime()
+
+    filteredFunctions.forEach((fn) => {
+      const diff = new Date(fn.date).getTime() - now
+      const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+      if (days <= 14) {
+        upcoming.push(fn)
+      } else {
+        later.push(fn)
+      }
+    })
+
+    const list: { title: string; data: FamilyFunction[] }[] = []
+    if (upcoming.length > 0) {
+      list.push({ title: "Immediate & This Fortnight", data: upcoming })
+    }
+    if (later.length > 0) {
+      list.push({ title: "Upcoming & Season Calendar", data: later })
+    }
+    if (list.length === 0 && filteredFunctions.length > 0) {
+      list.push({ title: "All Scheduled Functions", data: filteredFunctions })
+    }
+    return list
+  }, [filteredFunctions])
+
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View style={styles.sectionHeader}>
+        <AppText variant="caption" style={[styles.sectionHeaderText, { color: colors.text.muted }]}>
+          {title.toUpperCase()}
+        </AppText>
+      </View>
+    ),
+    [colors],
+  )
+
   const listFooter = useMemo(
     () => (
-      <View style={{ paddingTop: 16, paddingBottom: bottomInset + 32 }}>
+      <View style={{ paddingTop: 16 }}>
         <FamilyWeeklyGamesCard />
         <AppButton
           title="+ Schedule New Family Function"
@@ -200,7 +240,7 @@ export default function ScheduleScreen() {
         />
       </View>
     ),
-    [bottomInset],
+    [],
   )
 
   const emptyComponent = useMemo(
@@ -218,7 +258,9 @@ export default function ScheduleScreen() {
   return (
     <ScreenContainer
       safeArea
-      scrollable={false}
+      scrollMode="external"
+      headerMode="compact"
+      dockBehavior="auto-hide"
       header={
         <AppHeader
           sticky
@@ -235,15 +277,16 @@ export default function ScheduleScreen() {
         />
       }
     >
-      <FlatList
-        data={filteredFunctions}
+      <ScreenSectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
         ListEmptyComponent={emptyComponent}
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
       />
     </ScreenContainer>
   )
@@ -340,5 +383,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#555",
+  },
+  sectionHeader: {
+    paddingVertical: 10,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  sectionHeaderText: {
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    fontSize: 11,
   },
 })

@@ -1,10 +1,10 @@
 import React, { memo, useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
-  Dimensions,
   Modal,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native"
 import { Image } from "expo-image"
@@ -58,7 +58,6 @@ import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
 import { useColors } from "@/theme/useTheme"
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 const MAP_HEIGHT = 220
 const TILE_SIZE = 256
 
@@ -120,6 +119,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   onSelectMember,
   compact = false,
 }: FamilySanctuaryMapProps) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
   const colors = useColors()
   const showToast = useRootStore((s) => s.showToast)
   const addFunction = useScheduleStore((s) => s.addFunction)
@@ -599,7 +599,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     </Svg>
   )
 
-  const activeCanvasWidth = SCREEN_WIDTH - 32
+  const activeCanvasWidth = windowWidth - 32
   const activeCanvasHeight = compact ? 150 : MAP_HEIGHT
 
   return (
@@ -860,7 +860,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
           <View style={styles.zoomableCanvasHolder}>
             <Animated.View style={[styles.zoomableCanvas, zoomAnimStyle]}>
-              {renderTileMap(SCREEN_WIDTH, SCREEN_HEIGHT * 0.65, true)}
+              {renderTileMap(windowWidth, windowHeight * 0.65, true)}
             </Animated.View>
 
             {/* Floating Zoom Controls */}
@@ -1294,7 +1294,7 @@ const styles = StyleSheet.create({
   },
   zoomableCanvasHolder: {
     backgroundColor: "#FAF9F5",
-    height: SCREEN_HEIGHT * 0.75,
+    height: "75%",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
