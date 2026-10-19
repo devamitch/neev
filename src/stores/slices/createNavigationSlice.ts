@@ -20,15 +20,12 @@ export const VALID_RESTORABLE_PREFIXES = [
   "/(app)",
   "/(app)/(tabs)",
   "/(app)/(tabs)/dashboard",
-  "/(app)/(tabs)/activities",
   "/(app)/(tabs)/family",
-  "/(app)/(tabs)/discover",
-  "/(app)/(tabs)/you",
-  "/(app)/spaces",
-  "/(app)/kinship-map",
-  "/(app)/bridges",
-  "/(app)/settings",
-  "/(app)/household",
+  "/(app)/(tabs)/schedule",
+  "/(app)/(tabs)/knowledge",
+  "/(app)/(profile)/settings",
+  "/(app)/(profile)/about",
+  "/(app)/(profile)/privacy-policy",
 ]
 
 /**

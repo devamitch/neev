@@ -75,23 +75,29 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
     } else if (!isAuthenticated) {
       clearCompleteNavigationData()
       if (!inAuthGroup) router.replace("/(auth)/sign-in" as any)
-    // 3. User is signed in and has completed onboarding -> restore last saved route or go to dashboard
-    } else if (inOnboarding || inAuthGroup || !hasRestoredInitialNav.current) {
-      hasRestoredInitialNav.current = true
-      const savedRoute = getPersistedNavigationPath()
-      if (savedRoute && savedRoute !== "/(app)/(tabs)/dashboard") {
-        try {
-          router.replace(savedRoute as any)
-        } catch {
-          router.replace("/(app)/(tabs)/dashboard")
-        }
-      } else {
-        router.replace("/(app)/(tabs)/dashboard")
-      }
+    // 3. User is signed in and has completed onboarding
     } else {
-      // 4. Save entire navigation path & history stack (Ignite Boilerplate Standard)
-      const currentPath = `/${segments.join("/")}`
-      recordNavigationTransition(currentPath, segments as string[])
+      const isAtRoot = !topSegment || topSegment === "index"
+      if (inOnboarding || inAuthGroup || isAtRoot) {
+        if (!hasRestoredInitialNav.current) {
+          hasRestoredInitialNav.current = true
+          const savedRoute = getPersistedNavigationPath()
+          if (savedRoute && savedRoute !== "/(app)/(tabs)/dashboard") {
+            try {
+              router.replace(savedRoute as any)
+              return
+            } catch {
+              // fallback to dashboard
+            }
+          }
+        }
+        router.replace("/(app)/(tabs)/dashboard")
+      } else {
+        hasRestoredInitialNav.current = true
+        // 4. Save active navigation path & history stack
+        const currentPath = `/${segments.join("/")}`
+        recordNavigationTransition(currentPath, segments as string[])
+      }
     }
   }, [loaded, hasCompletedOnboarding, isAuthenticated, segments, router])
 

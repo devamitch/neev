@@ -2,17 +2,17 @@
  * Real Google Sign-In through Google Play services (no WebView, no fake users).
  *
  * Needs two OAuth clients in the Google Cloud project (see
- * docs/BACKEND_AND_AUTH_GUIDE.md): an Android client for com.amit.blinkquest
+ * docs/BACKEND_AND_AUTH_GUIDE.md): an Android client for com.amit.neev
  * with the signing SHA-1, and a Web client whose ID app.config.ts reads from
  * google-services.json so Google returns an ID token.
  */
-import Constants from "expo-constants"
 import {
   GoogleSignin,
   isErrorWithCode,
   isSuccessResponse,
   statusCodes,
 } from "@react-native-google-signin/google-signin"
+import Constants from "expo-constants"
 
 // Set by app.config.ts from google-services.json (or EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).
 const WEB_CLIENT_ID =
@@ -63,7 +63,10 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
         return { status: "unavailable", message: "Google Play services isn't available" }
       }
     }
-    return { status: "error", message: err instanceof Error ? err.message : "Google sign-in failed" }
+    return {
+      status: "error",
+      message: err instanceof Error ? err.message : "Google sign-in failed",
+    }
   }
 }
 

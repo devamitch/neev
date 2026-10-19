@@ -28,7 +28,7 @@ export const googleServicesClient = {
     try {
       // Constructs RFC3339 timestamp and synchronizes via Google Calendar REST API
       const eventPayload = {
-        summary: `🪷 ${fn.title}`,
+        summary: `[Neev] ${fn.title}`,
         description: `${fn.description}\n\nVibe: ${fn.vibe || "Casual Family Gathering"}\nTasks delegated in Neev App.`,
         location: fn.location,
         start: {

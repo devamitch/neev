@@ -1,18 +1,18 @@
-import { Linking } from 'react-native';
+import { Linking } from "react-native"
 
-const SETU_PACKAGE = 'com.amit.setu';
-const SETU_PLAY_STORE_MARKET = `market://details?id=${SETU_PACKAGE}`;
-const SETU_PLAY_STORE_WEB = `https://play.google.com/store/apps/details?id=${SETU_PACKAGE}`;
-const SETU_SCHEME = 'setu://';
+const SETU_PACKAGE = "com.amit.setu"
+const SETU_PLAY_STORE_MARKET = `market://details?id=${SETU_PACKAGE}`
+const SETU_PLAY_STORE_WEB = `https://play.google.com/store/apps/details?id=${SETU_PACKAGE}`
+const SETU_SCHEME = "setu://"
 
 export interface SsoCallbackData {
-  status: 'authorized' | 'cancelled' | 'error';
-  userId?: string;
-  displayName?: string;
-  avatar?: string;
-  token?: string;
-  state?: string;
-  errorMessage?: string;
+  status: "authorized" | "cancelled" | "error"
+  userId?: string
+  displayName?: string
+  avatar?: string
+  token?: string
+  state?: string
+  errorMessage?: string
 }
 
 export const setuSsoService = {
@@ -22,9 +22,9 @@ export const setuSsoService = {
    */
   async isSetuInstalled(): Promise<boolean> {
     try {
-      return await Linking.canOpenURL(SETU_SCHEME);
+      return await Linking.canOpenURL(SETU_SCHEME)
     } catch {
-      return false;
+      return false
     }
   },
 
@@ -33,14 +33,14 @@ export const setuSsoService = {
    */
   async openSetuDownload(): Promise<void> {
     try {
-      const canMarket = await Linking.canOpenURL(SETU_PLAY_STORE_MARKET).catch(() => false);
+      const canMarket = await Linking.canOpenURL(SETU_PLAY_STORE_MARKET).catch(() => false)
       if (canMarket) {
-        await Linking.openURL(SETU_PLAY_STORE_MARKET);
+        await Linking.openURL(SETU_PLAY_STORE_MARKET)
       } else {
-        await Linking.openURL(SETU_PLAY_STORE_WEB);
+        await Linking.openURL(SETU_PLAY_STORE_WEB)
       }
     } catch {
-      await Linking.openURL(SETU_PLAY_STORE_WEB).catch(() => undefined);
+      await Linking.openURL(SETU_PLAY_STORE_WEB).catch(() => undefined)
     }
   },
 
@@ -50,33 +50,33 @@ export const setuSsoService = {
    * If not installed, reports 'not_installed'.
    */
   async launchSetuSso(): Promise<{
-    ok: boolean;
-    status: 'launched' | 'not_installed' | 'failed';
-    state?: string;
+    ok: boolean
+    status: "launched" | "not_installed" | "failed"
+    state?: string
   }> {
-    const installed = await this.isSetuInstalled();
+    const installed = await this.isSetuInstalled()
     if (!installed) {
-      return { ok: false, status: 'not_installed' };
+      return { ok: false, status: "not_installed" }
     }
 
-    const state = `bq_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    const callbackUrl = 'blinkquest://auth/callback';
+    const state = `neev_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const callbackUrl = "neev://auth/callback"
 
     const params = new URLSearchParams({
-      app_id: 'com.amit.blinkquest',
-      app_name: 'BlinkQuest',
+      app_id: "com.amit.neev",
+      app_name: "Neev",
       callback_url: callbackUrl,
       state,
-      scopes: 'identity,p2p',
-    });
+      scopes: "identity,p2p",
+    })
 
-    const ssoUrl = `setu://sso?${params.toString()}`;
+    const ssoUrl = `setu://sso?${params.toString()}`
 
     try {
-      await Linking.openURL(ssoUrl);
-      return { ok: true, status: 'launched', state };
+      await Linking.openURL(ssoUrl)
+      return { ok: true, status: "launched", state }
     } catch {
-      return { ok: false, status: 'failed' };
+      return { ok: false, status: "failed" }
     }
   },
 
@@ -86,22 +86,22 @@ export const setuSsoService = {
   parseCallbackUrl(url: string): SsoCallbackData {
     try {
       // Normalise scheme for URL parsing
-      const normalized = url.replace('blinkquest://', 'http://blinkquest.local/');
-      const parsed = new URL(normalized);
-      const params = parsed.searchParams;
+      const normalized = url.replace(/^(neev|blinkquest):\/\//, "http://neev.local/")
+      const parsed = new URL(normalized)
+      const params = parsed.searchParams
 
-      const status = (params.get('status') as SsoCallbackData['status']) || 'error';
+      const status = (params.get("status") as SsoCallbackData["status"]) || "error"
       return {
         status,
-        userId: params.get('user_id') || undefined,
-        displayName: params.get('display_name') || undefined,
-        avatar: params.get('avatar') || undefined,
-        token: params.get('token') || undefined,
-        state: params.get('state') || undefined,
-        errorMessage: params.get('error_message') || undefined,
-      };
+        userId: params.get("user_id") || undefined,
+        displayName: params.get("display_name") || undefined,
+        avatar: params.get("avatar") || undefined,
+        token: params.get("token") || undefined,
+        state: params.get("state") || undefined,
+        errorMessage: params.get("error_message") || undefined,
+      }
     } catch {
-      return { status: 'error', errorMessage: 'Malformed callback URL' };
+      return { status: "error", errorMessage: "Malformed callback URL" }
     }
   },
-};
+}

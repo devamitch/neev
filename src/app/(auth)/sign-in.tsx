@@ -122,7 +122,7 @@ export default function SignInScreen() {
           <NeevLogoIcon size={56} />
         </View>
         <AppText variant="display" style={styles.center}>
-          Neev · नींव
+          Neev
         </AppText>
         <AppText variant="body" color={colors.text.secondary} style={styles.center}>
           The private, AI-guided family operating system for functions, schedules & shared wisdom.
@@ -132,7 +132,7 @@ export default function SignInScreen() {
       <View style={styles.actions}>
         <ProviderButton
           label="Try Demo Sanctuary (All Features)"
-          icon={<Ionicons name="sparkles" size={20} color={colors.accentText} />}
+          icon={<Ionicons name="play-circle-outline" size={20} color={colors.accentText} />}
           busy={pending === "demo"}
           disabled={pending !== null}
           onPress={() => void handleDemo()}
