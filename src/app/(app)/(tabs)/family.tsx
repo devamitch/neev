@@ -630,7 +630,12 @@ export default function FamilyScreen() {
         ))}
 
       {/* ── Modal: Multi-Realm Switcher ── */}
-      <Modal visible={realmModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={realmModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRealmModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -724,7 +729,12 @@ export default function FamilyScreen() {
       </Modal>
 
       {/* ── Modal: Claim Profile with Code ── */}
-      <Modal visible={claimModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={claimModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setClaimModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -755,7 +765,12 @@ export default function FamilyScreen() {
       </Modal>
 
       {/* ── Modal: Connect Kinship Edge ── */}
-      <Modal visible={kinshipModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={kinshipModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setKinshipModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -852,7 +867,12 @@ export default function FamilyScreen() {
       </Modal>
 
       {/* ── Modal: Add Bilateral Bridge ── */}
-      <Modal visible={bridgeModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={bridgeModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setBridgeModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -899,7 +919,12 @@ export default function FamilyScreen() {
       </Modal>
 
       {/* ── Modal: Add Custom Cluster ── */}
-      <Modal visible={clusterModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={clusterModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setClusterModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
