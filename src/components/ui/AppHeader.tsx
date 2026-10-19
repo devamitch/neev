@@ -14,6 +14,7 @@ import { PressableScale } from "./PressableScale"
 import { useTheme } from "@/theme/useTheme"
 
 import { BlurView } from "expo-blur"
+import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
 import { AppText } from "./AppText"
 
 export interface AppHeaderProps {
@@ -31,6 +32,10 @@ export interface AppHeaderProps {
    * becomes the collapsing large-title header (see CollapsingHeader).
    */
   sticky?: boolean
+  /** Compact presentation mode where title and right actions share the same single 52pt bar */
+  compact?: boolean
+  /** Presentation variant: 'compact' (single row) or 'large' (stacked large title) */
+  variant?: "compact" | "large"
 }
 
 /** Toolbar row height shared by the static and the collapsing header. */
@@ -115,17 +120,75 @@ export function HeaderLargeTitle({
 }
 
 /**
- * Static large-title header for places outside `ScreenContainer`. Toolbar row
- * (back on the left, actions on the right) above a full-width large title.
+ * Universal app header.
+ * - In compact mode (default or `variant="compact"`): Back button, title, and right
+ *   action icons share the same single-row space (52pt) with zero vertical waste.
+ * - In large mode (`variant="large"`): Top action row with full-width large title below.
  */
 export function AppHeader({
   title,
   subtitle,
   eyebrow,
   showBack = false,
+  showLogo = false,
   rightAction,
   style,
+  titleStyle,
+  compact,
+  variant,
 }: AppHeaderProps) {
+  const { colors } = useTheme()
+  const isCompact = compact ?? (variant === "compact" || (variant !== "large" && !eyebrow))
+
+  if (isCompact) {
+    return (
+      <View style={[styles.compactToolbar, style]}>
+        <View style={styles.left}>
+          {showBack ? (
+            <HeaderBackButton />
+          ) : showLogo ? (
+            <NeevLogoIcon size={24} withBackground={false} />
+          ) : (
+            <View style={{ width: 4 }} />
+          )}
+        </View>
+
+        <View style={styles.compactCenter}>
+          {eyebrow ? (
+            <AppText
+              variant="overline"
+              color={colors.accentText}
+              numberOfLines={1}
+              style={styles.compactEyebrow}
+            >
+              {eyebrow}
+            </AppText>
+          ) : null}
+          <AppText
+            variant="h3"
+            numberOfLines={1}
+            style={[styles.compactTitle, titleStyle]}
+            accessibilityRole="header"
+          >
+            {title}
+          </AppText>
+          {subtitle ? (
+            <AppText
+              variant="caption"
+              color={colors.text.secondary}
+              numberOfLines={1}
+              style={styles.compactSubtitle}
+            >
+              {subtitle}
+            </AppText>
+          ) : null}
+        </View>
+
+        <View style={styles.right}>{rightAction}</View>
+      </View>
+    )
+  }
+
   return (
     <View style={[styles.container, style]}>
       {showBack || rightAction ? (
@@ -141,22 +204,58 @@ export function AppHeader({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 10,
-    paddingTop: 6,
+    marginBottom: 8,
+    paddingTop: 4,
+  },
+  compactToolbar: {
+    alignItems: "center",
+    flexDirection: "row",
+    height: HEADER_BAR_HEIGHT,
+    justifyContent: "space-between",
+    minHeight: HEADER_BAR_HEIGHT,
+    width: "100%",
+  },
+  left: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+    minWidth: HEADER_BUTTON_SIZE,
+  },
+  compactCenter: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  compactTitle: {
+    fontFamily: "spaceGroteskSemiBold",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+    textAlign: "center",
+  },
+  compactEyebrow: {
+    fontSize: 9,
+    letterSpacing: 0.8,
+    marginBottom: 1,
+  },
+  compactSubtitle: {
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: 1,
   },
   largeTitleBlock: {
     paddingVertical: 2,
   },
   eyebrow: {
-    marginBottom: 2,
     fontSize: 10,
     letterSpacing: 0.8,
+    marginBottom: 2,
   },
   titleText: {
     fontSize: 19,
-    lineHeight: 24,
     fontWeight: "700",
     letterSpacing: -0.3,
+    lineHeight: 24,
   },
   iconButton: {
     alignItems: "center",
@@ -169,11 +268,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 8,
+    justifyContent: "flex-end",
+    minWidth: HEADER_BUTTON_SIZE,
   },
   subtitle: {
-    marginTop: 2,
     fontSize: 12,
     lineHeight: 16,
+    marginTop: 2,
   },
   toolbar: {
     alignItems: "center",
@@ -183,3 +284,4 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 })
+

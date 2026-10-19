@@ -94,7 +94,7 @@ export function CollapsingHeaderBar({
 }) {
   const { colors } = useTheme()
   const hasControls = Boolean(props.showBack || props.rightAction)
-  const [rightWidth, setRightWidth] = useState(0)
+  const [rightWidth, setRightWidth] = useState(props.rightAction ? HEADER_BUTTON_SIZE : 0)
   const titleInset = gutter + Math.max(props.showBack ? HEADER_BUTTON_SIZE : 0, rightWidth) + 12
 
   // With controls the bar is a real row the content scrolls beneath, so it is

@@ -32,6 +32,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg"
 
+import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
@@ -880,131 +881,103 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       </Modal>
 
       {/* ── Modal: Family Gathering & Dine-Out Planner ── */}
-      <Modal visible={dineoutModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.dineoutModalCard, { backgroundColor: colors.background }]}>
-            <View style={styles.modalTopRow}>
-              <View style={{ flex: 1 }}>
-                <AppText variant="h2" style={{ fontWeight: "800" }}>
-                  Family Gathering & Dine-Out Planner
+      <AppBottomSheetModal
+        visible={dineoutModalVisible}
+        onClose={() => setDineoutModalVisible(false)}
+        title="Family Gathering & Dine-Out"
+        subtitle="Recommended community spots & accessible venues for multigenerational gatherings"
+      >
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+          {DINE_OUT_SUGGESTIONS.map((item) => (
+            <Card key={item.id} style={styles.dineoutCard}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <AppText variant="subheading" style={{ fontWeight: "800", flex: 1 }}>
+                  {item.name}
                 </AppText>
-                <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  Recommended community spots & accessible venues for multigenerational gatherings
-                </AppText>
+                <Badge label={`Rating: ${item.rating}`} tone="success" size="small" />
               </View>
-              <PressableScale onPress={() => setDineoutModalVisible(false)}>
-                <Ionicons name="close-circle-outline" size={26} color={colors.text.muted} />
-              </PressableScale>
-            </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-              {DINE_OUT_SUGGESTIONS.map((item) => (
-                <Card key={item.id} style={styles.dineoutCard}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <AppText variant="subheading" style={{ fontWeight: "800", flex: 1 }}>
-                      {item.name}
-                    </AppText>
-                    <Badge label={`Rating: ${item.rating}`} tone="success" size="small" />
-                  </View>
+              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}>
+                {item.vibe} · {item.distanceMins} mins away
+              </AppText>
 
-                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}>
-                    {item.vibe} · {item.distanceMins} mins away
-                  </AppText>
+              <View style={styles.dineoutTagsRow}>
+                {item.elderFriendly && <Badge label="Elder Accessible" tone="neutral" size="small" />}
+                {item.petFriendly && <Badge label="Pet Friendly" tone="neutral" size="small" />}
+              </View>
 
-                  <View style={styles.dineoutTagsRow}>
-                    {item.elderFriendly && <Badge label="Elder Accessible" tone="neutral" size="small" />}
-                    {item.petFriendly && <Badge label="Pet Friendly" tone="neutral" size="small" />}
-                  </View>
+              <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 6, lineHeight: 18 }}>
+                {item.aiReason}
+              </AppText>
 
-                  <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 6, lineHeight: 18 }}>
-                    {item.aiReason}
-                  </AppText>
-
-                  <AppButton
-                    title="Schedule Family Outing & Sync Calendar"
-                    variant="primary"
-                    size="sm"
-                    onPress={() => handleScheduleDineOut(item)}
-                    style={{ marginTop: 10 }}
-                  />
-                </Card>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+              <AppButton
+                title="Schedule Family Outing & Sync Calendar"
+                variant="primary"
+                size="sm"
+                onPress={() => handleScheduleDineOut(item)}
+                style={{ marginTop: 10 }}
+              />
+            </Card>
+          ))}
+        </ScrollView>
+      </AppBottomSheetModal>
 
       {/* ── Modal: Precision "Where is My Phone" Acoustic Siren ── */}
-      <Modal visible={finderModalVisible} animationType="fade" transparent>
-        <Animated.View style={[styles.modalOverlay, isStrobeActive ? strobeAnimStyle : null]}>
-          <View style={[styles.finderModalCard, { backgroundColor: colors.background }]}>
-            <View style={styles.modalTopRow}>
-              <View style={{ flex: 1 }}>
-                <AppText variant="h2" style={{ fontWeight: "800", color: colors.text.primary }}>
-                  Pinpoint Phone Finder
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  Locating {selectedMember?.memberName}&apos;s phone
-                </AppText>
-              </View>
-              <PressableScale
-                onPress={() => {
-                  familyLocationService.stopPhoneSiren()
-                  setIsSirenActive(false)
-                  setIsStrobeActive(false)
-                  setFinderModalVisible(false)
-                }}
-              >
-                <Ionicons name="close-circle-outline" size={26} color={colors.text.muted} />
-              </PressableScale>
-            </View>
-
-            {/* Honest Telemetry & Pinpoint Radar Readout */}
-            <View style={[styles.radarBox, { backgroundColor: colors.surface2 }]}>
-              <View style={styles.radarIconWrap}>
-                <Ionicons
-                  name="radio-outline"
-                  size={36}
-                  color={radarScan?.status === "last_location_available" ? colors.primary : "#9CA3AF"}
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary }}>
-                    Accuracy: ±{radarScan?.accuracyMeters ?? 5}m
-                  </AppText>
-                </View>
-                <AppText variant="body" style={{ fontWeight: "700", marginTop: 2 }}>
-                  {radarScan?.areaDescription || "Last-Known Sanctuary Area"}
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 4 }}>
-                  GPS provides area-level coordinates. Trigger the siren and haptic pulse below to locate the device by ear.
-                </AppText>
-              </View>
-            </View>
-
-            {/* Acoustic Siren & Strobe Controls */}
-            <View style={styles.modalActionButtons}>
-              <AppButton
-                title={isSirenActive ? "Stop Loud Siren" : "Sound Audio & Haptic Siren"}
-                variant={isSirenActive ? "outline" : "primary"}
-                onPress={toggleSiren}
-                style={{ flex: 1 }}
-              />
-            </View>
-
-            {isSirenActive && (
-              <View style={[styles.sirenActiveBanner, { backgroundColor: "rgba(239, 68, 68, 0.12)" }]}>
-                <Ionicons name="warning" size={16} color="#EF4444" style={{ marginRight: 6 }} />
-                <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "700", flex: 1 }}>
-                  Audible chirp and haptic pulses are active. Listen carefully nearby! Note: volume is bounded by Android system audio policy.
-                </AppText>
-              </View>
-            )}
+      <AppBottomSheetModal
+        visible={finderModalVisible}
+        onClose={() => {
+          familyLocationService.stopPhoneSiren()
+          setIsSirenActive(false)
+          setIsStrobeActive(false)
+          setFinderModalVisible(false)
+        }}
+        title="Pinpoint Phone Finder"
+        subtitle={`Locating ${selectedMember?.memberName || "Family Member"}'s phone`}
+      >
+        {/* Honest Telemetry & Pinpoint Radar Readout */}
+        <View style={[styles.radarBox, { backgroundColor: colors.surface2 }]}>
+          <View style={styles.radarIconWrap}>
+            <Ionicons
+              name="radio-outline"
+              size={36}
+              color={radarScan?.status === "last_location_available" ? colors.primary : "#9CA3AF"}
+            />
           </View>
-        </Animated.View>
-      </Modal>
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary }}>
+                Accuracy: ±{radarScan?.accuracyMeters ?? 5}m
+              </AppText>
+            </View>
+            <AppText variant="body" style={{ fontWeight: "700", marginTop: 2 }}>
+              {radarScan?.areaDescription || "Last-Known Sanctuary Area"}
+            </AppText>
+            <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 4 }}>
+              GPS provides area-level coordinates. Trigger the siren and haptic pulse below to locate the device by ear.
+            </AppText>
+          </View>
+        </View>
+
+        {/* Acoustic Siren & Strobe Controls */}
+        <View style={styles.modalActionButtons}>
+          <AppButton
+            title={isSirenActive ? "Stop Loud Siren" : "Sound Audio & Haptic Siren"}
+            variant={isSirenActive ? "outline" : "primary"}
+            onPress={toggleSiren}
+            style={{ flex: 1 }}
+          />
+        </View>
+
+        {isSirenActive && (
+          <View style={[styles.sirenActiveBanner, { backgroundColor: "rgba(239, 68, 68, 0.12)" }]}>
+            <Ionicons name="warning" size={16} color="#EF4444" style={{ marginRight: 6 }} />
+            <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "700", flex: 1 }}>
+              Audible chirp and haptic pulses are active. Listen carefully nearby! Note: volume is bounded by Android system audio policy.
+            </AppText>
+          </View>
+        )}
+      </AppBottomSheetModal>
     </View>
   )
 })
@@ -1324,23 +1297,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  dineoutModalCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
-  },
-  modalTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
   dineoutCard: {
     padding: 14,
     marginBottom: 12,
@@ -1349,12 +1305,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     marginTop: 6,
-  },
-  finderModalCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
   },
   radarBox: {
     flexDirection: "row",

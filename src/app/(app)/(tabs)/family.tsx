@@ -2,10 +2,11 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { router } from "expo-router"
 import React, { useState } from "react"
-import { Linking, Modal, ScrollView, StyleSheet, View } from "react-native"
+import { Linking, ScrollView, StyleSheet, View } from "react-native"
 
 import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
+import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
@@ -683,373 +684,292 @@ export default function FamilyScreen() {
       ))}
 
       {/* ── Modal: Multi-Realm Switcher ── */}
-      <Modal
+      <AppBottomSheetModal
         visible={realmModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setRealmModalVisible(false)}
+        onClose={() => setRealmModalVisible(false)}
+        title="Select Family Realm"
+        subtitle="Neev isolates independent family trees. Each realm retains its own private graph."
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Select Family Realm
-              </AppText>
-              <PressableScale onPress={() => setRealmModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
-              </PressableScale>
-            </View>
-
-            <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 12 }}>
-              Neev isolates independent family trees. Each realm retains its own private graph.
-            </AppText>
-
-            {realms.map((r) => {
-              const isSelected = r.id === activeRealmId
-              return (
-                <PressableScale
-                  key={r.id}
-                  style={[
-                    styles.realmSelectCard,
-                    {
-                      backgroundColor: isSelected ? colors.primaryAlpha : colors.surface,
-                      borderColor: isSelected ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => {
-                    void Haptics.selectionAsync()
-                    setActiveRealm(r.id)
-                    setRealmModalVisible(false)
-                    showToast({ message: `Active Enclave: ${r.name}`, type: "success" })
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
-                      {r.name}
-                    </AppText>
-                    <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                      {r.city} · Est. {r.establishedYear}
-                    </AppText>
-                  </View>
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </PressableScale>
-              )
-            })}
-
-            <View style={{ marginTop: 16 }}>
-              <AppText variant="caption" style={styles.inputLabel}>
-                OR ESTABLISH NEW FAMILY REALM:
-              </AppText>
-              <TextField
-                label="Family Realm Name"
-                placeholder="e.g. Banerjee Sanctuary"
-                value={newRealmName}
-                onChangeText={setNewRealmName}
-              />
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
+          {realms.map((r) => {
+            const isSelected = r.id === activeRealmId
+            return (
+              <PressableScale
+                key={r.id}
+                style={[
+                  styles.realmSelectCard,
+                  {
+                    backgroundColor: isSelected ? colors.primaryAlpha : colors.surface,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => {
+                  void Haptics.selectionAsync()
+                  setActiveRealm(r.id)
+                  setRealmModalVisible(false)
+                  showToast({ message: `Active Enclave: ${r.name}`, type: "success" })
+                }}
+              >
                 <View style={{ flex: 1 }}>
-                  <TextField
-                    label="City / Ancestral Root"
-                    placeholder="e.g. Pune"
-                    value={newRealmCity}
-                    onChangeText={setNewRealmCity}
-                  />
+                  <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
+                    {r.name}
+                  </AppText>
+                  <AppText variant="caption" style={{ color: colors.text.secondary }}>
+                    {r.city} · Est. {r.establishedYear}
+                  </AppText>
                 </View>
-                <View style={{ width: 100 }}>
-                  <TextField
-                    label="Est. Year"
-                    placeholder="1980"
-                    value={newRealmYear}
-                    onChangeText={setNewRealmYear}
-                  />
-                </View>
-              </View>
-              <View style={{ marginTop: 8 }}>
-                <TextField
-                  label="Family Motto / Blessing"
-                  placeholder="e.g. Together in warmth and honor"
-                  value={newRealmMotto}
-                  onChangeText={setNewRealmMotto}
-                />
-              </View>
-
-              <View style={{ marginTop: 14 }}>
-                <AppButton
-                  title="Establish New Realm"
-                  onPress={handleCreateRealm}
-                  variant="primary"
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Modal: Claim Profile with Code ── */}
-      <Modal
-        visible={claimModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setClaimModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Claim Sanctuary Profile
-              </AppText>
-              <PressableScale onPress={() => setClaimModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
+                {isSelected && (
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                )}
               </PressableScale>
+            )
+          })}
+
+          <View style={{ marginTop: 16 }}>
+            <AppText variant="caption" style={styles.inputLabel}>
+              ESTABLISH NEW FAMILY REALM:
+            </AppText>
+            <TextField
+              label="Family Realm Name"
+              placeholder="e.g. Banerjee Sanctuary"
+              value={newRealmName}
+              onChangeText={setNewRealmName}
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+              <View style={{ flex: 1 }}>
+                <TextField
+                  label="City / Ancestral Root"
+                  placeholder="e.g. Pune"
+                  value={newRealmCity}
+                  onChangeText={setNewRealmCity}
+                />
+              </View>
+              <View style={{ width: 100 }}>
+                <TextField
+                  label="Est. Year"
+                  placeholder="1980"
+                  value={newRealmYear}
+                  onChangeText={setNewRealmYear}
+                />
+              </View>
+            </View>
+            <View style={{ marginTop: 8 }}>
+              <TextField
+                label="Family Motto / Blessing"
+                placeholder="e.g. Together in warmth and honor"
+                value={newRealmMotto}
+                onChangeText={setNewRealmMotto}
+              />
             </View>
 
-            <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 14 }}>
-              Enter the single-use invitation code provided by your family organizer to claim your
-              profile.
-            </AppText>
-
-            <TextField
-              label="One-Time Claim Code"
-              placeholder="e.g. NEEV-DADU-8821"
-              value={enteredClaimCode}
-              onChangeText={setEnteredClaimCode}
-            />
-
-            <View style={{ marginTop: 20 }}>
+            <View style={{ marginTop: 14 }}>
               <AppButton
-                title="Verify & Claim Profile"
-                onPress={handleClaimProfile}
+                title="Establish New Realm"
+                onPress={handleCreateRealm}
                 variant="primary"
               />
             </View>
           </View>
+        </ScrollView>
+      </AppBottomSheetModal>
+
+      {/* ── Modal: Claim Profile with Code ── */}
+      <AppBottomSheetModal
+        visible={claimModalVisible}
+        onClose={() => setClaimModalVisible(false)}
+        title="Claim Sanctuary Profile"
+        subtitle="Enter the single-use invitation code provided by your family organizer to claim your profile."
+      >
+        <TextField
+          label="One-Time Claim Code"
+          placeholder="e.g. NEEV-DADU-8821"
+          value={enteredClaimCode}
+          onChangeText={setEnteredClaimCode}
+        />
+
+        <View style={{ marginTop: 20 }}>
+          <AppButton
+            title="Verify & Claim Profile"
+            onPress={handleClaimProfile}
+            variant="primary"
+          />
         </View>
-      </Modal>
+      </AppBottomSheetModal>
 
       {/* ── Modal: Connect Kinship Edge ── */}
-      <Modal
+      <AppBottomSheetModal
         visible={kinshipModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setKinshipModalVisible(false)}
+        onClose={() => setKinshipModalVisible(false)}
+        title="Connect Kinship Edge"
+        subtitle="Kinship edges represent family ties without leaking personal data across boundaries."
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Connect Kinship Edge
+        <AppText variant="caption" style={styles.inputLabel}>
+          FROM MEMBER:
+        </AppText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.memberChipsScroll}
+        >
+          {members.map((m) => (
+            <PressableScale
+              key={m.id}
+              style={[
+                styles.chip,
+                sourceMemberId === m.id
+                  ? [styles.chipActive, { backgroundColor: colors.primary }]
+                  : [styles.chipInactive, { backgroundColor: colors.surface }],
+              ]}
+              onPress={() => setSourceMemberId(m.id)}
+            >
+              <AppText
+                variant="caption"
+                style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+              >
+                {m.name.split(" ")[0]}
               </AppText>
-              <PressableScale onPress={() => setKinshipModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
-              </PressableScale>
-            </View>
+            </PressableScale>
+          ))}
+        </ScrollView>
 
-            <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 12 }}>
-              Kinship edges represent family ties without leaking personal data across boundaries.
-            </AppText>
-
-            <AppText variant="caption" style={styles.inputLabel}>
-              FROM MEMBER:
-            </AppText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.memberChipsScroll}
+        <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
+          RELATIONSHIP:
+        </AppText>
+        <View style={styles.relationGrid}>
+          {KINSHIP_OPTIONS.map((k) => (
+            <PressableScale
+              key={k.relation}
+              style={[
+                styles.relChip,
+                selectedRelation === k.relation
+                  ? [
+                      styles.relChipActive,
+                      { backgroundColor: colors.primaryAlpha, borderColor: colors.primary },
+                    ]
+                  : [
+                      styles.relChipInactive,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ],
+              ]}
+              onPress={() => setSelectedRelation(k.relation)}
             >
-              {members.map((m) => (
-                <PressableScale
-                  key={m.id}
-                  style={[
-                    styles.chip,
-                    sourceMemberId === m.id
-                      ? [styles.chipActive, { backgroundColor: colors.primary }]
-                      : [styles.chipInactive, { backgroundColor: colors.surface }],
-                  ]}
-                  onPress={() => setSourceMemberId(m.id)}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
-                  >
-                    {m.name.split(" ")[0]}
-                  </AppText>
-                </PressableScale>
-              ))}
-            </ScrollView>
-
-            <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
-              RELATIONSHIP:
-            </AppText>
-            <View style={styles.relationGrid}>
-              {KINSHIP_OPTIONS.map((k) => (
-                <PressableScale
-                  key={k.relation}
-                  style={[
-                    styles.relChip,
-                    selectedRelation === k.relation
-                      ? [
-                          styles.relChipActive,
-                          { backgroundColor: colors.primaryAlpha, borderColor: colors.primary },
-                        ]
-                      : [
-                          styles.relChipInactive,
-                          { backgroundColor: colors.surface, borderColor: colors.border },
-                        ],
-                  ]}
-                  onPress={() => setSelectedRelation(k.relation)}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{
-                      fontSize: 11,
-                      fontWeight: selectedRelation === k.relation ? "700" : "500",
-                      color:
-                        selectedRelation === k.relation ? colors.primary : colors.text.secondary,
-                    }}
-                  >
-                    {k.label}
-                  </AppText>
-                </PressableScale>
-              ))}
-            </View>
-
-            <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
-              TO MEMBER:
-            </AppText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.memberChipsScroll}
-            >
-              {members.map((m) => (
-                <PressableScale
-                  key={m.id}
-                  style={[
-                    styles.chip,
-                    targetMemberId === m.id
-                      ? [styles.chipActive, { backgroundColor: colors.primary }]
-                      : [styles.chipInactive, { backgroundColor: colors.surface }],
-                  ]}
-                  onPress={() => setTargetMemberId(m.id)}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
-                  >
-                    {m.name.split(" ")[0]}
-                  </AppText>
-                </PressableScale>
-              ))}
-            </ScrollView>
-
-            <View style={{ marginTop: 20 }}>
-              <AppButton title="Record Kinship Edge" onPress={handleAddKinship} variant="primary" />
-            </View>
-          </View>
+              <AppText
+                variant="caption"
+                style={{
+                  fontSize: 11,
+                  fontWeight: selectedRelation === k.relation ? "700" : "500",
+                  color:
+                    selectedRelation === k.relation ? colors.primary : colors.text.secondary,
+                }}
+              >
+                {k.label}
+              </AppText>
+            </PressableScale>
+          ))}
         </View>
-      </Modal>
+
+        <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
+          TO MEMBER:
+        </AppText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.memberChipsScroll}
+        >
+          {members.map((m) => (
+            <PressableScale
+              key={m.id}
+              style={[
+                styles.chip,
+                targetMemberId === m.id
+                  ? [styles.chipActive, { backgroundColor: colors.primary }]
+                  : [styles.chipInactive, { backgroundColor: colors.surface }],
+              ]}
+              onPress={() => setTargetMemberId(m.id)}
+            >
+              <AppText
+                variant="caption"
+                style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+              >
+                {m.name.split(" ")[0]}
+              </AppText>
+            </PressableScale>
+          ))}
+        </ScrollView>
+
+        <View style={{ marginTop: 20 }}>
+          <AppButton title="Record Kinship Edge" onPress={handleAddKinship} variant="primary" />
+        </View>
+      </AppBottomSheetModal>
 
       {/* ── Modal: Add Bilateral Bridge ── */}
-      <Modal
+      <AppBottomSheetModal
         visible={bridgeModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setBridgeModalVisible(false)}
+        onClose={() => setBridgeModalVisible(false)}
+        title="Add Bilateral Bridge (Section 51)"
+        subtitle="A bilateral bridge allows safe, cross-family collaboration for weddings or ceremonies without merging trees or leaking private journals."
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Add Bilateral Bridge (Section 51)
-              </AppText>
-              <PressableScale onPress={() => setBridgeModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
-              </PressableScale>
-            </View>
+        <TextField
+          label="Target Family Realm Name"
+          placeholder="e.g. Sen-Roy Clan or Banerjee Branch"
+          value={targetRealmName}
+          onChangeText={setTargetRealmName}
+        />
 
-            <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 12 }}>
-              A bilateral bridge allows safe, cross-family collaboration for weddings or ceremonies
-              without merging trees or leaking private journals.
-            </AppText>
-
-            <TextField
-              label="Target Family Realm Name"
-              placeholder="e.g. Sen-Roy Clan or Banerjee Branch"
-              value={targetRealmName}
-              onChangeText={setTargetRealmName}
-            />
-
-            <View style={{ marginTop: 10 }}>
-              <TextField
-                label="Bridge Purpose"
-                placeholder="e.g. Wedding logistics & winter gathering"
-                value={bridgePurpose}
-                onChangeText={setBridgePurpose}
-              />
-            </View>
-
-            <View style={[styles.bridgeNoticeBox, { backgroundColor: colors.surface2 }]}>
-              <Ionicons
-                name="lock-closed"
-                size={14}
-                color={colors.primary}
-                style={{ marginRight: 6 }}
-              />
-              <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
-                Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays
-                100% hidden.
-              </AppText>
-            </View>
-
-            <View style={{ marginTop: 18 }}>
-              <AppButton title="Establish Bridge" onPress={handleAddBridge} variant="primary" />
-            </View>
-          </View>
+        <View style={{ marginTop: 10 }}>
+          <TextField
+            label="Bridge Purpose"
+            placeholder="e.g. Wedding logistics & winter gathering"
+            value={bridgePurpose}
+            onChangeText={setBridgePurpose}
+          />
         </View>
-      </Modal>
+
+        <View style={[styles.bridgeNoticeBox, { backgroundColor: colors.surface2 }]}>
+          <Ionicons
+            name="lock-closed"
+            size={14}
+            color={colors.primary}
+            style={{ marginRight: 6 }}
+          />
+          <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
+            Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays
+            100% hidden.
+          </AppText>
+        </View>
+
+        <View style={{ marginTop: 18 }}>
+          <AppButton title="Establish Bridge" onPress={handleAddBridge} variant="primary" />
+        </View>
+      </AppBottomSheetModal>
 
       {/* ── Modal: Add Custom Cluster ── */}
-      <Modal
+      <AppBottomSheetModal
         visible={clusterModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setClusterModalVisible(false)}
+        onClose={() => setClusterModalVisible(false)}
+        title="Create Custom Family Circle"
+        subtitle="Private circles coordinate specific projects, trips, or sub-groups."
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <AppText variant="subheading" style={{ fontWeight: "800" }}>
-                Create Custom Family Circle
-              </AppText>
-              <PressableScale onPress={() => setClusterModalVisible(false)}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
-              </PressableScale>
-            </View>
+        <TextField
+          label="Circle Name"
+          placeholder="e.g. Kolkata Trip, Chess Circle, Diya Team"
+          value={newClusterName}
+          onChangeText={setNewClusterName}
+        />
 
-            <TextField
-              label="Circle Name"
-              placeholder="e.g. Kolkata Trip, Chess Circle, Diya Team"
-              value={newClusterName}
-              onChangeText={setNewClusterName}
-            />
-
-            <View style={{ marginTop: 10 }}>
-              <TextField
-                label="Purpose & Access Description"
-                placeholder="e.g. Coordination for family vacation and tickets"
-                value={newClusterDesc}
-                onChangeText={setNewClusterDesc}
-              />
-            </View>
-
-            <View style={{ marginTop: 18 }}>
-              <AppButton title="Create Circle" onPress={handleAddCluster} variant="primary" />
-            </View>
-          </View>
+        <View style={{ marginTop: 10 }}>
+          <TextField
+            label="Purpose & Access Description"
+            placeholder="e.g. Coordination for family vacation and tickets"
+            value={newClusterDesc}
+            onChangeText={setNewClusterDesc}
+          />
         </View>
-      </Modal>
+
+        <View style={{ marginTop: 18 }}>
+          <AppButton title="Create Circle" onPress={handleAddCluster} variant="primary" />
+        </View>
+      </AppBottomSheetModal>
     </ScreenContainer>
   )
 }
@@ -1298,23 +1218,6 @@ const styles = StyleSheet.create({
   emptyCard: {
     padding: 24,
     alignItems: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    padding: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
   },
   realmSelectCard: {
     flexDirection: "row",
