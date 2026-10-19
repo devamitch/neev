@@ -8,13 +8,18 @@ export interface CardProps {
   style?: StyleProp<ViewStyle>
   radius?: number
   level?: 1 | 2 | 3
+  /**
+   * When true, uses a hardware-accelerated native View with borderRadius instead of
+   * measuring layout and drawing an SVG squircle path. Ideal for virtualized list rows.
+   */
+  nativeSurface?: boolean
 }
 
 /**
  * Surface container. Default padding is 16 unless `style` sets any padding key.
- * Everything in `style` goes straight onto the single squircle View - no inner wrapper.
+ * Everything in `style` goes straight onto the surface View - no inner wrapper.
  */
-export function Card({ children, style, radius = 20, level = 1 }: CardProps) {
+export function Card({ children, style, radius = 20, level = 1, nativeSurface = false }: CardProps) {
   const { colors } = useTheme()
 
   const fill = level === 3 ? colors.surface3 : level === 2 ? colors.surface2 : colors.surface
@@ -23,6 +28,25 @@ export function Card({ children, style, radius = 20, level = 1 }: CardProps) {
     const flat = StyleSheet.flatten(style)
     return !!flat && Object.keys(flat).some((key) => key.startsWith("padding"))
   }, [style])
+
+  if (nativeSurface) {
+    return (
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: fill,
+            borderRadius: radius,
+            overflow: "hidden",
+          },
+          hasPadding ? null : styles.defaultPadding,
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    )
+  }
 
   return (
     <SquircleSurface

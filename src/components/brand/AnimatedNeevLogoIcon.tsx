@@ -30,7 +30,7 @@ const LOOP_MS = 9000
  */
 export const AnimatedNeevLogoIcon = memo(function AnimatedNeevLogoIcon({
   size = 44,
-  animated = true,
+  animated = false,
   withBackground = true,
 }: AnimatedNeevLogoIconProps) {
   const reduceMotion = useReducedMotion()

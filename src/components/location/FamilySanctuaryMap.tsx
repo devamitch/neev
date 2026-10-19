@@ -11,6 +11,7 @@ import { Image } from "expo-image"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -172,7 +173,11 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         true,
       )
     } else {
+      cancelAnimation(radarPulse)
       radarPulse.value = 1
+    }
+    return () => {
+      cancelAnimation(radarPulse)
     }
   }, [finderModalVisible, radarPulse])
 
@@ -187,7 +192,11 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         true,
       )
     } else {
+      cancelAnimation(strobeOpacity)
       strobeOpacity.value = 1
+    }
+    return () => {
+      cancelAnimation(strobeOpacity)
     }
   }, [isStrobeActive, strobeOpacity])
 
