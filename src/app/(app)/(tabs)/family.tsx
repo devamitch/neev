@@ -21,6 +21,7 @@ import {
   useFamilyRealmsQuery,
   useKinshipGraphQuery,
 } from "@/hooks/useFamilyNetworkQuery"
+import { useFamilyMembersQuery } from "@/hooks/useFamilyMembersQuery"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
 import { useFamilyNetworkStore, type KinshipType } from "@/stores/useFamilyNetworkStore"
 import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
@@ -47,8 +48,10 @@ export default function FamilyScreen() {
   useKinshipGraphQuery()
   useFamilyClustersQuery()
   useFamilyBridgesQuery()
+  const { data: queryMembers } = useFamilyMembersQuery()
 
-  const members = useFamilyStore((s) => s.members)
+  const storeMembers = useFamilyStore((s) => s.members)
+  const members = queryMembers ?? storeMembers
   const updateMember = useFamilyStore((s) => s.updateMember)
 
   const {

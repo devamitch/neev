@@ -1,11 +1,14 @@
-import React, { forwardRef, useCallback, useRef } from "react"
-import { NativeScrollEvent, NativeSyntheticEvent, StyleSheet, ViewStyle } from "react-native"
+import React, { forwardRef } from "react"
+import { StyleSheet, ViewStyle } from "react-native"
+import Animated from "react-native-reanimated"
 import { FlashList, type FlashListProps, type FlashListRef } from "@shopify/flash-list"
 import { useScreenRootScrollProps } from "./ScreenScrollContext"
-import { hideTabBar, showTabBar } from "@/components/navigation/useScrollAwareDock"
 
-export interface ScreenFlashListProps<T> extends FlashListProps<T> {
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList as any)
+
+export interface ScreenFlashListProps<T> extends Omit<FlashListProps<T>, "onScroll"> {
   applyBottomClearance?: boolean
+  onScroll?: any
 }
 
 function ScreenFlashListInner<T>(
@@ -21,37 +24,16 @@ function ScreenFlashListInner<T>(
       )
     : userContent.paddingBottom
 
-  const lastYRef = useRef(0)
-
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y
-      if (rootProps.scrollY) {
-        rootProps.scrollY.value = y
-      }
-      const diff = y - lastYRef.current
-      if (y <= 24) {
-        showTabBar()
-      } else if (diff > 12 && y > 48) {
-        hideTabBar()
-      } else if (diff < -12) {
-        showTabBar()
-      }
-      lastYRef.current = y
-      onScroll?.(e)
-    },
-    [onScroll, rootProps.scrollY],
-  )
-
   return (
-    <FlashList<T>
+    <AnimatedFlashList
       ref={ref}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      onScroll={onScroll ?? rootProps.onScroll}
       contentContainerStyle={[contentContainerStyle, { paddingBottom }]}
-      {...rest}
+      {...(rest as any)}
     />
   )
 }

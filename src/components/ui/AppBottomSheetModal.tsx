@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons"
 import React, { useCallback, useEffect } from "react"
 import {
-  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   StyleProp,
   StyleSheet,
+  useWindowDimensions,
   View,
   ViewStyle,
 } from "react-native"
@@ -26,7 +26,6 @@ import { BlurView } from "expo-blur"
 import { AppText } from "./AppText"
 import { PressableScale } from "./PressableScale"
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window")
 const SWIPE_CLOSE_THRESHOLD = 80
 const SWIPE_VELOCITY_THRESHOLD = 500
 
@@ -69,10 +68,11 @@ export function AppBottomSheetModal({
   contentContainerStyle,
   headerRight,
 }: AppBottomSheetModalProps) {
+  const { height: screenHeight } = useWindowDimensions()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
 
-  const translateY = useSharedValue(SCREEN_HEIGHT)
+  const translateY = useSharedValue(screenHeight)
   const backdropOpacity = useSharedValue(0)
 
   const handleDismiss = useCallback(() => {
@@ -81,16 +81,16 @@ export function AppBottomSheetModal({
 
   const startCloseAnimation = useCallback(() => {
     backdropOpacity.value = withTiming(0, { duration: 180 })
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 200 }, (finished) => {
+    translateY.value = withTiming(screenHeight, { duration: 200 }, (finished) => {
       if (finished) {
         runOnJS(handleDismiss)()
       }
     })
-  }, [backdropOpacity, translateY, handleDismiss])
+  }, [backdropOpacity, translateY, handleDismiss, screenHeight])
 
   useEffect(() => {
     if (visible) {
-      translateY.value = SCREEN_HEIGHT
+      translateY.value = screenHeight
       backdropOpacity.value = 0
       backdropOpacity.value = withTiming(1, { duration: 220 })
       translateY.value = withSpring(0, {
@@ -99,7 +99,7 @@ export function AppBottomSheetModal({
         mass: 0.8,
       })
     }
-  }, [visible, backdropOpacity, translateY])
+  }, [visible, backdropOpacity, translateY, screenHeight])
 
   const panGesture = Gesture.Pan()
     .activeOffsetY([0, 10])
@@ -153,30 +153,32 @@ export function AppBottomSheetModal({
           enabled={avoidKeyboard}
           style={styles.keyboardAvoid}
         >
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[
-                styles.sheetSurface,
-                {
-                  backgroundColor: colors.background,
-                  borderTopColor: colors.border,
-                  borderLeftColor: colors.border,
-                  borderRightColor: colors.border,
-                  maxHeight,
-                  paddingBottom: Math.max(insets.bottom, 16) + 8,
-                },
-                sheetAnimatedStyle,
-              ]}
-            >
-              {/* Drag handle pill */}
-              {showHandle && (
-                <View style={styles.handleContainer}>
-                  <View style={[styles.handlePill, { backgroundColor: colors.border }]} />
-                </View>
-              )}
+          <Animated.View
+            style={[
+              styles.sheetSurface,
+              {
+                backgroundColor: colors.background,
+                borderTopColor: colors.border,
+                borderLeftColor: colors.border,
+                borderRightColor: colors.border,
+                maxHeight,
+                paddingBottom: Math.max(insets.bottom, 16) + 8,
+              },
+              sheetAnimatedStyle,
+            ]}
+          >
+            {/* Draggable header zone with pan gesture */}
+            <GestureDetector gesture={panGesture}>
+              <View style={styles.handleAndHeaderArea}>
+                {/* Drag handle pill */}
+                {showHandle && (
+                  <View style={styles.handleContainer}>
+                    <View style={[styles.handlePill, { backgroundColor: colors.border }]} />
+                  </View>
+                )}
 
-              {/* Sheet header row */}
-              {(Boolean(title) || Boolean(showCloseButton) || Boolean(headerRight)) && (
+                {/* Sheet header row */}
+                {(Boolean(title) || Boolean(showCloseButton) || Boolean(headerRight)) && (
                 <View style={styles.headerRow}>
                   <View style={styles.titleColumn}>
                     {eyebrow ? (
@@ -219,14 +221,15 @@ export function AppBottomSheetModal({
                   </View>
                 </View>
               )}
-
-              {/* Sheet body */}
-              <View style={[styles.body, contentContainerStyle]}>{children}</View>
-            </Animated.View>
+            </View>
           </GestureDetector>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+
+          {/* Sheet body */}
+          <View style={[styles.body, contentContainerStyle]}>{children}</View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </View>
+  </Modal>
   )
 }
 
@@ -234,6 +237,9 @@ const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
+  },
+  handleAndHeaderArea: {
+    width: "100%",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

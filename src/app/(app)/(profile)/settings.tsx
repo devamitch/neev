@@ -76,6 +76,7 @@ export default function SettingsScreen() {
     try {
       const res = await syncAll()
       if (res.ok) {
+        void queryClient.invalidateQueries()
         showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
       } else {
         showToast({ message: res.error || "Cloud sync could not complete. Working in local mode.", type: "error" })

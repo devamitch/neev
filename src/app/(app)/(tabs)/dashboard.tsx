@@ -22,6 +22,7 @@ import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { notificationsService } from "@/services/notifications/notificationsService"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useFamilyLocationsQuery } from "@/hooks/useFamilyLocationQuery"
+import { useFamilyMembersQuery } from "@/hooks/useFamilyMembersQuery"
 import { useIntentionsQuery, useCheerIntentionMutation } from "@/hooks/useIntentionsQuery"
 import { useKnowledgeQuery } from "@/hooks/useKnowledgeQuery"
 import { useRoutinesQuery, useToggleRoutineMutation } from "@/hooks/useRoutinesQuery"
@@ -79,7 +80,9 @@ export default function DashboardScreen() {
   useFamilyLocationsQuery()
 
   const household = useFamilyStore((s) => s.household)
-  const members = useFamilyStore((s) => s.members)
+  const { data: queryMembers } = useFamilyMembersQuery()
+  const storeMembers = useFamilyStore((s) => s.members)
+  const members = queryMembers ?? storeMembers
   const rawFunctions = useScheduleStore((s) => s.functions)
   const rawEntries = useKnowledgeStore((s) => s.entries)
   const functions = scheduleData ?? rawFunctions

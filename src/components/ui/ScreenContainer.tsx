@@ -182,8 +182,16 @@ export function ScreenContainer({
   const rootStyle = [styles.root, { backgroundColor: colors.background }, style]
 
   const resolvedScrollMode = scrollMode ?? (scrollable ? "shell-scroll-view" : "external")
-  const isCompactHeader =
-    headerMode === "compact" || (headerProps?.sticky && headerMode !== "collapsing")
+  const isExplicitCompact =
+    headerMode === "compact" ||
+    headerProps?.compact === true ||
+    headerProps?.variant === "compact"
+
+  const isCollapsingHeader =
+    Boolean(headerProps) &&
+    !isExplicitCompact &&
+    headerMode !== "none" &&
+    headerMode !== "custom"
 
   const contextValue = {
     scrollY,
@@ -194,7 +202,7 @@ export function ScreenContainer({
 
   /* ── Header: Pinned compact or custom node ─────────────── */
   const pinnedHeaderNode =
-    header && stickyHeader ? (
+    header && stickyHeader && headerMode !== "none" ? (
       <View
         style={[
           styles.pinnedHeader,
@@ -207,7 +215,7 @@ export function ScreenContainer({
     ) : null
 
   /* ── Collapsing large-title header (when not compact) ─────────────── */
-  if (headerProps && !isCompactHeader) {
+  if (isCollapsingHeader && headerProps) {
     const contentTop = headerContentTop(headerProps, statusInset)
     const largeTitle = (
       <CollapsingLargeTitle props={headerProps} scrollY={scrollY} titleHeight={titleHeight} />
