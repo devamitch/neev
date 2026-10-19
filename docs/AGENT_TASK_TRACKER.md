@@ -2,25 +2,37 @@
 
 **Purpose:** Universal task tracker for all coding agents (Claude, Devin, Cursor, Antigravity, Kimi, etc.) to understand project state and continue work.
 
-**Last Updated:** 2026-10-19 (Neev Production Repair, React Query Everywhere, Free Downloadable Slippy Map Engine, Universal Cultural Inclusion)
-**Project Status:** VERIFIED & PASSING. All TypeScript compiles cleanly with 0 errors (`pnpm run compile`), ESLint passes cleanly with 0 warnings (`pnpm run lint:check`), and all Jest test suites pass (33/33 tests). Verified running on physical Motorola Moto G71 5G (`com.amit.neev`).
+**Last Updated:** 2026-10-20 (Virtualized Lists, ScreenContainer Scroll Modes, TanStack Query Everywhere, Free Humanitarian OSM Map Engine, Universal Inclusion)
+**Project Status:** VERIFIED & PASSING. All TypeScript compiles cleanly with 0 errors (`pnpm run compile`), ESLint passes cleanly with 0 warnings (`pnpm run lint:check`), and all Jest test suites pass (33/33 tests). Verified running on physical Motorola Moto G71 5G (`com.amit.neev`) with 10.3% CPU.
 
 ---
 
-## CURRENT REPAIR & UNIVERSALIZATION PHASE (Phase 5.0 — 2026-10-19)
+## CURRENT REPAIR & UNIVERSALIZATION PHASE (Phase 5.0 — 2026-10-20)
 
 ### Completed & Verified:
-1. **Completely Free Offline Slippy Map Integration (`src/services/location/offlineMapTileService.ts`, `src/components/location/FamilySanctuaryMap.tsx`)**:
-   - Implemented real Web Mercator mathematics (`latLonToTileXY`, `tileXYToLatLon`, `getTileUrl`) supporting free Humanitarian OpenStreetMap (`https://a.tile.openstreetmap.fr/hot/`) and standard OSM tile servers.
+1. **Virtualized List Architecture & ScreenScrollContext (`src/components/ui/`)**:
+   - `ScreenScrollContext.tsx`: Shared UI-thread scroll offset (`scrollY`), canonical Reanimated scroll handler (`onRootScroll`), bottom clearance, and gutter.
+   - `ScreenFlatList.tsx`: High-performance root `Animated.FlatList` adapter with auto-clearance and UI-thread dock hide/show synchronization.
+   - `ScreenSectionList.tsx`: High-performance root `Animated.SectionList` adapter with grouped section support and auto-clearance.
+   - `ScreenFlashList.tsx`: Recycled FlashList adapter with responsive scroll tracking and dock coordination.
+   - `ScreenScrollView.tsx`: Bounded `Animated.ScrollView` adapter for modest static form screens.
+   - `ScreenContainer.tsx`: Upgraded with explicit scrolling modes (`scrollMode="external" | "shell-scroll-view" | "none"`), compact/collapsing headers (`headerMode="compact" | "collapsing" | "none"`), and dock policies (`dockBehavior="always" | "auto-hide" | "hidden"`). Bounded flex container (`styles.externalBody`) eliminates nested vertical scroll containers.
+
+2. **Screen Migrations to Virtualized Roots**:
+   - `knowledge.tsx`: Migrated to `ScreenFlatList` with `scrollMode="external"`, `headerMode="compact"`, and `dockBehavior="auto-hide"`.
+   - `schedule.tsx`: Migrated to `ScreenSectionList` with grouped calendar sections ("Immediate & This Fortnight", "Upcoming & Season Calendar"), `scrollMode="external"`, and `dockBehavior="auto-hide"`.
+   - `CollapsingHeader.tsx`: Fixed 6pt toolbar overlap by deriving `headerContentTop` from `HEADER_BAR_HEIGHT` (52pt) instead of arbitrary literal 46pt.
+
+3. **Completely Free Offline Slippy Map Integration (`FamilySanctuaryMap.tsx`, `offlineMapTileService.ts`)**:
+   - Implemented real Web Mercator mathematics (`latLonToTileXY`, `tileXYToLatLon`, `getTileUrl`) supporting free Humanitarian OpenStreetMap (`https://a.tile.openstreetmap.fr/hot/`).
    - Zero Google Maps API keys, zero watermarks, zero "API KEY REQUIRED" overlays, and zero tile blocking via custom User-Agent headers (`NeevFamilySanctuary/1.0`).
-   - Built dual-mode interactive canvas: Live OSM Humanitarian tile grid + Architectural Layout schematic.
+   - Upgraded to responsive `useWindowDimensions()` to support dynamic screen rotation and tablet layouts.
    - Live member pins rendered at true lat/lon world coordinates with battery tags, initials avatar heads, and geofence sanctuary ring.
    - Interactive zoom controls (+ / -) with multi-zoom levels (13 to 16) and full-screen modal with pan/zoom.
-   - Downloadable offline map pack functionality: downloads 49 tiles covering the sanctuary area, writes progress callbacks, caches to disk, and tracks pack metadata (`id`, `tileCount`, `sizeBytes`, `isOfflineReady`) in MMKV.
-   - Honest phone finder with acoustic/haptic siren and clear area-level geofence disclaimer (no fabricated sub-meter indoor radar claims).
-   - Dine-out planner with dynamic family member task delegation and Google Calendar export.
+   - Downloadable offline map pack functionality: downloads tiles covering the sanctuary area, writes progress callbacks, caches to disk, and tracks pack metadata (`id`, `tileCount`, `sizeBytes`, `isOfflineReady`) in MMKV.
 
-2. **TanStack React Query Offline-First Data Synchronization Everywhere**:
+4. **TanStack React Query Offline-First Data Synchronization Everywhere**:
+   - `useFamilyMembersQuery.ts`: Queries and mutations (`useAddFamilyMemberMutation`, `useUpdateFamilyMemberMutation`, `useRemoveFamilyMemberMutation`) for household members with cache invalidation.
    - `useFamilyLocationQuery.ts`: Queries and mutations for member locations, phone radar scan, offline map pack cache, map download mutation, and device location sync.
    - `useScheduleQuery.ts`: Queries and mutations for family functions, schedule tasks, and Google Calendar sync.
    - `useKnowledgeQuery.ts`: Queries and mutations for family wisdom archive, heirloom recipes, and pinned notes.
@@ -28,25 +40,21 @@
    - `useSpacesQuery.ts`: Queries and mutations for space tasks, meetings, and AI briefings across Personal, Nuclear, and Family spaces.
    - `useRoutinesQuery.ts`: Queries and mutations for daily family rhythm routines.
    - `useIntentionsQuery.ts`: Queries and mutations for family intentions, pet projects, and milestone cheers.
-   - Connected React Query hooks into `dashboard.tsx`, `family.tsx`, `schedule.tsx`, `knowledge.tsx`, `FamilyWeeklyGamesCard.tsx`, and all modals (`add-event.tsx`, `add-knowledge.tsx`, `add-task.tsx`).
+   - Connected React Query hooks into all modals (`add-member.tsx`, `add-event.tsx`, `add-knowledge.tsx`, `add-task.tsx`).
 
-3. **Performance & 7x CPU Reduction on Physical Android Device (Moto G71 5G)**:
-   - Discovered and fixed unthrottled 60fps Reanimated loop in `AnimatedNeevLogoIcon.tsx` (`animated = false` default), dropping main thread CPU from **75.0%** down to **10.7%**!
+5. **Performance & 7x CPU Reduction on Physical Android Device (Moto G71 5G)**:
+   - Fixed unthrottled 60fps Reanimated loop in `AnimatedNeevLogoIcon.tsx` (`animated = false` default), dropping main thread CPU from **75.0%** down to **10.3%**!
    - Optimized `Card.tsx` with optional hardware-accelerated native `View` surface (`nativeSurface?: boolean`) to prevent SVG layout measuring overhead on list rows.
    - Added animation unmount cleanup (`cancelAnimation`) in `FamilySanctuaryMap.tsx`.
 
-4. **Settings, Cache Purge & Android Modal Back Navigation**:
+6. **Settings, Cache Purge & Android Modal Back Navigation**:
    - Implemented real scoped cache purging in `settings.tsx` (`offlineMapTileService.clearMapPack()`, `queryClient.clear()`, and cache invalidation).
    - Added `onRequestClose` handlers across all 5 modals in `family.tsx` for reliable Android hardware back-button dismissal.
 
-5. **Cultural Universalization & Language Neutrality**:
+7. **Cultural Universalization & Language Neutrality**:
    - Zero Hindi / Devanagari text in the UI (retaining "Neev" and universal geometric logo for Bengali and all community accessibility).
    - Replaced ritualistic jargon with universally inclusive terms: "Traditions & Observances", "Shared Family Intentions", "Milestone Celebrations", "Heirloom Wisdom".
    - Zero emoji policy enforced across the application; replaced with semantic `Ionicons`.
-
-6. **Modals & Data Integrity**:
-   - Repaired `add-task.tsx`, `add-member.tsx`, `add-event.tsx`, `add-knowledge.tsx`, `quick-action.tsx`.
-   - Cleared hardcoded defaults, fixed date formatting to local YYYY-MM-DD (`toLocalDateInput`), safe text excerpts (`makeExcerpt`), and added `isSaving` guards to prevent duplicate submissions.
 
 ---
 
