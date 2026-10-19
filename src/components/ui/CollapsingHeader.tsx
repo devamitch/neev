@@ -131,7 +131,7 @@ export function CollapsingHeaderBar({
         style={styles.logo}
         resizeMode="contain"
         accessibilityRole="image"
-        accessibilityLabel="BlinkQuest logo"
+        accessibilityLabel="Neev logo"
       />
     )
   }

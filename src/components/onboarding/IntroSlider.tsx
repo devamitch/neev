@@ -67,7 +67,7 @@ const SLIDES: readonly IntroSlide[] = [
     title: "The Sanctuary for Every Family",
     description:
       "One app. Every role. Every stage. Coordinated with the calm, structured wisdom of a trusted elder.",
-    image: AssetIllustrations.familyHome,
+    image: AssetIllustrations.sanctuaryHome,
     background: "#F4F7F4",
     accent: "#5A7A64",
   },
@@ -76,7 +76,7 @@ const SLIDES: readonly IntroSlide[] = [
     title: "Shared Functions & Rituals",
     description:
       "Plan weddings, pujas, milestone birthdays, and school events with shared task delegations for everyone.",
-    image: AssetIllustrations.schoolingKids,
+    image: AssetIllustrations.functionsRituals,
     background: "#FAF6F0",
     accent: "#C27835",
   },
@@ -270,10 +270,10 @@ export function IntroSlider({ onFinishIntro }: IntroSliderProps) {
             style={styles.brandLogo}
             contentFit="contain"
             priority="high"
-            accessibilityLabel="BlinkQuest logo"
+            accessibilityLabel="Neev logo"
           />
           <AppText variant="label" style={styles.brandName}>
-            BlinkQuest
+            Neev
           </AppText>
         </View>
 

@@ -187,7 +187,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
         onPress={finish}
         scaleTo={1}
         accessibilityRole="button"
-        accessibilityLabel="BlinkQuest"
+        accessibilityLabel="Neev"
         accessibilityHint="Skips the intro animation"
       >
         <View style={styles.mark}>

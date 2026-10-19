@@ -65,7 +65,7 @@ export default function SignInScreen() {
       if (result.status === "not_installed") {
         showAlert({
           title: "Get Setu to continue",
-          message: "Setu keeps your identity on your phone and approves BlinkQuest in one tap.",
+          message: "Setu keeps your identity on your phone and approves Neev in one tap.",
           confirmText: "Get Setu",
           cancelText: "Not now",
           onConfirm: () => void openSetuDownload(),

@@ -1,71 +1,63 @@
-import React from "react"
-import Svg, {
-  Defs,
-  LinearGradient as SvgLinearGradient,
-  Stop,
-  Rect,
-  Path,
-  Line,
-  Text as SvgText,
-} from "react-native-svg"
+import React, { memo } from "react"
+import Svg, { Rect, Path, G } from "react-native-svg"
 
-interface NeevLogoIconProps {
+export interface NeevLogoIconProps {
   size?: number
   withBackground?: boolean
 }
 
 /**
  * Official Neev (नींव) Brand Mark:
- * Serene Sage & Cedar arch with the foundational italic "N" and grounded plinth line.
+ * Minimalist terracotta foundation arch (#D2A584) with a sprouting sage green leaf (#9AB596)
+ * and delicate white veins on warm porcelain (#FAF9F5).
  */
-export function NeevLogoIcon({ size = 48, withBackground = true }: NeevLogoIconProps) {
+export const NeevLogoIcon = memo(function NeevLogoIcon({
+  size = 48,
+  withBackground = true,
+}: NeevLogoIconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 120 120">
-      <Defs>
-        <SvgLinearGradient id="neevGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#8A9B8A" />
-          <Stop offset="100%" stopColor="#6B7D6B" />
-        </SvgLinearGradient>
-      </Defs>
-
       {withBackground && (
-        <Rect width="120" height="120" rx="30" fill="#E0EDE8" />
+        <Rect width="120" height="120" rx="30" fill="#FAF9F5" />
       )}
 
-      {/* Sanctuary Arch */}
+      {/* Terracotta Foundation Arch (नींव) */}
       <Path
-        d="M60 22 C38 22, 26 42, 26 62 C26 78, 36 90, 60 98 C84 90, 94 78, 94 62 C94 42, 82 22, 60 22Z"
-        fill="none"
-        stroke="url(#neevGrad)"
-        strokeWidth="4"
-        opacity="0.35"
+        d="M 38 88 A 22 22 0 0 1 82 88 L 72 88 A 12 12 0 0 0 48 88 Z"
+        fill="#D2A584"
       />
 
-      {/* Foundational "N" */}
-      <SvgText
-        x="60"
-        y="72"
-        fontSize="54"
-        fontWeight="700"
-        fontStyle="italic"
-        fill="#3D5250"
-        textAnchor="middle"
-        letterSpacing="-1"
-      >
-        N
-      </SvgText>
-
-      {/* Plinth Foundation line */}
-      <Line
-        x1="38"
-        y1="88"
-        x2="82"
-        y2="88"
-        stroke="#6B7D6B"
-        strokeWidth="3"
-        strokeLinecap="round"
-        opacity="0.6"
-      />
+      {/* Living Sprout / Leaf rising from foundation */}
+      <G>
+        <Path
+          d="M 59 66 C 58 52 50 42 62 26 C 74 38 82 48 68 64 C 65 67 61 68 59 66 Z"
+          fill="#9AB596"
+        />
+        {/* Leaf Vein */}
+        <Path
+          d="M 60 64 Q 63 46 67 31"
+          stroke="#FFFFFF"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <Path
+          d="M 62 50 Q 67 47 72 48"
+          stroke="#FFFFFF"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <Path
+          d="M 64 41 Q 68 38 72 40"
+          stroke="#FFFFFF"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </G>
     </Svg>
   )
-}
+})
+
+export default NeevLogoIcon

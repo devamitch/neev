@@ -1,5 +1,5 @@
 /**
- * Shown once on first launch: intro sliders explaining BlinkQuest, then forwards
+ * Shown once on first launch: intro sliders explaining Neev Family OS, then forwards
  * to auth flow (or dashboard if already signed in).
  */
 import { useRouter } from "expo-router"

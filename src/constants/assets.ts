@@ -7,28 +7,29 @@ import { ProductIcons, type ProductIconName } from "./product-icons"
 
 /** Hero, empty-state, role portraits, and trust/security artwork. */
 export const AssetIllustrations = {
-  // Authentic Neev Family OS Illustrations
-  familyHome: require("@assets/illustrations/neev_real_home.png"),
-  familySanctuary: require("@assets/illustrations/neev_real_connection.png"),
-  aiGuardian: require("@assets/illustrations/neev_real_guardian.png"),
-  schoolingKids: require("@assets/illustrations/neev_schooling_kids.png"),
-  studyingStudent: require("@assets/illustrations/neev_studying_student.png"),
-  heirloomVault: require("@assets/illustrations/neev_vault.png"),
-  familyGoals: require("@assets/illustrations/neev_real_goals.png"),
-  privateSecurity: require("@assets/illustrations/neev_real_security.png"),
-  roleChild: require("@assets/illustrations/neev_role_child.png"),
-  roleElder: require("@assets/illustrations/neev_role_elder.png"),
-  roleFather: require("@assets/illustrations/neev_role_father.png"),
-  roleMother: require("@assets/illustrations/neev_role_mother.png"),
-  signinHero: require("@assets/illustrations/neev_signin_family_1774253718340.png"),
+  // Authentic Neev Family OS Illustrations (Pure Architectural, Nature & Heirloom Artwork)
+  sanctuaryHome: require("@assets/illustrations/neev_sanctuary_home.png"),
+  functionsRituals: require("@assets/illustrations/neev_functions_rituals.png"),
+  heirloomVault: require("@assets/illustrations/neev_heirloom_vault.png"),
+  treeSanctuary: require("@assets/illustrations/neev_tree_sanctuary.png"),
+
+  // Mapped aliases
+  familyHome: require("@assets/illustrations/neev_sanctuary_home.png"),
+  familySanctuary: require("@assets/illustrations/neev_tree_sanctuary.png"),
+  aiGuardian: require("@assets/illustrations/neev_sanctuary_home.png"),
+  schoolingKids: require("@assets/illustrations/neev_functions_rituals.png"),
+  studyingStudent: require("@assets/illustrations/neev_functions_rituals.png"),
+  familyGoals: require("@assets/illustrations/neev_tree_sanctuary.png"),
+  privateSecurity: require("@assets/illustrations/neev_heirloom_vault.png"),
+  signinHero: require("@assets/illustrations/neev_tree_sanctuary.png"),
 
   // Backward compatibility aliases
-  empty: require("@assets/illustrations/neev_schooling_kids.png"),
-  network: require("@assets/illustrations/neev_vault.png"),
-  discover: require("@assets/illustrations/neev_real_home.png"),
-  security: require("@assets/illustrations/neev_real_security.png"),
-  vaultLocked: require("@assets/illustrations/neev_vault.png"),
-  share: require("@assets/illustrations/neev_real_connection.png"),
+  empty: require("@assets/illustrations/neev_functions_rituals.png"),
+  network: require("@assets/illustrations/neev_heirloom_vault.png"),
+  discover: require("@assets/illustrations/neev_sanctuary_home.png"),
+  security: require("@assets/illustrations/neev_heirloom_vault.png"),
+  vaultLocked: require("@assets/illustrations/neev_heirloom_vault.png"),
+  share: require("@assets/illustrations/neev_tree_sanctuary.png"),
 } as const
 
 export type AssetIllustrationsName = keyof typeof AssetIllustrations
