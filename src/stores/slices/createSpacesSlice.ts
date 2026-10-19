@@ -14,6 +14,10 @@ export interface SpaceTask {
   isCompleted: boolean
   googleTaskId?: string
   reminderNudgeCount: number
+  clusterType?: string
+  estimatedMinutes?: number
+  dependsOn?: string[]
+  priorityScore?: number
 }
 
 export interface SpaceMeeting {

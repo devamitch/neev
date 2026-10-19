@@ -444,3 +444,111 @@ create policy "memory chunks access" on public.memory_chunks for all to authenti
 create policy "functions access" on public.family_functions for all to authenticated, anon using (true) with check (true);
 create policy "knowledge access" on public.knowledge_entries for all to authenticated, anon using (true) with check (true);
 create policy "routines access" on public.family_routines for all to authenticated, anon using (true) with check (true);
+
+-- ==============================================================================
+-- Neev Family Network & Privacy Graph Addendum (Sections 45-62)
+-- "Family Is a Privacy Graph, Not a Group Chat"
+-- ==============================================================================
+
+-- 17. Family Realms (Independent Privacy Enclaves)
+create table if not exists public.family_realms (
+  id text primary key,
+  name text not null,
+  motto text default '',
+  established_year integer default 1950,
+  city text default '',
+  owner_id text,
+  is_primary boolean default true,
+  status text not null default 'active' check (status in ('active', 'archived', 'deleted')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 18. Kinship Edges (Typed Relationship Graph between family members)
+create table if not exists public.kinship_edges (
+  id text primary key,
+  realm_id text not null references public.family_realms(id) on delete cascade,
+  source_member_id text not null,
+  target_member_id text not null,
+  relation text not null check (relation in ('parent', 'child', 'spouse', 'sibling', 'grandparent', 'grandchild', 'guardian', 'in_law', 'relative')),
+  label text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 19. Family Clusters (Overlapping Collaborative Subgroups)
+create table if not exists public.clusters (
+  id text primary key,
+  realm_id text not null references public.family_realms(id) on delete cascade,
+  name text not null,
+  cluster_type text not null check (cluster_type in ('nuclear', 'care_circle', 'puja_tradition', 'siblings', 'extended', 'in_laws_bridge', 'custom')),
+  description text,
+  member_ids text[] default '{}',
+  color text default '#3B82F6',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 20. Family Bridges (Bilateral Consented Cross-Realm Bridges)
+create table if not exists public.family_bridges (
+  id text primary key,
+  from_realm_id text not null references public.family_realms(id) on delete cascade,
+  target_realm_name text not null,
+  purpose text not null,
+  shared_categories text[] default '{}',
+  status text not null default 'active' check (status in ('active', 'pending', 'paused')),
+  connected_at text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 21. Family Invitations (Secure Non-Spam Token-Based Invites)
+create table if not exists public.invitations (
+  id text primary key,
+  realm_id text not null references public.family_realms(id) on delete cascade,
+  invite_code text unique not null,
+  target_member_name text not null,
+  cluster_name text,
+  expires_at text not null,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'revoked')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 22. Resource Sharing Grants (Granular Scoped Grants)
+create table if not exists public.resource_sharing_grants (
+  id uuid primary key default gen_random_uuid(),
+  realm_id text not null,
+  resource_type text not null,
+  resource_id text not null,
+  grant_scope text not null check (grant_scope in ('only_me', 'selected_people', 'selected_cluster', 'selected_family', 'realm')),
+  permitted_actions text[] default '{read}',
+  granted_by text,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Indexes for Fast Graph Traversal
+create index if not exists idx_kinship_edges_realm on public.kinship_edges(realm_id);
+create index if not exists idx_kinship_edges_source on public.kinship_edges(source_member_id);
+create index if not exists idx_kinship_edges_target on public.kinship_edges(target_member_id);
+create index if not exists idx_clusters_realm on public.clusters(realm_id);
+create index if not exists idx_bridges_from_realm on public.family_bridges(from_realm_id);
+create index if not exists idx_invitations_code on public.invitations(invite_code);
+
+-- Enable RLS
+alter table public.family_realms enable row level security;
+alter table public.kinship_edges enable row level security;
+alter table public.clusters enable row level security;
+alter table public.family_bridges enable row level security;
+alter table public.invitations enable row level security;
+alter table public.resource_sharing_grants enable row level security;
+
+-- Allow policies for authenticated & anon clients
+create policy "Public access to family_realms" on public.family_realms for all to authenticated, anon using (true) with check (true);
+create policy "Public access to kinship_edges" on public.kinship_edges for all to authenticated, anon using (true) with check (true);
+create policy "Public access to clusters" on public.clusters for all to authenticated, anon using (true) with check (true);
+create policy "Public access to family_bridges" on public.family_bridges for all to authenticated, anon using (true) with check (true);
+create policy "Public access to invitations" on public.invitations for all to authenticated, anon using (true) with check (true);
+create policy "Public access to resource_sharing_grants" on public.resource_sharing_grants for all to authenticated, anon using (true) with check (true);
+

@@ -28,7 +28,7 @@ export interface FamilySlice {
   household: HouseholdInfo
   members: FamilyMember[]
   activeMemberId: string | null
-  addMember: (member: Omit<FamilyMember, "id">) => void
+  addMember: (member: Omit<FamilyMember, "id"> & { id?: string }) => string
   removeMember: (id: string) => void
   updateMember: (id: string, updates: Partial<FamilyMember>) => void
   setActiveMember: (id: string) => void
@@ -124,10 +124,13 @@ export const createFamilySlice: ImmerStateCreator<FamilySlice> = (set) => ({
   members: INITIAL_MEMBERS,
   activeMemberId: "m-3",
 
-  addMember: (member) =>
+  addMember: (member) => {
+    const id = member.id || `m-${Date.now()}`
     set((state) => {
-      state.members.push({ ...member, id: `m-${Date.now()}` })
-    }),
+      state.members.push({ ...member, id })
+    })
+    return id
+  },
 
   removeMember: (id) =>
     set((state) => {
