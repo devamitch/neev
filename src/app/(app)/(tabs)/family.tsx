@@ -523,7 +523,7 @@ export default function FamilyScreen() {
         {/* ── Toolbar: Quick Kinship Link & Claim ── */}
         <View style={styles.quickToolsRow}>
           <PressableScale
-            style={[styles.toolBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.toolBtn, { backgroundColor: colors.surface }]}
             onPress={() => setKinshipModalVisible(true)}
           >
             <Ionicons name="git-branch" size={15} color={colors.primary} style={{ marginRight: 6 }} />
@@ -533,7 +533,7 @@ export default function FamilyScreen() {
           </PressableScale>
 
           <PressableScale
-            style={[styles.toolBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.toolBtn, { backgroundColor: colors.surface }]}
             onPress={() => setClaimModalVisible(true)}
           >
             <Ionicons name="key" size={15} color="#D97706" style={{ marginRight: 6 }} />
@@ -980,11 +980,7 @@ const styles = StyleSheet.create({
   },
   clusterPillActive: {},
   clusterPillInactive: {},
-  addClusterPill: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(112, 151, 88, 0.4)",
-  },
+  addClusterPill: {},
   clusterBanner: {
     flexDirection: "row",
     alignItems: "center",

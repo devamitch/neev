@@ -252,10 +252,10 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Live Free Family Sanctuary Map & Telemetry ── */}
-        <FamilySanctuaryMap />
+        <FamilySanctuaryMap compact />
 
         {/* ── Real Weekly Multigenerational Family Games ── */}
-        <FamilyWeeklyGamesCard />
+        <FamilyWeeklyGamesCard compact />
 
         {/* ── Family Intelligence & Routines Card (Zero Borders) ── */}
         <Card style={styles.aiCard}>
@@ -1034,7 +1034,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadStatItem: {
-    width: "48.5%",
+    flex: 1,
+    minWidth: "46%",
     padding: 12,
     borderRadius: 14,
     alignItems: "center",

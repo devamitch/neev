@@ -98,10 +98,12 @@ const DINE_OUT_SUGGESTIONS: DineOutSuggestion[] = [
 export interface FamilySanctuaryMapProps {
   onSelectMember?: (member: FamilyLocationData) => void
   userRole?: string
+  compact?: boolean
 }
 
 export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   onSelectMember,
+  compact = false,
 }: FamilySanctuaryMapProps) {
   const colors = useColors()
   const showToast = useRootStore((s) => s.showToast)
@@ -129,15 +131,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     const load = () => {
       const data = familyLocationService.getAllFamilyLocations()
       setLocations(data)
-      if (!selectedMember && data.length > 0) {
-        const defaultMaa = data.find((d) => d.memberId === "m-4") || data[0]
-        setSelectedMember(defaultMaa)
-      }
+      setSelectedMember((prev) => prev || data.find((d) => d.memberId === "m-4") || data[0] || null)
     }
     load()
-    const timer = setInterval(load, 5000)
+    const timer = setInterval(load, 15000)
     return () => clearInterval(timer)
-  }, [selectedMember])
+  }, [])
 
   useEffect(() => {
     radarPulse.value = withRepeat(
@@ -377,7 +376,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
       {/* ── Styled Pista Map Canvas ── */}
       <View style={[styles.mapCanvasWrapper, { backgroundColor: colors.surface2 }]}>
-        {renderMapCanvas("100%", MAP_HEIGHT, false)}
+        {renderMapCanvas("100%", compact ? 130 : MAP_HEIGHT, false)}
       </View>
 
       {/* ── Horizontal Family Member Chips ── */}
@@ -438,6 +437,27 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
       {/* ── Active Member Details & "Where is My Phone" Card ── */}
       {selectedMember && (
+        compact ? (
+          <View style={[styles.compactMemberBar, { backgroundColor: colors.surface }]}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }} numberOfLines={1}>
+                {selectedMember.memberName} • {selectedMember.placeName}
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 11 }} numberOfLines={1}>
+                {selectedMember.roomDetail} · {selectedMember.batteryLevel}% 🔋
+              </AppText>
+            </View>
+            <PressableScale
+              style={[styles.compactFindBtn, { backgroundColor: colors.primary }]}
+              onPress={() => handleOpenFinder(selectedMember)}
+            >
+              <Ionicons name="volume-high" size={13} color="#FFFFFF" />
+              <AppText style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", marginLeft: 4 }}>
+                Find Phone
+              </AppText>
+            </PressableScale>
+          </View>
+        ) : (
         <Card style={styles.detailCard}>
           <View style={styles.detailHeader}>
             <View style={{ flex: 1 }}>
@@ -494,7 +514,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             </View>
           </View>
         </Card>
-      )}
+      ))}
 
       {/* ── Modal: Fullscreen Zoomable Map View ── */}
       <Modal visible={fullscreenMapVisible} animationType="fade" transparent>
@@ -721,6 +741,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+  },
+  compactMemberBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  compactFindBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   detailCard: {
     marginTop: 10,

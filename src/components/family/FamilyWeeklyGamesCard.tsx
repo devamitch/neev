@@ -92,7 +92,13 @@ const REAL_FAMILY_GAMES: RealFamilyGame[] = [
   },
 ]
 
-export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard() {
+export interface FamilyWeeklyGamesCardProps {
+  compact?: boolean
+}
+
+export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
+  compact = false,
+}: FamilyWeeklyGamesCardProps) {
   const colors = useColors()
   const showToast = useRootStore((s) => s.showToast)
   const addFunction = useScheduleStore((s) => s.addFunction)
@@ -179,16 +185,18 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard() {
           {game.tagline}
         </AppText>
 
-        <View style={styles.rulesList}>
-          {game.rules.map((rule, idx) => (
-            <View key={idx} style={styles.ruleItem}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: 6, marginTop: 2 }} />
-              <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary, lineHeight: 18 }}>
-                {rule}
-              </AppText>
-            </View>
-          ))}
-        </View>
+        {(!compact || isScorerActive) && (
+          <View style={styles.rulesList}>
+            {game.rules.map((rule, idx) => (
+              <View key={idx} style={styles.ruleItem}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: 6, marginTop: 2 }} />
+                <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary, lineHeight: 18 }}>
+                  {rule}
+                </AppText>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Real Scorekeeper Widget */}
         {isScorerActive ? (

@@ -96,17 +96,17 @@ export function HeaderLargeTitle({
 }: Pick<AppHeaderProps, "eyebrow" | "title" | "subtitle">) {
   const { colors } = useTheme()
   return (
-    <View>
+    <View style={styles.largeTitleBlock}>
       {eyebrow ? (
         <AppText variant="overline" color={colors.accentText} style={styles.eyebrow}>
           {eyebrow}
         </AppText>
       ) : null}
-      <AppText variant="h1" accessibilityRole="header">
+      <AppText variant="h2" style={styles.titleText} accessibilityRole="header" numberOfLines={1}>
         {title}
       </AppText>
       {subtitle ? (
-        <AppText variant="body" color={colors.text.secondary} style={styles.subtitle}>
+        <AppText variant="caption" color={colors.text.secondary} numberOfLines={1} style={styles.subtitle}>
           {subtitle}
         </AppText>
       ) : null}
@@ -141,11 +141,22 @@ export function AppHeader({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
-    paddingTop: 10,
+    marginBottom: 10,
+    paddingTop: 6,
+  },
+  largeTitleBlock: {
+    paddingVertical: 2,
   },
   eyebrow: {
-    marginBottom: 6,
+    marginBottom: 2,
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  titleText: {
+    fontSize: 23,
+    lineHeight: 28,
+    fontWeight: "700",
+    letterSpacing: -0.4,
   },
   iconButton: {
     alignItems: "center",
@@ -160,13 +171,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subtitle: {
-    marginTop: 6,
+    marginTop: 2,
+    fontSize: 12,
   },
   toolbar: {
     alignItems: "center",
     flexDirection: "row",
     height: HEADER_BAR_HEIGHT,
     justifyContent: "space-between",
-    marginBottom: 4,
+    marginBottom: 2,
   },
 })

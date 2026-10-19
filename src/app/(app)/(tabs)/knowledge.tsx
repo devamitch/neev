@@ -38,9 +38,10 @@ export default function KnowledgeScreen() {
   )
   const [expandedId, setExpandedId] = useState<string | null>("k-1")
 
-  const filteredEntries = selectedCategory === "all"
-    ? entries
-    : entries.filter((e) => e.category === selectedCategory)
+  const filteredEntries = React.useMemo(
+    () => (selectedCategory === "all" ? entries : entries.filter((e) => e.category === selectedCategory)),
+    [selectedCategory, entries],
+  )
 
   return (
     <ScreenContainer

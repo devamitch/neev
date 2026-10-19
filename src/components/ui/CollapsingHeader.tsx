@@ -39,7 +39,7 @@ const clamp = Extrapolation.CLAMP
 /** Where content starts below the status bar for a given header. */
 export function headerContentTop(props: AppHeaderProps, statusInset: number): number {
   const hasControls = Boolean(props.showBack || props.rightAction)
-  return statusInset + (hasControls ? HEADER_BAR_HEIGHT : 6)
+  return statusInset + (hasControls ? 46 : 4)
 }
 
 export function useCollapsingHeader(scrollY: SharedValue<number>) {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
   },
-  largeTitle: { marginBottom: 20 },
+  largeTitle: { marginBottom: 10 },
   logo: {
     borderRadius: 6,
     height: 24,
