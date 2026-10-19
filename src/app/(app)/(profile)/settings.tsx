@@ -19,6 +19,7 @@ import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
 import { useRoutineStore } from "@/stores/useRoutineStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
+import { useByokStore } from "@/stores/useByokStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 
 export default function SettingsScreen() {
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
   const intentions = useIntentionsStore((s) => s.intentions)
 
   const { status, lastSyncedAt, syncAll, isGoogleConnected } = useCloudSyncStore()
+  const { credentials, deterministicOnlyMode, setDeterministicOnlyMode, testConnection } = useByokStore()
 
   const { showAlert, showToast } = useRootStore(
     useShallow((s) => ({
@@ -118,6 +120,37 @@ export default function SettingsScreen() {
               variant="outline"
               size="sm"
               onPress={handleSyncNow}
+            />
+          }
+        />
+      </ListGroup>
+
+      {/* AI Engine & Token Optimization (BYOK) */}
+      <SectionHeader title="AI ENGINE & TOKEN OPTIMIZATION (BYOK)" />
+      <ListGroup>
+        <ListRow
+          title="100% Deterministic Calculations"
+          subtitle="Saves 100% AI tokens using offline mathematical algorithms"
+          trailing={
+            <Switch
+              value={deterministicOnlyMode}
+              onValueChange={setDeterministicOnlyMode}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          }
+        />
+        <ListRow
+          title="Bring Your Own Key (BYOK)"
+          subtitle={
+            credentials.length > 0
+              ? `${credentials[0].provider.toUpperCase()} (${credentials[0].maskedKey})`
+              : "Google Gemini, OpenAI, or Groq API Key"
+          }
+          trailing={
+            <Badge
+              label={deterministicOnlyMode ? "Offline Math" : credentials.length > 0 ? "Configured" : "Free Default"}
+              variant={credentials.length > 0 ? "success" : "neutral"}
             />
           }
         />
