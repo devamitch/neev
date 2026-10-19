@@ -183,11 +183,23 @@ export default function Root() {
                 <Stack.Screen name="(app)" />
                 <Stack.Screen name="index" />
                 <Stack.Screen
+                  name="modal/quick-action"
+                  options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                />
+                <Stack.Screen
                   name="modal/add-event"
                   options={{ presentation: "modal", animation: "slide_from_bottom" }}
                 />
                 <Stack.Screen
+                  name="modal/add-task"
+                  options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                />
+                <Stack.Screen
                   name="modal/add-knowledge"
+                  options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                />
+                <Stack.Screen
+                  name="modal/add-member"
                   options={{ presentation: "modal", animation: "slide_from_bottom" }}
                 />
               </Stack>

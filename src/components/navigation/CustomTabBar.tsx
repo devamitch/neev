@@ -278,7 +278,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
   const onOrbPress = useCallback(() => {
     haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium))
-    router.push("/modal/add-event" as any)
+    router.push("/modal/quick-action" as any)
   }, [])
 
   const cx = barW / 2

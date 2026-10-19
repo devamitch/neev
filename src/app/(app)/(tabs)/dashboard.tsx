@@ -361,6 +361,15 @@ export default function DashboardScreen() {
               {currentSpaceTasks.filter((t) => t.isCompleted).length} of {currentSpaceTasks.length} tasks ready
             </AppText>
           </View>
+          <PressableScale
+            style={[styles.addTaskBtn, { backgroundColor: colors.primaryAlpha }]}
+            onPress={() => router.push("/modal/add-task")}
+          >
+            <Ionicons name="add" size={16} color={colors.primary} />
+            <AppText variant="label" style={{ color: colors.primary, fontSize: 13, marginLeft: 4 }}>
+              Add Task
+            </AppText>
+          </PressableScale>
         </View>
 
         <View style={styles.spaceTasksList}>
@@ -1107,5 +1116,12 @@ const styles = StyleSheet.create({
   wisdomAuthor: {
     textAlign: "right",
     opacity: 0.7,
+  },
+  addTaskBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
 })

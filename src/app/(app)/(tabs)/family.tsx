@@ -1,8 +1,9 @@
 import React from "react"
 import { Linking, ScrollView, StyleSheet, View } from "react-native"
+import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 
-import { AppHeader } from "@/components/ui/AppHeader"
+import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
 import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
@@ -97,6 +98,13 @@ export default function FamilyScreen() {
         title="Family Sanctuary"
         subtitle={`${members.length} Multigenerational Members & Pets`}
         showBack={false}
+        rightAction={
+          <HeaderIconButton
+            icon="person-add"
+            label="Welcome Member"
+            onPress={() => router.push("/modal/add-member")}
+          />
+        }
       />
 
       <ScrollView
