@@ -13,6 +13,7 @@ import { PressableScale } from "@/components/ui/PressableScale"
 import { Badge } from "@/components/ui/Badge"
 import { useColors } from "@/theme/useTheme"
 import { useSpacesStore, type SpaceType } from "@/stores/useSpacesStore"
+import { useAddSpaceTaskMutation } from "@/hooks/useSpacesQuery"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useFamilyNetworkStore } from "@/stores/useFamilyNetworkStore"
 import { deterministicEngine, type ConstraintTask } from "@/services/engine/deterministicEngine"
@@ -44,7 +45,8 @@ const DURATIONS = [
 
 export default function AddTaskModal() {
   const colors = useColors()
-  const { currentSpace, tasks: allTasks, addTask } = useSpacesStore()
+  const { currentSpace, tasks: allTasks } = useSpacesStore()
+  const addTaskMutation = useAddSpaceTaskMutation()
   const members = useFamilyStore((s) => s.members)
   const clusters = useFamilyNetworkStore((s) => s.clusters)
   const showToast = useRootStore((s) => s.showToast)
@@ -133,7 +135,7 @@ export default function AddTaskModal() {
 
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-      addTask({
+      addTaskMutation.mutate({
         title: title.trim(),
         space: selectedSpace,
         category,

@@ -11,7 +11,7 @@ import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useColors } from "@/theme/useTheme"
 import { useKnowledgeStore, type KnowledgeCategory } from "@/stores/useKnowledgeStore"
-
+import { useAddKnowledgeEntryMutation } from "@/hooks/useKnowledgeQuery"
 import { useRootStore } from "@/stores/useRootStore"
 import { makeExcerpt } from "@/utils/textUtils"
 
@@ -25,7 +25,7 @@ const CATEGORIES: { key: KnowledgeCategory; label: string }[] = [
 
 export default function AddKnowledgeModal() {
   const colors = useColors()
-  const addEntry = useKnowledgeStore((s) => s.addEntry)
+  const addEntryMutation = useAddKnowledgeEntryMutation()
   const user = useRootStore((s) => s.user)
 
   const [title, setTitle] = useState("")
@@ -40,7 +40,7 @@ export default function AddKnowledgeModal() {
     if (!title.trim() || !body.trim() || isSaving) return
     setIsSaving(true)
     try {
-      addEntry({
+      addEntryMutation.mutate({
         title: title.trim(),
         authorName: authorName.trim() || user?.displayName || "Family Member",
         authorRole: authorRole.trim() || "Contributor",

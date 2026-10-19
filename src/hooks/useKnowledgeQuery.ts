@@ -46,7 +46,7 @@ export function useAddKnowledgeEntryMutation() {
   const addEntryInStore = useKnowledgeStore((s) => s.addEntry)
 
   return useMutation({
-    mutationFn: async (entry: Omit<KnowledgeEntry, "id" | "dateAdded">) => {
+    mutationFn: async (entry: Omit<KnowledgeEntry, "id" | "createdAt">) => {
       return addEntryInStore(entry)
     },
     onSuccess: () => {

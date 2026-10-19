@@ -22,8 +22,16 @@ import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { notificationsService } from "@/services/notifications/notificationsService"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useFamilyLocationsQuery } from "@/hooks/useFamilyLocationQuery"
+import { useIntentionsQuery, useCheerIntentionMutation } from "@/hooks/useIntentionsQuery"
 import { useKnowledgeQuery } from "@/hooks/useKnowledgeQuery"
+import { useRoutinesQuery, useToggleRoutineMutation } from "@/hooks/useRoutinesQuery"
 import { useScheduleQuery } from "@/hooks/useScheduleQuery"
+import {
+  useSpacesTasksQuery,
+  useToggleSpaceTaskMutation,
+  useSpaceMeetingsQuery,
+  useSpaceAiBriefingsQuery,
+} from "@/hooks/useSpacesQuery"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
@@ -78,49 +86,35 @@ export default function DashboardScreen() {
   const entries = knowledgeData ?? rawEntries
   const pinnedEntries = React.useMemo(() => entries.filter((e) => e.isPinned), [entries])
 
-  const { routines, toggleRoutine } = useRoutineStore(
-    useShallow((s) => ({ routines: s.routines, toggleRoutine: s.toggleRoutine })),
-  )
-  const { intentions, cheerIntention } = useIntentionsStore(
-    useShallow((s) => ({ intentions: s.intentions, cheerIntention: s.cheerIntention })),
-  )
+  const { data: routines = [] } = useRoutinesQuery()
+  const toggleRoutineMutation = useToggleRoutineMutation()
+
+  const { data: intentions = [] } = useIntentionsQuery()
+  const cheerIntentionMutation = useCheerIntentionMutation()
+
   const { status, lastSyncedAt, healthMetrics } = useCloudSyncStore(
     useShallow((s) => ({ status: s.status, lastSyncedAt: s.lastSyncedAt, healthMetrics: s.healthMetrics })),
   )
 
-  const {
-    currentSpace,
-    setSpace,
-    spaceTasks,
-    meetings,
-    aiBriefings,
-    toggleTask,
-  } = useSpacesStore(
+  const { currentSpace, setSpace } = useSpacesStore(
     useShallow((s) => ({
       currentSpace: s.currentSpace,
       setSpace: s.setSpace,
-      spaceTasks: s.tasks,
-      meetings: s.meetings,
-      aiBriefings: s.aiBriefings,
-      toggleTask: s.toggleTask,
     })),
   )
+
+  const { data: currentSpaceTasks = [] } = useSpacesTasksQuery(currentSpace)
+  const toggleSpaceTaskMutation = useToggleSpaceTaskMutation()
+  const { data: currentSpaceMeetings = [] } = useSpaceMeetingsQuery(currentSpace)
+  const { data: spaceAiBriefings = [] } = useSpaceAiBriefingsQuery(currentSpace)
 
   const activeSpaceConfig = React.useMemo(
     () => SPACES.find((s) => s.key === currentSpace) || SPACES[1],
     [currentSpace],
   )
-  const currentSpaceTasks = React.useMemo(
-    () => spaceTasks.filter((t) => t.space === currentSpace),
-    [spaceTasks, currentSpace],
-  )
-  const currentSpaceMeetings = React.useMemo(
-    () => meetings.filter((m) => m.space === currentSpace),
-    [meetings, currentSpace],
-  )
   const currentSpaceBriefing = React.useMemo(
-    () => aiBriefings.find((b) => b.space === currentSpace) || aiBriefings[0],
-    [aiBriefings, currentSpace],
+    () => spaceAiBriefings[0],
+    [spaceAiBriefings],
   )
 
   const nextFunction = functions[0]
@@ -157,8 +151,8 @@ export default function DashboardScreen() {
   }
 
   const familyLoad = React.useMemo(
-    () => neevHeuristicEngine.computeFamilyLoadBalance(spaceTasks, members),
-    [spaceTasks, members],
+    () => neevHeuristicEngine.computeFamilyLoadBalance(currentSpaceTasks, members),
+    [currentSpaceTasks, members],
   )
 
   const openMeetingLink = (url?: string) => {
@@ -514,7 +508,7 @@ export default function DashboardScreen() {
               style={[styles.taskCard, { backgroundColor: colors.surface }]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                toggleTask(task.id)
+                toggleSpaceTaskMutation.mutate(task.id)
               }}
             >
               <Ionicons
@@ -654,7 +648,7 @@ export default function DashboardScreen() {
                   style={[styles.cheerBtn, { backgroundColor: colors.primaryAlpha }]}
                   onPress={() => {
                     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                    cheerIntention(item.id)
+                    cheerIntentionMutation.mutate(item.id)
                   }}
                 >
                   <Ionicons name="heart" size={13} color={colors.primary} />
@@ -830,7 +824,7 @@ export default function DashboardScreen() {
               style={[styles.routineItem, { backgroundColor: colors.surface }]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                toggleRoutine(routine.id)
+                toggleRoutineMutation.mutate(routine.id)
               }}
             >
               <View style={styles.routineCheckWrap}>

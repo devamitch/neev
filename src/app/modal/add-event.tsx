@@ -12,7 +12,7 @@ import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useColors } from "@/theme/useTheme"
 import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleStore"
-
+import { useAddScheduleFunctionMutation } from "@/hooks/useScheduleQuery"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { toLocalDateInput } from "@/utils/textUtils"
 
@@ -26,7 +26,7 @@ const CATEGORIES: { key: FunctionCategory; label: string }[] = [
 
 export default function AddEventModal() {
   const colors = useColors()
-  const addFunction = useScheduleStore((s) => s.addFunction)
+  const addFunctionMutation = useAddScheduleFunctionMutation()
   const members = useFamilyStore((s) => s.members)
 
   const [title, setTitle] = useState("")
@@ -62,7 +62,7 @@ export default function AddEventModal() {
     if (!title.trim() || isSaving) return
     setIsSaving(true)
     try {
-      addFunction({
+      addFunctionMutation.mutate({
         title: title.trim(),
         date,
         time: time.trim() || "All Day",
