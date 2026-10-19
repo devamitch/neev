@@ -4,6 +4,7 @@
  *
  * Implements:
  * - Persistent navigation state restoration backed by React Native MMKV
+ * - Full route history stack tracking (up to 25 historical routes)
  * - Automatic route change tracking & breadcrumb logging
  * - Auth & Onboarding state gating: protected routes are never restored for unauthenticated users
  * - Fallback protection: invalid or obsolete routes safely redirect to canonical dashboard
@@ -13,6 +14,14 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { storage } from "@/utils/storage"
 
 export const NAVIGATION_PERSISTENCE_KEY = "NEEV_NAVIGATION_STATE_V1"
+export const MAX_HISTORY_LENGTH = 25
+
+export interface NavigationPersistenceState {
+  currentRoute: string
+  routeHistory: string[]
+  params?: Record<string, string | number | boolean>
+  updatedAt: string
+}
 
 // Whitelist of valid app routes eligible for state restoration
 export const VALID_RESTORABLE_PREFIXES = [
@@ -42,15 +51,61 @@ export function isRouteRestorable(path: string | null | undefined): boolean {
 }
 
 /**
- * Persists the current navigation path into MMKV storage
+ * Retrieves the full persisted navigation state from MMKV storage
  */
-export function persistNavigationPath(path: string): void {
+export function getPersistedNavigationState(): NavigationPersistenceState | null {
   try {
-    if (isRouteRestorable(path)) {
-      storage.set(NAVIGATION_PERSISTENCE_KEY, path)
-      if (__DEV__) {
-        console.log(`[NavigationPersistence] Saved active route: ${path}`)
+    const raw = storage.getString(NAVIGATION_PERSISTENCE_KEY)
+    if (!raw) return null
+    const state = JSON.parse(raw) as NavigationPersistenceState
+    if (state && state.currentRoute && isRouteRestorable(state.currentRoute)) {
+      return state
+    }
+  } catch (error) {
+    if (__DEV__) {
+      console.warn("[NavigationPersistence] Failed to parse persisted navigation state:", error)
+    }
+  }
+  return null
+}
+
+/**
+ * Retrieves just the persisted current route path from MMKV storage
+ */
+export function getPersistedNavigationPath(): string | null {
+  const state = getPersistedNavigationState()
+  return state?.currentRoute ?? null
+}
+
+/**
+ * Persists the current route path and maintains history stack in MMKV storage
+ */
+export function persistNavigationPath(path: string, params?: Record<string, any>): void {
+  try {
+    if (!isRouteRestorable(path)) return
+
+    const previousState = getPersistedNavigationState()
+    const history = previousState?.routeHistory ?? []
+
+    // Avoid pushing consecutive duplicate routes to history
+    if (history[history.length - 1] !== path) {
+      history.push(path)
+      if (history.length > MAX_HISTORY_LENGTH) {
+        history.shift()
       }
+    }
+
+    const nextState: NavigationPersistenceState = {
+      currentRoute: path,
+      routeHistory: history,
+      params,
+      updatedAt: new Date().toISOString(),
+    }
+
+    storage.set(NAVIGATION_PERSISTENCE_KEY, JSON.stringify(nextState))
+
+    if (__DEV__) {
+      console.log(`[NavigationPersistence] Saved active route: ${path} (History size: ${history.length})`)
     }
   } catch (error) {
     if (__DEV__) {
@@ -60,55 +115,50 @@ export function persistNavigationPath(path: string): void {
 }
 
 /**
- * Retrieves the persisted navigation path from MMKV storage
- */
-export function getPersistedNavigationPath(): string | null {
-  try {
-    const savedPath = storage.getString(NAVIGATION_PERSISTENCE_KEY)
-    if (savedPath && isRouteRestorable(savedPath)) {
-      return savedPath
-    }
-  } catch (error) {
-    if (__DEV__) {
-      console.warn("[NavigationPersistence] Failed to read persisted route:", error)
-    }
-  }
-  return null
-}
-
-/**
- * Clears the persisted navigation state
+ * Clears the persisted navigation state from MMKV storage
  */
 export function clearPersistedNavigationPath(): void {
   try {
     storage.delete(NAVIGATION_PERSISTENCE_KEY)
-  } catch {}
+    if (__DEV__) {
+      console.log("[NavigationPersistence] Navigation state cleared from MMKV")
+    }
+  } catch (error) {
+    if (__DEV__) {
+      console.warn("[NavigationPersistence] Failed to delete navigation state:", error)
+    }
+  }
 }
 
 /**
- * Hook to manage navigation persistence lifecycle
+ * React hook to manage navigation persistence lifecycle (Ignite boilerplate standard)
  */
 export function useNavigationPersistence() {
   const [isRestored, setIsRestored] = useState(false)
   const [initialRoute, setInitialRoute] = useState<string | null>(null)
+  const [routeHistory, setRouteHistory] = useState<string[]>([])
   const isFirstRender = useRef(true)
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
-      const savedRoute = getPersistedNavigationPath()
-      setInitialRoute(savedRoute)
+      const state = getPersistedNavigationState()
+      if (state) {
+        setInitialRoute(state.currentRoute)
+        setRouteHistory(state.routeHistory)
+      }
       setIsRestored(true)
     }
   }, [])
 
-  const onNavigationStateChange = useCallback((currentPath: string) => {
-    persistNavigationPath(currentPath)
+  const onNavigationStateChange = useCallback((currentPath: string, params?: Record<string, any>) => {
+    persistNavigationPath(currentPath, params)
   }, [])
 
   return {
     isRestored,
     initialRoute,
+    routeHistory,
     onNavigationStateChange,
     clearNavigationState: clearPersistedNavigationPath,
   }
