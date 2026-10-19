@@ -215,7 +215,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       for (let dx = -1; dx <= 1; dx++) {
         const x = centerTile.x + dx
         const y = centerTile.y + dy
-        const url = getTileUrl(x, y, tileZoom, TILE_SERVERS.cartoVoyager)
+        const url = getTileUrl(x, y, tileZoom, TILE_SERVERS.openStreetMap)
         tiles.push({ x, y, dx, dy, url, key: `${tileZoom}_${x}_${y}` })
       }
     }
@@ -490,7 +490,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         {/* Provider Attribution Badge */}
         <View style={styles.osmAttributionBadge}>
           <AppText style={styles.osmAttributionText}>
-            © OpenStreetMap · CartoDB Voyager
+            © OpenStreetMap contributors
           </AppText>
         </View>
       </View>

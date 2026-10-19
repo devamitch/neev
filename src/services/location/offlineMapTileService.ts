@@ -28,10 +28,10 @@ export interface OfflineMapPack {
 
 const STORAGE_KEY = "NEEV_OFFLINE_MAP_PACK"
 
-// Free high-quality CartoDB Voyager & OpenStreetMap tile servers
+// 100% Free OpenStreetMap & Humanitarian OSM tile servers (Zero API key or billing required)
 export const TILE_SERVERS = {
-  cartoVoyager: "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
   openStreetMap: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  osmHot: "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
 }
 
 /**
@@ -65,7 +65,7 @@ export function getTileUrl(
   x: number,
   y: number,
   z: number,
-  serverTemplate: string = TILE_SERVERS.cartoVoyager,
+  serverTemplate: string = TILE_SERVERS.openStreetMap,
 ): string {
   return serverTemplate
     .replace("{z}", z.toString())
