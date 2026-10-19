@@ -403,44 +403,65 @@ alter table public.knowledge_entries enable row level security;
 alter table public.family_routines enable row level security;
 
 -- Profile Policies
+drop policy if exists "users read own profile" on public.profiles;
 create policy "users read own profile" on public.profiles for select to authenticated using (id = (select auth.uid()));
+drop policy if exists "users update own profile" on public.profiles;
 create policy "users update own profile" on public.profiles for update to authenticated using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
 -- Household Policies (Allow family members & anon onboarding invite code lookups)
+drop policy if exists "household access" on public.households;
 create policy "household access" on public.households for all to authenticated, anon using (true) with check (true);
+drop policy if exists "household members access" on public.household_members;
 create policy "household members access" on public.household_members for all to authenticated, anon using (true) with check (true);
 
 -- Sacred Spaces Policies
+drop policy if exists "spaces visible to authorized members" on public.spaces;
 create policy "spaces visible to authorized members" on public.spaces for select to authenticated, anon using (true);
+drop policy if exists "spaces writable to authorized members" on public.spaces;
 create policy "spaces writable to authorized members" on public.spaces for insert to authenticated, anon with check (true);
+drop policy if exists "spaces updatable to authorized members" on public.spaces;
 create policy "spaces updatable to authorized members" on public.spaces for update to authenticated, anon using (true) with check (true);
 
 -- Space Members Policies
+drop policy if exists "space members access" on public.space_members;
 create policy "space members access" on public.space_members for all to authenticated, anon using (true) with check (true);
 
 -- Goals & Plans Policies
+drop policy if exists "goals access" on public.goals;
 create policy "goals access" on public.goals for all to authenticated, anon using (true) with check (true);
+drop policy if exists "plans access" on public.plans;
 create policy "plans access" on public.plans for all to authenticated, anon using (true) with check (true);
+drop policy if exists "plan versions access" on public.plan_versions;
 create policy "plan versions access" on public.plan_versions for all to authenticated, anon using (true) with check (true);
 
 -- Tasks Policies
+drop policy if exists "tasks access" on public.tasks;
 create policy "tasks access" on public.tasks for all to authenticated, anon using (true) with check (true);
+drop policy if exists "task dependencies access" on public.task_dependencies;
 create policy "task dependencies access" on public.task_dependencies for all to authenticated, anon using (true) with check (true);
 
 -- Consequential Approvals Policies
+drop policy if exists "approvals access" on public.approvals;
 create policy "approvals access" on public.approvals for all to authenticated, anon using (true) with check (true);
 
 -- Provider Credentials (BYOK - Strict Isolation to Owner)
+drop policy if exists "users manage own provider credentials" on public.provider_credentials;
 create policy "users manage own provider credentials" on public.provider_credentials
   for all to authenticated, anon
   using (true)
   with check (true);
 
 -- Memory & RAG Policies
+drop policy if exists "memory records access" on public.memory_records;
 create policy "memory records access" on public.memory_records for all to authenticated, anon using (true) with check (true);
+drop policy if exists "memory chunks access" on public.memory_chunks;
 create policy "memory chunks access" on public.memory_chunks for all to authenticated, anon using (true) with check (true);
 
 -- Family Functions, Knowledge & Routines Policies
+drop policy if exists "functions access" on public.family_functions;
 create policy "functions access" on public.family_functions for all to authenticated, anon using (true) with check (true);
+drop policy if exists "knowledge access" on public.knowledge_entries;
 create policy "knowledge access" on public.knowledge_entries for all to authenticated, anon using (true) with check (true);
+drop policy if exists "routines access" on public.family_routines;
 create policy "routines access" on public.family_routines for all to authenticated, anon using (true) with check (true);
+

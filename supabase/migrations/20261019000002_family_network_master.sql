@@ -99,9 +99,16 @@ ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resource_sharing_grants ENABLE ROW LEVEL SECURITY;
 
 -- Allow policies for authenticated & anon clients
+DROP POLICY IF EXISTS "Public access to family_realms" ON public.family_realms;
 CREATE POLICY "Public access to family_realms" ON public.family_realms FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public access to kinship_edges" ON public.kinship_edges;
 CREATE POLICY "Public access to kinship_edges" ON public.kinship_edges FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public access to clusters" ON public.clusters;
 CREATE POLICY "Public access to clusters" ON public.clusters FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public access to family_bridges" ON public.family_bridges;
 CREATE POLICY "Public access to family_bridges" ON public.family_bridges FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public access to invitations" ON public.invitations;
 CREATE POLICY "Public access to invitations" ON public.invitations FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public access to resource_sharing_grants" ON public.resource_sharing_grants;
 CREATE POLICY "Public access to resource_sharing_grants" ON public.resource_sharing_grants FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+
