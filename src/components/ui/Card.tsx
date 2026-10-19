@@ -1,6 +1,6 @@
 import { useTheme } from "@/theme/useTheme"
 import { useMemo } from "react"
-import { StyleSheet, type StyleProp, type ViewStyle } from "react-native"
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native"
 import { SquircleSurface } from "./SquircleSurface"
 
 export interface CardProps {

@@ -21,6 +21,8 @@ import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useByokStore } from "@/stores/useByokStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
+import { useQueryClient } from "@tanstack/react-query"
+import { offlineMapTileService } from "@/services/location/offlineMapTileService"
 
 export default function SettingsScreen() {
   const colors = useColors()
@@ -64,6 +66,7 @@ export default function SettingsScreen() {
   const setIntentionNudgesEnabled = useRootStore((s) => s.setIntentionNudgesEnabled)
   const pujaTimersEnabled = useRootStore((s) => s.pujaTimersEnabled)
   const setPujaTimersEnabled = useRootStore((s) => s.setPujaTimersEnabled)
+  const queryClient = useQueryClient()
   const [isSyncing, setIsSyncing] = useState(false)
 
   const handleSyncNow = async () => {
@@ -106,11 +109,18 @@ export default function SettingsScreen() {
   const handleClearCache = () => {
     showAlert({
       title: "Purge Local Cache?",
-      message: "This will refresh cached media and temporary responses while safely preserving your family tree, calendar events, intentions, and heirloom notes.",
+      message: "This will refresh cached map tiles, query cache, and temporary responses while safely preserving your family tree, calendar events, intentions, and heirloom notes.",
       confirmText: "Purge Cache",
       cancelText: "Cancel",
       onConfirm: async () => {
-        showToast({ message: "Local cache purged successfully.", type: "success" })
+        try {
+          offlineMapTileService.clearMapPack()
+          queryClient.clear()
+          await queryClient.invalidateQueries()
+          showToast({ message: "Local cache purged successfully. All storage refreshed.", type: "success" })
+        } catch {
+          showToast({ message: "Could not purge local cache. Working in standard mode.", type: "error" })
+        }
       },
     })
   }
