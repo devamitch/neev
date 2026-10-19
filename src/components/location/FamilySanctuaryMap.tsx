@@ -215,7 +215,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       for (let dx = -1; dx <= 1; dx++) {
         const x = centerTile.x + dx
         const y = centerTile.y + dy
-        const url = getTileUrl(x, y, tileZoom, TILE_SERVERS.openStreetMap)
+        const url = getTileUrl(x, y, tileZoom, TILE_SERVERS.osmHot)
         tiles.push({ x, y, dx, dy, url, key: `${tileZoom}_${x}_${y}` })
       }
     }
@@ -361,7 +361,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
           return (
             <Image
               key={tile.key}
-              source={{ uri: tile.url }}
+              source={{
+                uri: tile.url,
+                headers: {
+                  "User-Agent": "NeevFamilySanctuary/1.0 (contact@neev.family)",
+                },
+              }}
               style={[
                 styles.mapTileImage,
                 {
