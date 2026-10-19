@@ -5,6 +5,7 @@
 
 import { signInWithGoogleAccount, signOutOfGoogle } from "@/services/auth/googleSignIn"
 import { setuSsoService, type SsoCallbackData } from "@/services/auth/setuSsoService"
+import { supabase } from "@/services/supabase/supabaseClient"
 import type { ImmerStateCreator } from "../types"
 
 export type AuthProvider = "google" | "setu" | "apple" | "guest"
@@ -37,6 +38,8 @@ export interface AuthSlice {
 
   signInWithGoogle: () => Promise<GoogleSignInStatus>
   signInWithSetu: () => Promise<SetuSignInResult>
+  signInAsGuest: () => Promise<void>
+  signInAsDemoUser: () => Promise<void>
   handleSetuSsoCallback: (data: SsoCallbackData) => boolean
   checkSetuInstalled: () => Promise<boolean>
   openSetuDownload: () => Promise<void>
@@ -191,6 +194,168 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     return false
   },
 
+  signInAsGuest: async () => {
+    const guestUid = `guest_${Date.now()}`
+    const displayName = "Guest Explorer"
+
+    try {
+      await supabase.from("profiles").upsert({
+        id: guestUid,
+        display_name: displayName,
+        role: "guest",
+        updated_at: new Date().toISOString(),
+      })
+    } catch (e) {
+      console.warn("[AuthSlice] Supabase guest sync note:", e)
+    }
+
+    set((state) => {
+      state.user = {
+        uid: guestUid,
+        displayName,
+        provider: "guest",
+        signedInAt: Date.now(),
+      }
+      state.displayName = displayName
+      state.isAuthenticated = true
+      state.isAuthLoading = false
+      state.authError = null
+    })
+  },
+
+  signInAsDemoUser: async () => {
+    const demoUid = "demo_amit_guardian"
+    const displayName = "Amit Sharma (Demo Guardian)"
+    const email = "amit.sharma.demo@neev.sanctuary"
+
+    try {
+      await supabase.from("profiles").upsert({
+        id: demoUid,
+        display_name: displayName,
+        email,
+        role: "guardian",
+        updated_at: new Date().toISOString(),
+      })
+    } catch (e) {
+      console.warn("[AuthSlice] Supabase demo user sync note:", e)
+    }
+
+    set((state) => {
+      state.user = {
+        uid: demoUid,
+        displayName,
+        email,
+        provider: "guest",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200",
+        signedInAt: Date.now(),
+      }
+      state.displayName = displayName
+      state.isAuthenticated = true
+      state.isAuthLoading = false
+      state.authError = null
+
+      // Ensure demo family realm is established if not present
+      const existingRealms = state.realms || []
+      const demoRealmId = "realm_sharma_heritage"
+      if (!existingRealms.some((r) => r.id === demoRealmId)) {
+        state.realms.push({
+          id: demoRealmId,
+          name: "Sharma Sanctuary Realm",
+          motto: "Tradition, Wisdom & Clarity Across Generations",
+          establishedYear: 1994,
+          city: "Bengaluru",
+          ownerId: demoUid,
+          isPrimary: true,
+        })
+        state.activeRealmId = demoRealmId
+      }
+
+      // Ensure demo clusters exist
+      const existingClusters = state.clusters || []
+      if (existingClusters.length === 0) {
+        state.clusters = [
+          {
+            id: "cluster_core",
+            realmId: demoRealmId,
+            name: "Household Core",
+            type: "nuclear",
+            description: "Daily meals, tasks, and home logistics",
+            icon: "home",
+            memberIds: [demoUid, "demo_priya", "demo_aarav"],
+            color: "#6B8E23",
+          },
+          {
+            id: "cluster_grandparents",
+            realmId: demoRealmId,
+            name: "Grandparents Sanctuary Circle",
+            type: "extended",
+            description: "Medication schedules, evening walks, doctor consultations",
+            icon: "heart",
+            memberIds: [demoUid, "demo_dadaji", "demo_dadiji"],
+            color: "#D97706",
+          },
+          {
+            id: "cluster_kids",
+            realmId: demoRealmId,
+            name: "Children's Growth & Learning",
+            type: "care_circle",
+            description: "School projects, exams, tennis practices",
+            icon: "school",
+            memberIds: [demoUid, "demo_priya", "demo_aarav"],
+            color: "#2563EB",
+          },
+        ]
+      }
+
+      // Ensure kinship edges exist
+      const existingEdges = state.kinshipEdges || []
+      if (existingEdges.length === 0) {
+        state.kinshipEdges = [
+          {
+            id: "edge_amit_priya",
+            realmId: demoRealmId,
+            sourceMemberId: demoUid,
+            targetMemberId: "demo_priya",
+            relation: "spouse",
+            label: "Partner in Sanctuary Care",
+          },
+          {
+            id: "edge_amit_aarav",
+            realmId: demoRealmId,
+            sourceMemberId: demoUid,
+            targetMemberId: "demo_aarav",
+            relation: "child",
+            label: "Son (10th Grade)",
+          },
+          {
+            id: "edge_amit_dadaji",
+            realmId: demoRealmId,
+            sourceMemberId: demoUid,
+            targetMemberId: "demo_dadaji",
+            relation: "parent",
+            label: "Father (Retired Civil Engineer)",
+          },
+        ]
+      }
+
+      // Ensure bilateral bridge exists
+      const existingBridges = state.bridges || []
+      if (existingBridges.length === 0) {
+        state.bridges = [
+          {
+            id: "bridge_jaipur_heritage",
+            fromRealmId: demoRealmId,
+            targetRealmName: "Sharma Family (Jaipur Branch)",
+            purpose: "Joint Diwali Puja & Annual Family Gathering",
+            sharedCategories: ["functions", "rituals"],
+            status: "active",
+            connectedAt: new Date().toISOString(),
+          },
+        ]
+      }
+    })
+  },
+
   signOut: async () => {
     if (get().user?.provider === "google") await signOutOfGoogle()
     set((state) => {
@@ -203,3 +368,4 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     })
   },
 })
+

@@ -18,23 +18,32 @@ import { SquircleSurface } from "@/components/ui/SquircleSurface"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useTheme } from "@/theme/useTheme"
 
-type Pending = "google" | "setu" | null
+type Pending = "google" | "setu" | "demo" | "guest" | null
 
 export default function SignInScreen() {
   const { colors } = useTheme()
   const router = useRouter()
   const [pending, setPending] = useState<Pending>(null)
 
-  const { signInWithGoogle, signInWithSetu, openSetuDownload, showAlert, showToast } =
-    useRootStore(
-      useShallow((s) => ({
-        signInWithGoogle: s.signInWithGoogle,
-        signInWithSetu: s.signInWithSetu,
-        openSetuDownload: s.openSetuDownload,
-        showAlert: s.showAlert,
-        showToast: s.showToast,
-      })),
-    )
+  const {
+    signInWithGoogle,
+    signInWithSetu,
+    signInAsGuest,
+    signInAsDemoUser,
+    openSetuDownload,
+    showAlert,
+    showToast,
+  } = useRootStore(
+    useShallow((s) => ({
+      signInWithGoogle: s.signInWithGoogle,
+      signInWithSetu: s.signInWithSetu,
+      signInAsGuest: s.signInAsGuest,
+      signInAsDemoUser: s.signInAsDemoUser,
+      openSetuDownload: s.openSetuDownload,
+      showAlert: s.showAlert,
+      showToast: s.showToast,
+    })),
+  )
 
   const google = async () => {
     setPending("google")
@@ -78,6 +87,28 @@ export default function SignInScreen() {
     }
   }
 
+  const handleDemo = async () => {
+    setPending("demo")
+    try {
+      await signInAsDemoUser()
+      showToast("Welcome to Demo Sanctuary", "success")
+      router.replace("/(app)/(tabs)/dashboard")
+    } finally {
+      setPending(null)
+    }
+  }
+
+  const handleGuest = async () => {
+    setPending("guest")
+    try {
+      await signInAsGuest()
+      showToast("Continuing as Guest", "info")
+      router.replace("/(app)/(tabs)/dashboard")
+    } finally {
+      setPending(null)
+    }
+  }
+
   return (
     <ScreenContainer safeArea scrollable contentContainerStyle={styles.page}>
       {router.canGoBack() ? (
@@ -100,6 +131,13 @@ export default function SignInScreen() {
 
       <View style={styles.actions}>
         <ProviderButton
+          label="Try Demo Sanctuary (All Features)"
+          icon={<Ionicons name="sparkles" size={20} color={colors.accentText} />}
+          busy={pending === "demo"}
+          disabled={pending !== null}
+          onPress={() => void handleDemo()}
+        />
+        <ProviderButton
           label="Continue with Google"
           icon={<GoogleG />}
           busy={pending === "google"}
@@ -112,6 +150,13 @@ export default function SignInScreen() {
           busy={pending === "setu"}
           disabled={pending !== null}
           onPress={() => void setu()}
+        />
+        <ProviderButton
+          label="Continue as Guest"
+          icon={<Ionicons name="person-outline" size={20} color={colors.text.secondary} />}
+          busy={pending === "guest"}
+          disabled={pending !== null}
+          onPress={() => void handleGuest()}
         />
       </View>
 
