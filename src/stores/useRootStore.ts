@@ -21,6 +21,7 @@ import { createRoutineSlice } from "./slices/createRoutineSlice"
 import { createSpacesSlice } from "./slices/createSpacesSlice"
 import { createFamilyNetworkSlice } from "./slices/createFamilyNetworkSlice"
 import { createNavigationSlice } from "./slices/createNavigationSlice"
+import { createMindfulNotificationsSlice } from "./slices/createMindfulNotificationsSlice"
 
 import type { RootStoreState } from "./types"
 export { useShallow } from "zustand/react/shallow"
@@ -47,6 +48,7 @@ export const useRootStore = create<RootStoreState>()(
       ...createSpacesSlice(...a),
       ...createFamilyNetworkSlice(...a),
       ...createNavigationSlice(...a),
+      ...createMindfulNotificationsSlice(...a),
     })),
     {
       name: "neev_root_v2",
@@ -104,6 +106,10 @@ export const useRootStore = create<RootStoreState>()(
         routeParams: state.routeParams,
         navigationHistory: state.navigationHistory,
         lastNavigatedAt: state.lastNavigatedAt,
+
+        // Mindful Notifications
+        mindfulNotifications: state.mindfulNotifications,
+        activeBannerNotificationId: state.activeBannerNotificationId,
       }),
     },
   ),

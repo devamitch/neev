@@ -32,8 +32,22 @@ export default function SettingsScreen() {
   const routines = useRoutineStore((s) => s.routines)
   const intentions = useIntentionsStore((s) => s.intentions)
 
-  const { status, lastSyncedAt, syncAll, isGoogleConnected } = useCloudSyncStore()
-  const { credentials, deterministicOnlyMode, setDeterministicOnlyMode, testConnection } = useByokStore()
+  const { status, lastSyncedAt, syncAll, isGoogleConnected } = useCloudSyncStore(
+    useShallow((s) => ({
+      status: s.status,
+      lastSyncedAt: s.lastSyncedAt,
+      syncAll: s.syncAll,
+      isGoogleConnected: s.isGoogleConnected,
+    })),
+  )
+  const { credentials, deterministicOnlyMode, setDeterministicOnlyMode, testConnection } = useByokStore(
+    useShallow((s) => ({
+      credentials: s.credentials,
+      deterministicOnlyMode: s.deterministicOnlyMode,
+      setDeterministicOnlyMode: s.setDeterministicOnlyMode,
+      testConnection: s.testConnection,
+    })),
+  )
 
   const { showAlert, showToast } = useRootStore(
     useShallow((s) => ({

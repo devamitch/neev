@@ -34,11 +34,18 @@ export function showTabBar(immediate = false): void {
 /**
  * Hide the bottom dock tab bar off-screen.
  */
-export function hideTabBar(immediate = false): void {
+/**
+ * Hide the bottom dock tab bar off-screen.
+ * (Persistent dock mode: Keep dock visible so tabs never get trapped/lost)
+ */
+export function hideTabBar(_immediate = false): void {
   "worklet"
-  if (dockTarget.value === 1 && !immediate) return
-  dockTarget.value = 1
-  tabBarScrollProgress.value = immediate ? 1 : withTiming(1, TIMING_HIDE)
+  // Keep tab bar accessible at all times - dock auto-hide commented out for stable UX
+  // if (dockTarget.value === 1 && !immediate) return
+  // dockTarget.value = 1
+  // tabBarScrollProgress.value = immediate ? 1 : withTiming(1, TIMING_HIDE)
+  dockTarget.value = 0
+  tabBarScrollProgress.value = 0
 }
 
 /**

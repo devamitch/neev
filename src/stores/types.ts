@@ -18,6 +18,7 @@ import type { RoutineSlice } from "./slices/createRoutineSlice"
 import type { SpacesSlice } from "./slices/createSpacesSlice"
 import type { FamilyNetworkSlice } from "./slices/createFamilyNetworkSlice"
 import type { NavigationSlice } from "./slices/createNavigationSlice"
+import type { MindfulNotificationsSlice } from "./slices/createMindfulNotificationsSlice"
 
 export type RootStoreState = AppSlice &
   IntentionsSlice &
@@ -30,7 +31,8 @@ export type RootStoreState = AppSlice &
   RoutineSlice &
   SpacesSlice &
   FamilyNetworkSlice &
-  NavigationSlice
+  NavigationSlice &
+  MindfulNotificationsSlice
 
 export type ImmerStateCreator<Slice> = StateCreator<
   RootStoreState,

@@ -1,52 +1,97 @@
-import React from "react"
-import { Linking, ScrollView, StyleSheet, View } from "react-native"
-import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { router } from "expo-router"
+import React from "react"
+import { Linking, ScrollView, StyleSheet, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
 import { openAppDrawer } from "@/components/navigation/AppDrawer"
-import { AppText } from "@/components/ui/AppText"
-import { AppButton } from "@/components/ui/AppButton"
-import { Card } from "@/components/ui/Card"
-import { Badge } from "@/components/ui/Badge"
-import { PressableScale } from "@/components/ui/PressableScale"
-import { ScreenContainer } from "@/components/ui/ScreenContainer"
-import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
-import { useFamilyStore } from "@/stores/useFamilyStore"
-import { useScheduleStore } from "@/stores/useScheduleStore"
-import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
-import { useRoutineStore } from "@/stores/useRoutineStore"
-import { useIntentionsStore } from "@/stores/useIntentionsStore"
-import { useSpacesStore, type SpaceType } from "@/stores/useSpacesStore"
-import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
-import { googleServicesClient } from "@/services/google/googleServicesClient"
+import { HeaderIconButton } from "@/components/ui/AppHeader"
+import { AppText } from "@/components/ui/AppText"
+import { Badge } from "@/components/ui/Badge"
+import { Card } from "@/components/ui/Card"
+import { PressableScale } from "@/components/ui/PressableScale"
+import { SectionHeader } from "@/components/ui/SectionHeader"
 import { neevAiOrchestrator, type LifeDomain } from "@/services/ai/neevAiOrchestrator"
 import { neevHeuristicEngine } from "@/services/ai/neevHeuristicEngine"
+import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { notificationsService } from "@/services/notifications/notificationsService"
-import { useRootStore } from "@/stores/useRootStore"
+import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
+import { useFamilyStore } from "@/stores/useFamilyStore"
+import { useIntentionsStore } from "@/stores/useIntentionsStore"
+import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
+import { useRootStore, useShallow } from "@/stores/useRootStore"
+import { useRoutineStore } from "@/stores/useRoutineStore"
+import { useScheduleStore } from "@/stores/useScheduleStore"
+import { useSpacesStore, type SpaceType } from "@/stores/useSpacesStore"
+import { useColors } from "@/theme/useTheme"
 
-const SPACES: { key: SpaceType; label: string; icon: keyof typeof Ionicons.glyphMap; description: string }[] = [
-  { key: "personal", label: "Personal Space", icon: "lock-closed", description: "Career switch, interview prep & private goals" },
-  { key: "nuclear", label: "Nuclear Space", icon: "home", description: "Child school, doctor appointments & daily chores" },
-  { key: "family", label: "Family Sanctuary", icon: "people", description: "Grandparents, festivals, heirloom recipes & pets" },
+const SPACES: {
+  key: SpaceType
+  label: string
+  icon: keyof typeof Ionicons.glyphMap
+  description: string
+}[] = [
+  {
+    key: "personal",
+    label: "Personal",
+    icon: "lock-closed-outline",
+    description: "Career switch, interview prep & private goals",
+  },
+  {
+    key: "nuclear",
+    label: "Nuclear",
+    icon: "home-outline",
+    description: "Child school, doctor appointments & daily chores",
+  },
+  {
+    key: "family",
+    label: "Family",
+    icon: "people-outline",
+    description: "Grandparents, festivals, heirloom recipes & pets",
+  },
 ]
 
 export default function DashboardScreen() {
   const colors = useColors()
   const bottomInset = useTabBarInset()
+  const insets = useSafeAreaInsets()
   const showToast = useRootStore((s) => s.showToast)
 
   const household = useFamilyStore((s) => s.household)
   const members = useFamilyStore((s) => s.members)
   const functions = useScheduleStore((s) => s.functions)
-  const pinnedEntries = useKnowledgeStore((s) => s.entries.filter((e) => e.isPinned))
-  const { routines, toggleRoutine } = useRoutineStore()
-  const { intentions, cheerIntention } = useIntentionsStore()
-  const { status, lastSyncedAt, healthMetrics } = useCloudSyncStore()
+  const entries = useKnowledgeStore((s) => s.entries)
+  const pinnedEntries = React.useMemo(() => entries.filter((e) => e.isPinned), [entries])
 
-  const { currentSpace, setSpace, tasks: spaceTasks, meetings, aiBriefings, generateAiBriefing, toggleTask } = useSpacesStore()
+  const { routines, toggleRoutine } = useRoutineStore(
+    useShallow((s) => ({ routines: s.routines, toggleRoutine: s.toggleRoutine })),
+  )
+  const { intentions, cheerIntention } = useIntentionsStore(
+    useShallow((s) => ({ intentions: s.intentions, cheerIntention: s.cheerIntention })),
+  )
+  const { status, lastSyncedAt, healthMetrics } = useCloudSyncStore(
+    useShallow((s) => ({ status: s.status, lastSyncedAt: s.lastSyncedAt, healthMetrics: s.healthMetrics })),
+  )
+
+  const {
+    currentSpace,
+    setSpace,
+    spaceTasks,
+    meetings,
+    aiBriefings,
+    toggleTask,
+  } = useSpacesStore(
+    useShallow((s) => ({
+      currentSpace: s.currentSpace,
+      setSpace: s.setSpace,
+      spaceTasks: s.tasks,
+      meetings: s.meetings,
+      aiBriefings: s.aiBriefings,
+      toggleTask: s.toggleTask,
+    })),
+  )
 
   const activeSpaceConfig = SPACES.find((s) => s.key === currentSpace) || SPACES[1]
   const currentSpaceTasks = spaceTasks.filter((t) => t.space === currentSpace)
@@ -92,43 +137,59 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title={household.name}
-        subtitle={household.motto}
-        rightAction={
-          <HeaderIconButton
-            icon="menu-outline"
-            label="Sanctuary Spaces"
-            onPress={openAppDrawer}
-          />
-        }
-      />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* ── Fixed Clean Top Bar ── */}
+      <View style={[styles.topBar, { backgroundColor: colors.background, paddingTop: insets.top + 4 }]}>
+        <View style={styles.topBarLeft}>
+          <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", letterSpacing: 0.6, fontSize: 10 }}>
+            FAMILY SANCTUARY
+          </AppText>
+          <AppText variant="subheading" style={styles.topBarTitle} numberOfLines={1}>
+            {household.name}
+          </AppText>
+        </View>
+        <HeaderIconButton icon="menu-outline" label="Sanctuary Spaces" onPress={openAppDrawer} />
+      </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Real-Time Cloud Sync Bar ── */}
+        {/* ── Sanctuary Welcome Motto ── */}
+        <View style={styles.mottoSection}>
+          <AppText variant="h2" style={styles.heroTitle} numberOfLines={1}>
+            {household.name}
+          </AppText>
+          <AppText variant="body" style={[styles.heroSubtitle, { color: colors.text.secondary }]}>
+            {household.motto}
+          </AppText>
+        </View>
+
+        {/* ── Real-Time Cloud Sync Bar (Zero Borders) ── */}
         <PressableScale
           style={[styles.cloudBar, { backgroundColor: colors.surface }]}
           onPress={() => router.push("/(app)/(profile)/settings")}
         >
           <View style={styles.cloudStatusLeft}>
-            <View style={[styles.statusDot, { backgroundColor: status === "syncing" ? "#D97706" : "#10B981" }]} />
-            <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-              {status === "syncing" ? "Syncing to Supabase..." : "Supabase Cloud Connected"}
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: status === "syncing" ? "#C27835" : "#709758" },
+              ]}
+            />
+            <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }} numberOfLines={1}>
+              {status === "syncing" ? "Syncing to Cloud..." : "Supabase Cloud Connected"}
             </AppText>
           </View>
           <View style={styles.cloudStatusRight}>
             <Ionicons name="cloud-done-outline" size={14} color={colors.primary} />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-              {lastSyncedAt ? `Synced ${lastSyncedAt}` : "Multi-User Live"}
+            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600", marginLeft: 4 }} numberOfLines={1}>
+              {lastSyncedAt ? `Synced ${lastSyncedAt}` : "Live Sync"}
             </AppText>
           </View>
         </PressableScale>
 
-        {/* ── Sacred Spaces Switcher Bar ── */}
+        {/* ── Sacred Spaces Switcher Bar (Zero Borders) ── */}
         <View style={styles.spacesSelectorRow}>
           {SPACES.map((space) => {
             const isActive = currentSpace === space.key
@@ -138,8 +199,7 @@ export default function DashboardScreen() {
                 style={[
                   styles.spaceTabBtn,
                   {
-                    backgroundColor: isActive ? colors.primary : colors.surface,
-                    borderColor: isActive ? colors.primary : colors.border,
+                    backgroundColor: isActive ? colors.primary : colors.surface2,
                   },
                 ]}
                 onPress={() => {
@@ -151,45 +211,52 @@ export default function DashboardScreen() {
                   name={space.icon}
                   size={14}
                   color={isActive ? "#FFFFFF" : colors.text.secondary}
-                  style={{ marginRight: 6 }}
+                  style={{ marginRight: 5 }}
                 />
                 <AppText
                   variant="caption"
                   style={{
                     fontWeight: "700",
+                    fontSize: 12,
                     color: isActive ? "#FFFFFF" : colors.text.primary,
                   }}
+                  numberOfLines={1}
                 >
-                  {space.label.replace(" Space", "")}
+                  {space.label}
                 </AppText>
               </PressableScale>
             )
           })}
         </View>
 
-        {/* Active Space Banner */}
+        {/* Active Space Hint (Zero Borders) */}
         <View style={[styles.activeSpaceBanner, { backgroundColor: colors.surface2 }]}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+          <Ionicons
+            name="information-circle-outline"
+            size={15}
+            color={colors.primary}
+            style={{ marginRight: 6 }}
+          />
           <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
             {activeSpaceConfig.description}
           </AppText>
         </View>
 
-        {/* ── Private Family AI Cognitive Orchestrator ── */}
-        <Card style={[styles.aiCard, { backgroundColor: colors.surface }]}>
+        {/* ── Family Intelligence & Routines Card (Zero Borders) ── */}
+        <Card style={styles.aiCard}>
           <View style={styles.aiHeader}>
-            <View style={[styles.aiIconWrap, { backgroundColor: "rgba(139, 111, 196, 0.12)" }]}>
-              <Ionicons name="sparkles" size={18} color="#8B6FC4" />
+            <View style={[styles.aiIconWrap, { backgroundColor: colors.surface2 }]}>
+              <Ionicons name="leaf-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <AppText variant="subheading" style={{ fontWeight: "700" }}>
-                  Neev AI Cognitive Assistant
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <AppText variant="subheading" style={{ fontWeight: "700", flex: 1 }} numberOfLines={1}>
+                  Family Intelligence & Routines
                 </AppText>
-                <Badge label="0 Tokens · Local Intelligence" tone="success" size="small" />
+                <Badge label="Private & Local" tone="success" size="small" style={{ flexShrink: 0 }} />
               </View>
-              <AppText variant="caption" style={{ color: colors.text.muted }}>
-                Zero data sharing · Calculated on-device with time & effort heuristics
+              <AppText variant="caption" style={{ color: colors.text.muted, marginTop: 1 }}>
+                On-device heuristics · Private family schedules
               </AppText>
             </View>
           </View>
@@ -197,16 +264,27 @@ export default function DashboardScreen() {
           {/* Active AI Briefing */}
           {currentSpaceBriefing && (
             <View style={[styles.briefingBox, { backgroundColor: colors.surface2 }]}>
-              <AppText variant="body" style={{ fontWeight: "700", color: colors.text.primary, marginBottom: 4 }}>
+              <AppText
+                variant="body"
+                style={{ fontWeight: "700", color: colors.text.primary, marginBottom: 4 }}
+              >
                 {currentSpaceBriefing.title}
               </AppText>
-              <AppText variant="caption" style={{ color: colors.text.secondary, lineHeight: 18, marginBottom: 8 }}>
+              <AppText
+                variant="caption"
+                style={{ color: colors.text.secondary, lineHeight: 18, marginBottom: 8 }}
+              >
                 {currentSpaceBriefing.summary}
               </AppText>
               <View style={styles.briefingActionItems}>
                 {currentSpaceBriefing.actionItems.map((item, idx) => (
                   <View key={idx} style={styles.briefingBulletRow}>
-                    <Ionicons name="checkmark-circle" size={13} color={colors.primary} style={{ marginRight: 6, marginTop: 2 }} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={colors.primary}
+                      style={{ marginRight: 6, marginTop: 2 }}
+                    />
                     <AppText variant="caption" style={{ flex: 1, color: colors.text.primary }}>
                       {item}
                     </AppText>
@@ -217,77 +295,105 @@ export default function DashboardScreen() {
           )}
 
           {/* Quick Preparation Generators */}
-          <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.muted, marginTop: 10, marginBottom: 6 }}>
-            PREPARE ME PROACTIVELY FOR:
+          <AppText
+            variant="caption"
+            style={{ fontWeight: "700", color: colors.text.muted, marginTop: 12, marginBottom: 6, letterSpacing: 0.4 }}
+          >
+            PREPARE PROACTIVELY FOR:
           </AppText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aiQuickChips}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.aiQuickChips}
+          >
             <PressableScale
-              style={[styles.aiChip, { backgroundColor: colors.primaryAlpha }]}
+              style={[styles.aiChip, { backgroundColor: colors.surface2 }]}
               onPress={() => handleTriggerAiPrep("school_prep")}
             >
-              <AppText style={{ fontSize: 12 }}>🎓</AppText>
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
-                Child School & Exams
+              <Ionicons name="school-outline" size={14} color={colors.primary} />
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginLeft: 5 }}
+              >
+                Child School
               </AppText>
             </PressableScale>
 
             <PressableScale
-              style={[styles.aiChip, { backgroundColor: colors.primaryAlpha }]}
+              style={[styles.aiChip, { backgroundColor: colors.surface2 }]}
               onPress={() => handleTriggerAiPrep("doctor_visit")}
             >
-              <AppText style={{ fontSize: 12 }}>🩺</AppText>
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
-                Doctor & Clinic Visit
+              <Ionicons name="medkit-outline" size={14} color={colors.primary} />
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginLeft: 5 }}
+              >
+                Doctor Visit
               </AppText>
             </PressableScale>
 
             <PressableScale
-              style={[styles.aiChip, { backgroundColor: colors.primaryAlpha }]}
+              style={[styles.aiChip, { backgroundColor: colors.surface2 }]}
               onPress={() => handleTriggerAiPrep("career_interview")}
             >
-              <AppText style={{ fontSize: 12 }}>💼</AppText>
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
-                Career & Interview Prep
+              <Ionicons name="briefcase-outline" size={14} color={colors.primary} />
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginLeft: 5 }}
+              >
+                Career Prep
               </AppText>
             </PressableScale>
 
             <PressableScale
-              style={[styles.aiChip, { backgroundColor: colors.primaryAlpha }]}
+              style={[styles.aiChip, { backgroundColor: colors.surface2 }]}
               onPress={() => handleTriggerAiPrep("office_work")}
             >
-              <AppText style={{ fontSize: 12 }}>📊</AppText>
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
-                Office Work & Deadlines
+              <Ionicons name="business-outline" size={14} color={colors.primary} />
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginLeft: 5 }}
+              >
+                Office Deadlines
               </AppText>
             </PressableScale>
 
             <PressableScale
-              style={[styles.aiChip, { backgroundColor: colors.primaryAlpha }]}
+              style={[styles.aiChip, { backgroundColor: colors.surface2 }]}
               onPress={() => handleTriggerAiPrep("family_event")}
             >
-              <AppText style={{ fontSize: 12 }}>🪷</AppText>
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
-                Festival & Gathering
+              <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginLeft: 5 }}
+              >
+                Gatherings
               </AppText>
             </PressableScale>
           </ScrollView>
 
-          {/* Live Escalating Nudge Dispatcher */}
+          {/* Live Escalating Nudge Dispatcher (Zero Borders) */}
           <View style={[styles.notificationTriggerRow, { backgroundColor: colors.surface2 }]}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
               <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-                🔔 Escalating Reminders Active
+                Escalating Reminders
               </AppText>
-              <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 11, marginTop: 1 }}>
-                Persistent nudges keep you prepared for school, clinic & interviews
+              <AppText
+                variant="caption"
+                style={{ color: colors.text.muted, fontSize: 11, marginTop: 1 }}
+              >
+                Gentle nudges keep household members aligned
               </AppText>
             </View>
             <PressableScale
               style={[styles.testNudgeBtn, { backgroundColor: colors.primary }]}
               onPress={handleTestLiveNotification}
             >
-              <Ionicons name="notifications" size={13} color="#FFFFFF" />
-              <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "700", marginLeft: 4 }}>
+              <Ionicons name="notifications-outline" size={13} color="#FFFFFF" />
+              <AppText
+                variant="caption"
+                style={{ color: "#FFFFFF", fontWeight: "700", marginLeft: 4 }}
+              >
                 Test Nudge
               </AppText>
             </PressableScale>
@@ -296,20 +402,14 @@ export default function DashboardScreen() {
 
         {/* ── Space Meetings & Google Meet Links ── */}
         {currentSpaceMeetings.length > 0 && (
-          <View style={{ marginTop: 12 }}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <AppText variant="subheading" style={styles.sectionTitle}>
-                  Upcoming Meetings & Calls
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.muted }}>
-                  Google Calendar & Google Meet connected
-                </AppText>
-              </View>
-            </View>
+          <View>
+            <SectionHeader
+              title="Upcoming Meetings & Calls"
+              subtitle="Google Calendar & Google Meet connected"
+            />
 
             {currentSpaceMeetings.map((mtg) => (
-              <Card key={mtg.id} style={[styles.meetingCard, { backgroundColor: colors.surface }]}>
+              <Card key={mtg.id} style={styles.meetingCard}>
                 <View style={styles.meetingTopRow}>
                   <View style={{ flex: 1 }}>
                     <AppText variant="subheading" style={{ fontWeight: "700" }}>
@@ -317,11 +417,17 @@ export default function DashboardScreen() {
                     </AppText>
                     <View style={styles.meetingMetaRow}>
                       <Ionicons name="time-outline" size={13} color={colors.text.muted} />
-                      <AppText variant="caption" style={{ color: colors.text.muted, marginLeft: 4, marginRight: 8 }}>
+                      <AppText
+                        variant="caption"
+                        style={{ color: colors.text.muted, marginLeft: 4, marginRight: 8 }}
+                      >
                         {mtg.date} · {mtg.time}
                       </AppText>
                       <Ionicons name="videocam-outline" size={13} color={colors.primary} />
-                      <AppText variant="caption" style={{ color: colors.primary, marginLeft: 4, fontWeight: "600" }}>
+                      <AppText
+                        variant="caption"
+                        style={{ color: colors.primary, marginLeft: 4, fontWeight: "600" }}
+                      >
                         Google Meet
                       </AppText>
                     </View>
@@ -332,7 +438,10 @@ export default function DashboardScreen() {
                       onPress={() => openMeetingLink(mtg.meetLink)}
                     >
                       <Ionicons name="videocam" size={14} color="#FFFFFF" />
-                      <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "700", marginLeft: 4 }}>
+                      <AppText
+                        variant="caption"
+                        style={{ color: "#FFFFFF", fontWeight: "700", marginLeft: 4 }}
+                      >
                         Join Call
                       </AppText>
                     </PressableScale>
@@ -340,7 +449,12 @@ export default function DashboardScreen() {
                 </View>
                 {mtg.preparationNotes ? (
                   <View style={[styles.meetingNotesBox, { backgroundColor: colors.surface2 }]}>
-                    <Ionicons name="document-text-outline" size={12} color={colors.text.muted} style={{ marginRight: 6 }} />
+                    <Ionicons
+                      name="document-text-outline"
+                      size={13}
+                      color={colors.text.muted}
+                      style={{ marginRight: 6 }}
+                    />
                     <AppText variant="caption" style={{ color: colors.text.secondary, flex: 1 }}>
                       {mtg.preparationNotes}
                     </AppText>
@@ -352,34 +466,27 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Space Priority Tasks & Delegations ── */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <AppText variant="subheading" style={styles.sectionTitle}>
-              {activeSpaceConfig.label} Tasks & Nudges
-            </AppText>
-            <AppText variant="caption" style={{ color: colors.text.muted }}>
-              {currentSpaceTasks.filter((t) => t.isCompleted).length} of {currentSpaceTasks.length} tasks ready
-            </AppText>
-          </View>
-          <PressableScale
-            style={[styles.addTaskBtn, { backgroundColor: colors.primaryAlpha }]}
-            onPress={() => router.push("/modal/add-task")}
-          >
-            <Ionicons name="add" size={16} color={colors.primary} />
-            <AppText variant="label" style={{ color: colors.primary, fontSize: 13, marginLeft: 4 }}>
-              Add Task
-            </AppText>
-          </PressableScale>
-        </View>
+        <SectionHeader
+          title={`${activeSpaceConfig.label} Tasks & Nudges`}
+          subtitle={`${currentSpaceTasks.filter((t) => t.isCompleted).length} of ${currentSpaceTasks.length} tasks ready`}
+          action={
+            <PressableScale
+              style={[styles.addTaskBtn, { backgroundColor: colors.primaryAlpha }]}
+              onPress={() => router.push("/modal/add-task")}
+            >
+              <Ionicons name="add" size={16} color={colors.primary} />
+              <AppText variant="label" style={{ color: colors.primary, fontSize: 13, marginLeft: 4 }}>
+                Add Task
+              </AppText>
+            </PressableScale>
+          }
+        />
 
         <View style={styles.spaceTasksList}>
           {currentSpaceTasks.map((task) => (
             <PressableScale
               key={task.id}
-              style={[
-                styles.taskCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
+              style={[styles.taskCard, { backgroundColor: colors.surface }]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                 toggleTask(task.id)
@@ -392,17 +499,22 @@ export default function DashboardScreen() {
                 style={{ marginRight: 12 }}
               />
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                   <AppText
                     style={[
                       styles.taskTitleText,
-                      task.isCompleted && { textDecorationLine: "line-through", color: colors.text.muted },
+                      { flex: 1 },
+                      task.isCompleted && {
+                        textDecorationLine: "line-through",
+                        color: colors.text.muted,
+                      },
                     ]}
+                    numberOfLines={2}
                   >
                     {task.title}
                   </AppText>
                   {task.priority === "urgent" && !task.isCompleted && (
-                    <Badge label="URGENT" tone="error" size="small" />
+                    <Badge label="URGENT" tone="error" size="small" style={{ flexShrink: 0 }} />
                   )}
                 </View>
                 <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 2 }}>
@@ -413,32 +525,45 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* ── Calculated Family Load & Effort Balance (0 Tokens) ── */}
-        <Card style={[styles.loadCard, { backgroundColor: colors.surface }]}>
+        {/* ── Calculated Family Load & Effort Balance (Zero Borders) ── */}
+        <Card style={styles.loadCard}>
           <View style={styles.loadHeader}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <AppText variant="subheading" style={{ fontWeight: "700" }}>
-                  Family Effort & Chore Balance
-                </AppText>
-                <Badge label="Heuristic Math" tone="info" size="small" />
-              </View>
-              <AppText variant="caption" style={{ color: colors.text.muted }}>
-                Algorithmic task distribution ensures no single member is overwhelmed
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              <AppText variant="subheading" style={{ fontWeight: "700", flex: 1 }} numberOfLines={1}>
+                Family Effort & Chore Balance
               </AppText>
+              <Badge label="Heuristic Math" tone="info" size="small" style={{ flexShrink: 0 }} />
             </View>
+            <AppText variant="caption" style={{ color: colors.text.muted, marginTop: 2 }}>
+              Algorithmic task distribution ensures no single member is overwhelmed
+            </AppText>
           </View>
           <View style={styles.loadStatsRow}>
             {familyLoad.slice(0, 4).map((fl) => (
-              <View key={fl.memberId} style={[styles.loadStatItem, { backgroundColor: colors.surface2 }]}>
-                <AppText variant="caption" style={{ fontWeight: "700" }}>{fl.memberName}</AppText>
-                <AppText variant="body" style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}>
+              <View
+                key={fl.memberId}
+                style={[styles.loadStatItem, { backgroundColor: colors.surface2 }]}
+              >
+                <AppText variant="caption" style={{ fontWeight: "700" }}>
+                  {fl.memberName}
+                </AppText>
+                <AppText
+                  variant="body"
+                  style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}
+                >
                   {fl.taskCount} {fl.taskCount === 1 ? "task" : "tasks"}
                 </AppText>
                 <Badge
                   label={fl.loadLevel.toUpperCase()}
-                  tone={fl.loadLevel === "heavy" ? "error" : fl.loadLevel === "balanced" ? "warning" : "success"}
+                  tone={
+                    fl.loadLevel === "heavy"
+                      ? "error"
+                      : fl.loadLevel === "balanced"
+                        ? "warning"
+                        : "success"
+                  }
                   size="small"
+                  style={{ marginTop: 2 }}
                 />
               </View>
             ))}
@@ -446,18 +571,22 @@ export default function DashboardScreen() {
         </Card>
 
         {/* ── Multigenerational Family & Pets Row ── */}
-        <View style={styles.sectionHeader}>
-          <AppText variant="subheading" style={styles.sectionTitle}>
-            Family & Beloved Pets
-          </AppText>
-          <PressableScale onPress={() => router.push("/(app)/(tabs)/family")}>
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-              View All ({members.length}) →
-            </AppText>
-          </PressableScale>
-        </View>
+        <SectionHeader
+          title="Family & Beloved Pets"
+          action={
+            <PressableScale onPress={() => router.push("/(app)/(tabs)/family")}>
+              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                View All ({members.length}) →
+              </AppText>
+            </PressableScale>
+          }
+        />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.membersRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.membersRow}
+        >
           {members.map((member) => (
             <PressableScale
               key={member.id}
@@ -478,20 +607,18 @@ export default function DashboardScreen() {
         </ScrollView>
 
         {/* ── Active Family Intentions & Pet Projects ── */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <AppText variant="subheading" style={styles.sectionTitle}>
-              Intentions & Pet Projects
-            </AppText>
-            <AppText variant="caption" style={{ color: colors.text.muted }}>
-              Shared Sankalpas & weekend bonding
-            </AppText>
-          </View>
-        </View>
+        <SectionHeader
+          title="Intentions & Pet Projects"
+          subtitle="Shared Sankalpas & weekend bonding"
+        />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.intentionsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.intentionsRow}
+        >
           {intentions.map((item) => (
-            <Card key={item.id} style={[styles.intentionCard, { backgroundColor: colors.surface }]}>
+            <Card key={item.id} style={styles.intentionCard}>
               <View style={styles.intentionTop}>
                 <Badge
                   label={item.category.toUpperCase()}
@@ -506,7 +633,10 @@ export default function DashboardScreen() {
                   }}
                 >
                   <AppText style={{ fontSize: 13 }}>👏</AppText>
-                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
+                  <AppText
+                    variant="caption"
+                    style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}
+                  >
                     {item.cheerCount}
                   </AppText>
                 </PressableScale>
@@ -519,35 +649,39 @@ export default function DashboardScreen() {
               </AppText>
               <View style={styles.progressContainer}>
                 <View style={styles.progressLabelRow}>
-                  <AppText variant="caption" style={{ color: colors.text.muted }}>Progress</AppText>
+                  <AppText variant="caption" style={{ color: colors.text.muted }}>
+                    Progress
+                  </AppText>
                   <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
                     {item.progress}%
                   </AppText>
                 </View>
-                <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-                  <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${item.progress}%` }]} />
+                <View style={[styles.progressBar, { backgroundColor: colors.surface2 }]}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { backgroundColor: colors.primary, width: `${item.progress}%` },
+                    ]}
+                  />
                 </View>
               </View>
             </Card>
           ))}
         </ScrollView>
 
-        {/* ── Family Health & Daily Movement Telemetry (Google Fit) ── */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <AppText variant="subheading" style={styles.sectionTitle}>
-              Family Movement & Wellness
-            </AppText>
-            <AppText variant="caption" style={{ color: colors.text.muted }}>
-              Google Fit & Health Connect daily telemetry
-            </AppText>
-          </View>
-        </View>
+        {/* ── Family Health & Daily Movement Telemetry ── */}
+        <SectionHeader
+          title="Family Movement & Wellness"
+          subtitle="Google Fit & Health Connect daily telemetry"
+        />
 
-        <Card style={[styles.healthCard, { backgroundColor: colors.surface }]}>
+        <Card style={styles.healthCard}>
           <View style={styles.healthHeader}>
-            <Ionicons name="heart-circle-outline" size={20} color="#DA7756" />
-            <AppText variant="body" style={{ fontWeight: "700", color: colors.text.primary, flex: 1, marginLeft: 8 }}>
+            <Ionicons name="heart-circle-outline" size={20} color={colors.primary} />
+            <AppText
+              variant="body"
+              style={{ fontWeight: "700", color: colors.text.primary, flex: 1, marginLeft: 8 }}
+            >
               Today's Gentle Movement Pulse
             </AppText>
             <Badge label="Google Fit Sync" tone="success" size="small" />
@@ -555,7 +689,9 @@ export default function DashboardScreen() {
           <View style={styles.healthStatsRow}>
             {healthMetrics.map((hm) => (
               <View key={hm.memberId} style={styles.healthStatItem}>
-                <AppText variant="caption" style={{ fontWeight: "700" }}>{hm.memberName}</AppText>
+                <AppText variant="caption" style={{ fontWeight: "700" }}>
+                  {hm.memberName}
+                </AppText>
                 <AppText variant="h3" style={{ color: colors.primary, marginTop: 2 }}>
                   {hm.dailySteps.toLocaleString()}
                 </AppText>
@@ -569,30 +705,28 @@ export default function DashboardScreen() {
 
         {/* ── Next Upcoming Function & Invitations ── */}
         {nextFunction && (
-          <View style={{ marginTop: 12 }}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <AppText variant="subheading" style={styles.sectionTitle}>
-                  Next Family Function
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.muted }}>
-                  Invitations & shared preparations
-                </AppText>
-              </View>
-              <PressableScale onPress={() => router.push("/(app)/(tabs)/schedule")}>
-                <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-                  All Events →
-                </AppText>
-              </PressableScale>
-            </View>
-
-            <Card style={[styles.eventCard, { backgroundColor: colors.surface }]}>
-              <View style={styles.eventCardHeader}>
-                <View style={styles.eventDateBadge}>
-                  <AppText style={styles.eventDateMonth}>
-                    {new Date(nextFunction.date).toLocaleString("default", { month: "short" }).toUpperCase()}
+          <View>
+            <SectionHeader
+              title="Next Family Function"
+              subtitle="Invitations & shared preparations"
+              action={
+                <PressableScale onPress={() => router.push("/(app)/(tabs)/schedule")}>
+                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                    All Events →
                   </AppText>
-                  <AppText style={styles.eventDateDay}>
+                </PressableScale>
+              }
+            />
+
+            <Card style={styles.eventCard}>
+              <View style={styles.eventCardHeader}>
+                <View style={[styles.eventDateBadge, { backgroundColor: colors.surface2 }]}>
+                  <AppText style={[styles.eventDateMonth, { color: colors.primary }]}>
+                    {new Date(nextFunction.date)
+                      .toLocaleString("default", { month: "short" })
+                      .toUpperCase()}
+                  </AppText>
+                  <AppText style={[styles.eventDateDay, { color: colors.primary }]}>
                     {new Date(nextFunction.date).getDate()}
                   </AppText>
                 </View>
@@ -619,7 +753,12 @@ export default function DashboardScreen() {
                     <AppText variant="caption" style={styles.eventMetaText}>
                       {nextFunction.time}
                     </AppText>
-                    <Ionicons name="location-outline" size={13} color={colors.text.muted} style={{ marginLeft: 8 }} />
+                    <Ionicons
+                      name="location-outline"
+                      size={13}
+                      color={colors.text.muted}
+                      style={{ marginLeft: 8 }}
+                    />
                     <AppText variant="caption" style={styles.eventMetaText} numberOfLines={1}>
                       {nextFunction.location}
                     </AppText>
@@ -631,16 +770,20 @@ export default function DashboardScreen() {
                 {nextFunction.description}
               </AppText>
 
-              <View style={styles.eventFooterRow}>
+              <View style={[styles.eventFooterRow, { borderTopColor: colors.surface2 }]}>
                 <AppText variant="caption" style={{ color: colors.text.secondary }}>
-                  {nextFunction.tasks.filter((t) => t.isDone).length} of {nextFunction.tasks.length} preparations ready
+                  {nextFunction.tasks.filter((t) => t.isDone).length} of {nextFunction.tasks.length}{" "}
+                  preparations ready
                 </AppText>
                 <PressableScale
                   style={[styles.gcalBtn, { backgroundColor: colors.primaryAlpha }]}
                   onPress={handleSyncToGoogle}
                 >
                   <Ionicons name="calendar-outline" size={13} color={colors.primary} />
-                  <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
+                  <AppText
+                    variant="caption"
+                    style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}
+                  >
                     Google Sync
                   </AppText>
                 </PressableScale>
@@ -650,25 +793,16 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Daily Rhythms Checklist ── */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <AppText variant="subheading" style={styles.sectionTitle}>
-              Daily Family Rhythms
-            </AppText>
-            <AppText variant="caption" style={{ color: colors.text.muted }}>
-              {completedRoutines} of {routines.length} completed today
-            </AppText>
-          </View>
-        </View>
+        <SectionHeader
+          title="Daily Family Rhythms"
+          subtitle={`${completedRoutines} of ${routines.length} completed today`}
+        />
 
         <View style={styles.routinesList}>
           {routines.slice(0, 4).map((routine) => (
             <PressableScale
               key={routine.id}
-              style={[
-                styles.routineItem,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
+              style={[styles.routineItem, { backgroundColor: colors.surface }]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                 toggleRoutine(routine.id)
@@ -685,7 +819,10 @@ export default function DashboardScreen() {
                 <AppText
                   style={[
                     styles.routineTitle,
-                    routine.isCompleted && { textDecorationLine: "line-through", color: colors.text.muted },
+                    routine.isCompleted && {
+                      textDecorationLine: "line-through",
+                      color: colors.text.muted,
+                    },
                   ]}
                 >
                   {routine.title}
@@ -700,7 +837,7 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* ── Elder Wisdom of the Day ── */}
+        {/* ── Elder Wisdom of the Day (Zero Borders) ── */}
         {pinnedEntries[0] && (
           <Card style={[styles.wisdomCard, { backgroundColor: colors.surface }]}>
             <View style={styles.wisdomTopRow}>
@@ -721,13 +858,46 @@ export default function DashboardScreen() {
           </Card>
         )}
       </ScrollView>
-    </ScreenContainer>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  topBarLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  topBarTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  mottoSection: {
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  heroTitle: {
+    fontWeight: "800",
+    fontSize: 22,
+    letterSpacing: -0.3,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    marginTop: 3,
+    lineHeight: 18,
+  },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 8,
   },
   cloudBar: {
@@ -743,6 +913,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flex: 1,
+    marginRight: 8,
   },
   statusDot: {
     width: 8,
@@ -753,6 +925,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexShrink: 0,
   },
   spacesSelectorRow: {
     flexDirection: "row",
@@ -764,9 +937,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 14,
-    borderWidth: 1,
   },
   activeSpaceBanner: {
     flexDirection: "row",
@@ -836,7 +1008,7 @@ const styles = StyleSheet.create({
   },
   loadCard: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     marginBottom: 8,
   },
   loadHeader: {
@@ -844,25 +1016,15 @@ const styles = StyleSheet.create({
   },
   loadStatsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   loadStatItem: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 12,
+    width: "48.5%",
+    padding: 12,
+    borderRadius: 14,
     alignItems: "center",
     gap: 4,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    marginTop: 14,
-  },
-  sectionTitle: {
-    fontWeight: "700",
-    letterSpacing: -0.2,
   },
   meetingCard: {
     padding: 14,
@@ -885,6 +1047,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
+    marginLeft: 8,
   },
   meetingNotesBox: {
     flexDirection: "row",
@@ -900,9 +1063,8 @@ const styles = StyleSheet.create({
   taskCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 14,
     borderRadius: 16,
-    borderWidth: 1,
   },
   taskTitleText: {
     fontWeight: "600",
@@ -923,7 +1085,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
-    elevation: 2,
+    elevation: 1,
   },
   avatarText: {
     color: "#FFFFFF",
@@ -1018,19 +1180,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 52,
     borderRadius: 14,
-    backgroundColor: "rgba(90, 122, 100, 0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   eventDateMonth: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#5A7A64",
   },
   eventDateDay: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#5A7A64",
   },
   eventHeaderInfo: {
     flex: 1,
@@ -1058,7 +1217,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(0,0,0,0.06)",
   },
   gcalBtn: {
     flexDirection: "row",
@@ -1073,9 +1231,8 @@ const styles = StyleSheet.create({
   routineItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 14,
     borderRadius: 16,
-    borderWidth: 1,
   },
   routineCheckWrap: {
     marginRight: 12,
@@ -1094,8 +1251,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 18,
     marginTop: 18,
-    borderLeftWidth: 4,
-    borderLeftColor: "#DA7756",
   },
   wisdomTopRow: {
     flexDirection: "row",

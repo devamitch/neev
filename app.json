@@ -9,6 +9,7 @@
   "android": {
     "package": "com.amit.neev",
     "versionCode": 1,
+    "googleServicesFile": "./google-services.json",
     "icon": "./assets/images/app-icon-android-legacy.png",
     "adaptiveIcon": {
       "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
@@ -65,7 +66,14 @@
     ],
     "expo-build-properties",
     "expo-router",
-    "expo-image"
+    "expo-image",
+    [
+      "expo-notifications",
+      {
+        "icon": "./assets/images/app-icon-android-legacy.png",
+        "color": "#D97706"
+      }
+    ]
   ],
   "experiments": {
     "tsconfigPaths": true,

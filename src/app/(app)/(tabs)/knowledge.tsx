@@ -14,12 +14,13 @@ import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useKnowledgeStore, type KnowledgeCategory } from "@/stores/useKnowledgeStore"
+import { useShallow } from "@/stores/useRootStore"
 
 const CATEGORIES: { key: KnowledgeCategory | "all"; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "All Vault", icon: "albums-outline" },
   { key: "story", label: "Family Stories", icon: "book-outline" },
   { key: "recipe", label: "Heirloom Recipes", icon: "restaurant-outline" },
-  { key: "wisdom", label: "Elder Wisdom", icon: "sparkles-outline" },
+  { key: "wisdom", label: "Elder Wisdom", icon: "bulb-outline" },
   { key: "tradition", label: "Rituals & Mandir", icon: "flame-outline" },
   { key: "project", label: "Pet Projects", icon: "hammer-outline" },
 ]
@@ -27,7 +28,14 @@ const CATEGORIES: { key: KnowledgeCategory | "all"; label: string; icon: keyof t
 export default function KnowledgeScreen() {
   const colors = useColors()
   const bottomInset = useTabBarInset()
-  const { entries, selectedCategory, setCategory, togglePin } = useKnowledgeStore()
+  const { entries, selectedCategory, setCategory, togglePin } = useKnowledgeStore(
+    useShallow((s) => ({
+      entries: s.entries,
+      selectedCategory: s.selectedCategory,
+      setCategory: s.setCategory,
+      togglePin: s.togglePin,
+    })),
+  )
   const [expandedId, setExpandedId] = useState<string | null>("k-1")
 
   const filteredEntries = selectedCategory === "all"
@@ -53,7 +61,7 @@ export default function KnowledgeScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Category Pills */}
+        {/* Category Pills (Zero Borders) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
             const active = selectedCategory === cat.key
@@ -63,8 +71,7 @@ export default function KnowledgeScreen() {
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: active ? colors.primary : colors.surface,
-                    borderColor: active ? colors.primary : colors.border,
+                    backgroundColor: active ? colors.primary : colors.surface2,
                   },
                 ]}
                 onPress={() => {
@@ -173,7 +180,7 @@ export default function KnowledgeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
   },
   filterRow: {
@@ -185,9 +192,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
   },
   filterPillText: {
     fontWeight: "600",

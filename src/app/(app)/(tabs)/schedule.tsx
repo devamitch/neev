@@ -17,7 +17,7 @@ import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleSto
 import { useFamilyStore } from "@/stores/useFamilyStore"
 
 import { googleServicesClient } from "@/services/google/googleServicesClient"
-import { useRootStore } from "@/stores/useRootStore"
+import { useRootStore, useShallow } from "@/stores/useRootStore"
 
 const CATEGORIES: { key: FunctionCategory | "all"; label: string }[] = [
   { key: "all", label: "All Functions" },
@@ -33,14 +33,23 @@ export default function ScheduleScreen() {
   const bottomInset = useTabBarInset()
   const [selectedCat, setSelectedCat] = useState<FunctionCategory | "all">("all")
 
-  const { functions, toggleTask } = useScheduleStore()
+  const { functions, toggleTask } = useScheduleStore(
+    useShallow((s) => ({ functions: s.functions, toggleTask: s.toggleTask })),
+  )
   const members = useFamilyStore((s) => s.members)
 
-  const memberMap = new Map(members.map((m) => [m.id, m.name.split(" ")[0]]))
+  const memberMap = React.useMemo(
+    () => new Map(members.map((m) => [m.id, m.name.split(" ")[0]])),
+    [members],
+  )
 
-  const filteredFunctions = selectedCat === "all"
-    ? functions
-    : functions.filter((f) => f.category === selectedCat)
+  const filteredFunctions = React.useMemo(
+    () =>
+      selectedCat === "all"
+        ? functions
+        : functions.filter((f) => f.category === selectedCat),
+    [selectedCat, functions],
+  )
 
   return (
     <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
@@ -61,7 +70,7 @@ export default function ScheduleScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Category Filter Pills */}
+        {/* Category Filter Pills (Zero Borders) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
             const active = selectedCat === cat.key
@@ -71,8 +80,7 @@ export default function ScheduleScreen() {
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: active ? colors.primary : colors.surface,
-                    borderColor: active ? colors.primary : colors.border,
+                    backgroundColor: active ? colors.primary : colors.surface2,
                   },
                 ]}
                 onPress={() => {
@@ -194,7 +202,7 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
   },
   filterRow: {
@@ -204,9 +212,8 @@ const styles = StyleSheet.create({
   },
   filterPill: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
   },
   filterPillText: {
     fontWeight: "600",

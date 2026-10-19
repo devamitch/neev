@@ -11,12 +11,14 @@ import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { AnimatedSplashScreen } from "@/components/splash/AnimatedSplashScreen"
 import { CustomAlert } from "@/components/ui/CustomAlert"
 import { Toast } from "@/components/ui/Toast"
+import { MindfulNotificationBanner } from "@/components/ui/MindfulNotificationBanner"
 import { initI18n } from "@/i18n"
 import { setuSsoService } from "@/services/auth/setuSsoService"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { customFontsToLoad } from "@/theme/typography"
 import { loadDateFnsLocale } from "@/utils/formatDate"
 import { QueryProvider } from "@/services/query/queryClient"
+import { notificationsService } from "@/services/notifications/notificationsService"
 
 /** Run a splash call without ever letting it throw or reject into the app. */
 function safely(run: () => unknown) {
@@ -92,6 +94,24 @@ function AuthNavigationGuard({ loaded }: { loaded: boolean }) {
       recordNavigationTransition(currentPath, segments as string[])
     }
   }, [loaded, hasCompletedOnboarding, isAuthenticated, segments, router])
+
+  useEffect(() => {
+    if (!loaded || !isAuthenticated) return
+
+    // Safely register FCM & real push notifications once signed in
+    void notificationsService.registerForPushNotificationsAsync()
+
+    // Attach listeners for incoming push messages & deep link navigation
+    const cleanup = notificationsService.setupNotificationListeners((route) => {
+      try {
+        router.push(route as any)
+      } catch (err) {
+        if (__DEV__) console.warn("[push] navigation failed:", err)
+      }
+    })
+
+    return cleanup
+  }, [loaded, isAuthenticated, router])
 
   return null
 }
@@ -230,6 +250,7 @@ export default function Root() {
           </QueryProvider>
           <CustomAlert />
           <Toast />
+          <MindfulNotificationBanner />
           {!splashDone && (
             <AnimatedSplashScreen
               onReady={hideNativeSplash}

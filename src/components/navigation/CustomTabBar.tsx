@@ -1,10 +1,18 @@
-import { PressableScale } from "@/components/ui/PressableScale"
+/**
+ * Neev Family Sanctuary Bottom Dock (Traced identically from BlinkQuest canonical dock architecture):
+ * - Edge-to-edge, anchored to bottom: no side or bottom gaps; runs under system navigation area
+ * - 70px content row, rounded top corners
+ * - Raised hump: raised-cosine wave wrapping the 60px central action orb
+ * - Refined Pista palette: Deep obsidian dock (#192216), authentic Pista green (#709758), muted sage (#8F9F8B)
+ * - Labels under every item, perfectly aligned on the same horizontal baseline
+ */
+
+import { memo, useCallback, useEffect, useMemo, type ComponentProps } from "react"
+import { StyleSheet, useWindowDimensions, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import type { Tabs } from "expo-router"
 import { router } from "expo-router"
-import { memo, useCallback, useEffect, useMemo, type ComponentProps } from "react"
-import { StyleSheet, useWindowDimensions, View } from "react-native"
 import Animated, {
   Easing,
   interpolateColor,
@@ -15,15 +23,12 @@ import Animated, {
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, {
-  Circle,
   ClipPath,
   Defs,
   Path,
-  Stop,
-  LinearGradient as SvgLinearGradient,
 } from "react-native-svg"
 
-import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
+import { PressableScale } from "@/components/ui/PressableScale"
 import { useLayout } from "@/theme/layout"
 
 import {
@@ -50,16 +55,21 @@ const TAB_META: Record<string, TabMeta> = {
   family: { activeIcon: "people", inactiveIcon: "people-outline", label: "Family" },
 }
 
-const ORB_ROUTE = "add-event"
+const ORB_ROUTE = "quick-action"
 
-/* ── Design System Constants ───────────────────────────────────── */
-const DOCK_COLOR = "#262624"
-const ACCENT_COLOR = "#DA7756"
-const MUTED_COLOR = "#A8A29E"
+/* ── BlinkQuest Canonical Dock Constants (Pista Edition) ───────── */
+const DOCK_COLOR = "#192216"
+const ACCENT_COLOR = "#709758"
+const MUTED_COLOR = "#8F9F8B"
 
 const CENTER_SIZE = 60
 const BAR_H = 70
 const TOP_R = 24
+/**
+ * Raised-cosine wave:
+ *   h(x) = HUMP_RISE · (1 + cos(π·x / HUMP_HALF)) / 2,  |x| ≤ HUMP_HALF
+ * 31.5px tall, 94px each side, centred on the orb.
+ */
 const HUMP_RISE = 31.5
 const HUMP_HALF = 94
 const HUMP_H = 34
@@ -72,8 +82,10 @@ const ICON_SIZE = 24
 const LABEL_LINE = 14
 const TAB_CONTENT_H = ICON_SIZE + 2 + 2 + LABEL_LINE
 const LABEL_TOP = HUMP_H + (BAR_H - TAB_CONTENT_H) / 2 + ICON_SIZE + 4
+const SCAN_LABEL_GAP = LABEL_TOP - (ORB_CENTER_Y + CENTER_SIZE / 2)
 
 const GLYPH_SWAP = { duration: 180, easing: Easing.out(Easing.quad) } as const
+const PRESS = { duration: 90, easing: Easing.out(Easing.quad) } as const
 
 const bottomPad = (insetBottom: number) => insetBottom + BOTTOM_EXTRA
 
@@ -92,8 +104,10 @@ const haptic = (run: () => Promise<void>) => {
   void run().catch(() => undefined)
 }
 
+/* ── Dock silhouette: flat top, rounded corners, raised-cosine wave ── */
 const WAVE_STEPS = 24
 
+/** Smooth cubic chain Catmull-Rom through sampled points (identical to BlinkQuest) */
 function wavePath(cx: number): string {
   const pts: [number, number][] = []
   for (let i = 0; i <= WAVE_STEPS; i++) {
@@ -108,61 +122,50 @@ function wavePath(cx: number): string {
     const p1 = pts[i]
     const p2 = pts[i + 1]
     const p3 = pts[Math.min(pts.length - 1, i + 2)]
-    const cp1x = p1[0] + (p2[0] - p0[0]) / 6
-    const cp1y = p1[1] + (p2[1] - p0[1]) / 6
-    const cp2x = p2[0] - (p3[0] - p1[0]) / 6
-    const cp2y = p2[1] - (p3[1] - p1[1]) / 6
-    d += ` C ${f(cp1x)} ${f(cp1y)}, ${f(cp2x)} ${f(cp2y)}, ${f(p2[0])} ${f(p2[1])}`
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6
+    d += ` C ${f(c1x)} ${f(c1y)} ${f(c2x)} ${f(c2y)} ${f(p2[0])} ${f(p2[1])}`
   }
   return d
 }
 
-function buildBarPath(w: number, totalH: number, cornerR: number): string {
-  const cx = w / 2
-  const f = (n: number) => n.toFixed(2)
-  const leftShoulderX = cx - HUMP_HALF
-  const rightShoulderX = cx + HUMP_HALF
-
-  if (cornerR > 0) {
-    const r = Math.min(cornerR, leftShoulderX, totalH / 2)
-    return [
-      `M 0 ${f(HUMP_H + r)}`,
-      `A ${f(r)} ${f(r)} 0 0 1 ${f(r)} ${f(HUMP_H)}`,
-      `L ${f(leftShoulderX)} ${f(HUMP_H)}`,
-      wavePath(cx),
-      `L ${f(w - r)} ${f(HUMP_H)}`,
-      `A ${f(r)} ${f(r)} 0 0 1 ${f(w)} ${f(HUMP_H + r)}`,
-      `L ${f(w)} ${f(totalH - r)}`,
-      `A ${f(r)} ${f(r)} 0 0 1 ${f(w - r)} ${f(totalH)}`,
-      `L ${f(r)} ${f(totalH)}`,
-      `A ${f(r)} ${f(r)} 0 0 1 0 ${f(totalH - r)}`,
-      "Z",
-    ].join(" ")
-  }
-
+function buildTopEdge(w: number): string[] {
+  const T = HUMP_H
+  const r = TOP_R
   return [
-    `M 0 ${f(HUMP_H)}`,
-    `L ${f(leftShoulderX)} ${f(HUMP_H)}`,
-    wavePath(cx),
-    `L ${f(w)} ${f(HUMP_H)}`,
-    `L ${f(w)} ${f(totalH)}`,
-    `L 0 ${f(totalH)}`,
+    `A ${r} ${r} 0 0 1 ${r} ${T}`,
+    wavePath(w / 2),
+    `L ${w - r} ${T}`,
+    `A ${r} ${r} 0 0 1 ${w} ${T + r}`,
+  ]
+}
+
+function buildBarPath(w: number, h: number, bottomR = 0): string {
+  if (bottomR <= 0) {
+    return [`M 0 ${h}`, `L 0 ${HUMP_H + TOP_R}`, ...buildTopEdge(w), `L ${w} ${h}`, "Z"].join(" ")
+  }
+  const br = bottomR
+  return [
+    `M 0 ${h - br}`,
+    `L 0 ${HUMP_H + TOP_R}`,
+    ...buildTopEdge(w),
+    `L ${w} ${h - br}`,
+    `A ${br} ${br} 0 0 1 ${w - br} ${h}`,
+    `L ${br} ${h}`,
+    `A ${br} ${br} 0 0 1 0 ${h - br}`,
     "Z",
   ].join(" ")
 }
 
 function buildRimPath(w: number): string {
-  const cx = w / 2
-  const f = (n: number) => n.toFixed(2)
-  return [
-    `M 0 ${f(HUMP_H)}`,
-    `L ${f(cx - HUMP_HALF)} ${f(HUMP_H)}`,
-    wavePath(cx),
-    `L ${f(w)} ${f(HUMP_H)}`,
-  ].join(" ")
+  const y = HUMP_H + TOP_R + 6
+  return [`M 0 ${y}`, `L 0 ${HUMP_H + TOP_R}`, ...buildTopEdge(w), `L ${w} ${y}`].join(" ")
 }
 
-type TabButtonProps = {
+/* ── Tab Button Component ──────────────────────────────────────── */
+interface TabButtonProps {
   routeKey: string
   routeName: string
   activeIcon: keyof typeof Ionicons.glyphMap
@@ -206,7 +209,7 @@ const TabButton = memo(function TabButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: focused }}
       onPress={() => onTabPress(routeKey, routeName, focused)}
-      android_ripple={{ color: "rgba(218, 119, 86, 0.15)", borderless: true, radius: 28 }}
+      android_ripple={{ color: "rgba(112, 151, 88, 0.15)", borderless: true, radius: 28 }}
       scaleTo={0.94}
       style={styles.tab}
       testID={`tab-${routeName}`}
@@ -221,8 +224,10 @@ const TabButton = memo(function TabButton({
   )
 })
 
+/* ── Main CustomTabBar Component ───────────────────────────────── */
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
+  const reduceMotion = useReducedMotion()
   const { width } = useWindowDimensions()
 
   useEffect(() => {
@@ -234,6 +239,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const barW = isTablet ? Math.min(width - 48, FLOAT_MAX_W) : Math.ceil(width) + bleed * 2
   const barH = HUMP_H + BAR_H + (isTablet ? 0 : bottomPad(insets.bottom))
   const floatBottom = isTablet ? insets.bottom + FLOAT_GAP : 0
+
   const barPath = useMemo(
     () => buildBarPath(barW, barH, isTablet ? TOP_R : 0),
     [barW, barH, isTablet],
@@ -248,6 +254,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const half = Math.ceil(routes.length / 2)
   const left = routes.slice(0, half)
   const right = routes.slice(half)
+  const activeIndex = routes.findIndex((route) => route.key === state.routes[state.index]?.key)
 
   const press = useSharedValue(0)
 
@@ -276,230 +283,179 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     [navigation],
   )
 
-  const onOrbPress = useCallback(() => {
+  const handleOrbPress = useCallback(() => {
     haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium))
     router.push("/modal/quick-action" as any)
   }, [])
 
-  const cx = barW / 2
-  const orbLeft = cx - CENTER_SIZE / 2
-  const orbTop = ORB_CENTER_Y - CENTER_SIZE / 2
+  const currentRoute = state.routes[state.index]
+  if (currentRoute?.name === ORB_ROUTE || !TAB_META[currentRoute?.name]) {
+    const currentOptions = descriptors[currentRoute?.key]?.options
+    const isExplicitlyHidden =
+      currentOptions?.tabBarStyle &&
+      (currentOptions.tabBarStyle as { display?: string }).display === "none"
+    if (isExplicitlyHidden || !TAB_META[currentRoute?.name]) {
+      return null
+    }
+  }
+
+  const renderTab = (route: (typeof routes)[number], index: number) => {
+    const meta = TAB_META[route.name]
+    if (!meta) return null
+    return (
+      <TabButton
+        key={route.key}
+        routeKey={route.key}
+        routeName={route.name}
+        activeIcon={meta.activeIcon}
+        inactiveIcon={meta.inactiveIcon}
+        label={meta.label}
+        focused={activeIndex === index}
+        onTabPress={onTabPress}
+      />
+    )
+  }
 
   return (
     <Animated.View
+      testID="tab-bar"
       pointerEvents="box-none"
-      style={[
-        styles.root,
-        isTablet ? { bottom: floatBottom, alignSelf: "center", width: barW } : { left: -bleed },
-        containerAnimStyle,
-      ]}
+      style={[styles.dock, { bottom: floatBottom }, containerAnimStyle]}
     >
-      <View style={[styles.canvas, { width: barW, height: barH }]} pointerEvents="none">
-        <Svg width={barW} height={barH}>
+      <View style={{ width: barW, height: barH, alignSelf: "center" }} pointerEvents="box-none">
+        <Svg width={barW} height={barH} style={StyleSheet.absoluteFill} pointerEvents="none">
           <Defs>
-            <SvgLinearGradient id="dockBody" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={DOCK_COLOR} stopOpacity="0.98" />
-              <Stop offset="1" stopColor="#1E1E1C" stopOpacity="1" />
-            </SvgLinearGradient>
-            <SvgLinearGradient id="dockRim" x1="0" y1="0" x2="1" y2="0">
-              <Stop offset="0" stopColor="rgba(255,255,255,0.06)" />
-              <Stop offset="0.5" stopColor="rgba(255,255,255,0.22)" />
-              <Stop offset="1" stopColor="rgba(255,255,255,0.06)" />
-            </SvgLinearGradient>
             <ClipPath id="dockClip">
               <Path d={barPath} />
             </ClipPath>
           </Defs>
-          <Path d={barPath} fill="url(#dockBody)" />
-          <Path d={rimPath} stroke="url(#dockRim)" strokeWidth={1} fill="none" />
+          {/* Solid deep Pista obsidian body (No tacky gradient) */}
+          <Path d={barPath} fill={DOCK_COLOR} />
+          {/* Hairline outline tracing the silhouette */}
+          <Path d={rimPath} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
         </Svg>
-      </View>
 
-      <View style={[styles.dockRow, { width: barW, top: HUMP_H, height: BAR_H }]}>
-        <View style={styles.tabWing}>
-          {left.map((route) => {
-            const meta = TAB_META[route.name]
-            const focused = state.routes[state.index]?.key === route.key
-            return (
-              <TabButton
-                key={route.key}
-                routeKey={route.key}
-                routeName={route.name}
-                activeIcon={meta.activeIcon}
-                inactiveIcon={meta.inactiveIcon}
-                label={meta.label}
-                focused={focused}
-                onTabPress={onTabPress}
-              />
-            )
-          })}
-        </View>
-
-        <View style={styles.centerGap} pointerEvents="none" />
-
-        <View style={styles.tabWing}>
-          {right.map((route) => {
-            const meta = TAB_META[route.name]
-            const focused = state.routes[state.index]?.key === route.key
-            return (
-              <TabButton
-                key={route.key}
-                routeKey={route.key}
-                routeName={route.name}
-                activeIcon={meta.activeIcon}
-                inactiveIcon={meta.inactiveIcon}
-                label={meta.label}
-                focused={focused}
-                onTabPress={onTabPress}
-              />
-            )
-          })}
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.orbAnchor,
-          {
-            left: orbLeft,
-            top: orbTop,
-            width: CENTER_SIZE,
-            height: CENTER_SIZE,
-          },
-        ]}
-      >
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel="Add Family Event or Wisdom"
-          onPress={onOrbPress}
-          scaleTo={0.92}
-          style={styles.orbButton}
-          testID="tab-add-event-orb"
+        {/* Tab buttons row */}
+        <View
+          style={[styles.row, { paddingHorizontal: bleed }]}
+          accessibilityRole="tablist"
         >
-          <Animated.View style={[styles.orbSurface, orbPress]}>
-            <Svg width={CENTER_SIZE} height={CENTER_SIZE}>
-              <Defs>
-                <SvgLinearGradient id="orbGrad" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor="#E28464" />
-                  <Stop offset="0.6" stopColor={ACCENT_COLOR} />
-                  <Stop offset="1" stopColor="#9C4426" />
-                </SvgLinearGradient>
-              </Defs>
-              <Circle
-                cx={CENTER_SIZE / 2}
-                cy={CENTER_SIZE / 2}
-                r={CENTER_SIZE / 2 - 1}
-                fill="url(#orbGrad)"
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth={1.5}
-              />
-            </Svg>
-            <View style={styles.orbIconWrap}>
-              <Ionicons name="add" size={32} color="#FFFFFF" />
-            </View>
-          </Animated.View>
-        </PressableScale>
-      </View>
+          <View style={styles.side}>{left.map((route, i) => renderTab(route, i))}</View>
+          <View style={styles.centerSlot} />
+          <View style={styles.side}>
+            {right.map((route, i) => renderTab(route, i + left.length))}
+          </View>
+        </View>
 
-      <View
-        pointerEvents="none"
-        style={[
-          styles.orbLabelRow,
-          {
-            top: LABEL_TOP,
-            left: cx - CENTER_SLOT / 2,
-            width: CENTER_SLOT,
-          },
-        ]}
-      >
-        <Animated.Text style={styles.orbLabel}>Schedule</Animated.Text>
+        {/* Central Action Orb with Action label */}
+        <Animated.View pointerEvents="box-none" style={[styles.centerWrap, orbPress]}>
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Sanctuary Action"
+            testID="tab-action-orb"
+            hitSlop={6}
+            onPressIn={() => {
+              press.value = reduceMotion ? 1 : withTiming(1, PRESS)
+            }}
+            onPressOut={() => {
+              press.value = reduceMotion ? 0 : withTiming(0, PRESS)
+            }}
+            onPress={handleOrbPress}
+            scaleTo={0.94}
+            style={styles.orbButton}
+          >
+            <View style={styles.centerOrb}>
+              <Ionicons name="add" size={28} color="#FFFFFF" />
+            </View>
+
+            <Animated.Text style={styles.scanLabel} numberOfLines={1}>
+              Action
+            </Animated.Text>
+          </PressableScale>
+        </Animated.View>
       </View>
     </Animated.View>
   )
 }
 
+/* ── Styles (Identical to BlinkQuest Canonical Architecture) ───── */
 const styles = StyleSheet.create({
-  root: {
-    position: "absolute",
-    bottom: 0,
-    zIndex: 999,
-  },
-  canvas: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-  },
-  dockRow: {
-    position: "absolute",
-    left: 0,
-    flexDirection: "row",
+  centerOrb: {
     alignItems: "center",
+    backgroundColor: ACCENT_COLOR,
+    borderRadius: CENTER_SIZE / 2,
+    height: CENTER_SIZE,
+    justifyContent: "center",
+    paddingTop: 0,
+    width: CENTER_SIZE,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  tabWing: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    height: "100%",
-  },
-  centerGap: {
+  centerSlot: {
     width: CENTER_SLOT,
-    height: "100%",
   },
-  tab: {
-    flex: 1,
+  centerWrap: {
     alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-  },
-  iconWrap: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  label: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-    marginTop: 3,
-  },
-  orbAnchor: {
+    left: "50%",
+    marginLeft: -CENTER_SIZE / 2,
     position: "absolute",
-    zIndex: 1001,
-  },
-  orbButton: {
+    top: ORB_CENTER_Y - CENTER_SIZE / 2,
     width: CENTER_SIZE,
-    height: CENTER_SIZE,
-    borderRadius: CENTER_SIZE / 2,
   },
-  orbSurface: {
-    width: CENTER_SIZE,
-    height: CENTER_SIZE,
-    borderRadius: CENTER_SIZE / 2,
+  dock: {
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: ACCENT_COLOR,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  orbIconWrap: {
+    bottom: 0,
+    left: 0,
+    paddingTop: DOCK_TOP,
     position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  orbLabelRow: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
+    right: 0,
     zIndex: 1000,
   },
-  orbLabel: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-    color: ACCENT_COLOR,
+  iconWrap: {
+    alignItems: "center",
+    height: ICON_SIZE,
+    justifyContent: "center",
+    width: ICON_SIZE,
+  },
+  label: {
+    color: MUTED_COLOR,
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: LABEL_LINE,
+    marginTop: 2,
+  },
+  orbButton: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  row: {
+    flexDirection: "row",
+    height: BAR_H,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: HUMP_H,
+  },
+  scanLabel: {
+    color: "#E7E5E4",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: LABEL_LINE,
+    marginTop: SCAN_LABEL_GAP,
+    width: CENTER_SLOT,
+    textAlign: "center",
+  },
+  side: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  tab: {
+    alignItems: "center",
+    flex: 1,
+    gap: 2,
+    justifyContent: "center",
   },
 })

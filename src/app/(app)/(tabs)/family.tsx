@@ -21,7 +21,7 @@ import {
   type KinshipType,
 } from "@/stores/useFamilyNetworkStore"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
-import { useRootStore } from "@/stores/useRootStore"
+import { useRootStore, useShallow } from "@/stores/useRootStore"
 
 const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
   { relation: "parent", label: "Parent of" },
@@ -58,7 +58,27 @@ export default function FamilyScreen() {
     addBridge,
     toggleBridgeStatus,
     revokeBridge,
-  } = useFamilyNetworkStore()
+  } = useFamilyNetworkStore(
+    useShallow((s) => ({
+      realms: s.realms,
+      activeRealmId: s.activeRealmId,
+      clusters: s.clusters,
+      activeClusterType: s.activeClusterType,
+      kinshipEdges: s.kinshipEdges,
+      bridges: s.bridges,
+      setActiveRealm: s.setActiveRealm,
+      createRealm: s.createRealm,
+      setActiveCluster: s.setActiveCluster,
+      addKinshipEdge: s.addKinshipEdge,
+      removeKinshipEdge: s.removeKinshipEdge,
+      addCluster: s.addCluster,
+      createInvitation: s.createInvitation,
+      claimInvitation: s.claimInvitation,
+      addBridge: s.addBridge,
+      toggleBridgeStatus: s.toggleBridgeStatus,
+      revokeBridge: s.revokeBridge,
+    })),
+  )
 
   const showToast = useRootStore((s) => s.showToast)
   const showAlert = useRootStore((s) => s.showAlert)
@@ -959,14 +979,13 @@ const styles = StyleSheet.create({
   addClusterPill: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#3B82F6",
+    borderColor: "rgba(112, 151, 88, 0.4)",
   },
   clusterBanner: {
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
     borderRadius: 12,
-    borderWidth: 1,
   },
   quickToolsRow: {
     flexDirection: "row",
@@ -979,7 +998,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 12,
-    borderWidth: 1,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1089,7 +1107,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    borderWidth: 1,
   },
   clusterDot: {
     width: 6,
@@ -1178,7 +1195,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: 14,
-    borderWidth: 1.5,
     marginBottom: 8,
   },
   inputLabel: {
@@ -1198,10 +1214,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   chipActive: {},
-  chipInactive: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  chipInactive: {},
   relationGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1212,7 +1225,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    borderWidth: 1,
   },
   relChipActive: {},
   relChipInactive: {},

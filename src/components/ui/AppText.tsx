@@ -1,4 +1,4 @@
-import { SetuTypography } from "@/theme/setuTypography"
+import { normalize, SetuTypography } from "@/theme/setuTypography"
 import { useTheme } from "@/theme/useTheme"
 import React from "react"
 import { StyleProp, StyleSheet, Text, TextProps, TextStyle } from "react-native"
@@ -71,7 +71,14 @@ const PASSTHROUGH_FAMILIES = new Set([
   "Geist-Bold",
 ])
 
-export function AppText({ variant = "body", color, style, children, ...rest }: AppTextProps) {
+export function AppText({
+  variant = "body",
+  color,
+  style,
+  children,
+  maxFontSizeMultiplier = 1.3,
+  ...rest
+}: AppTextProps) {
   const { colors } = useTheme()
 
   const variantStyle: TextStyle =
@@ -88,10 +95,15 @@ export function AppText({ variant = "body", color, style, children, ...rest }: A
   // screen renders the intended font at the intended weight.
   const flat = StyleSheet.flatten([variantStyle, style]) ?? {}
   const family = flat.fontFamily
+  
+  // Make custom fontSizes responsive if specified directly in style
+  const responsiveFontSize = typeof flat.fontSize === "number" ? normalize(flat.fontSize) : undefined
+
   let resolved: TextStyle
   if (family && PASSTHROUGH_FAMILIES.has(family)) {
     resolved = {
       ...flat,
+      fontSize: responsiveFontSize ?? flat.fontSize,
       fontFamily: family,
       fontWeight: family === "monospace" || family === "Courier" ? flat.fontWeight : undefined,
     }
@@ -99,13 +111,18 @@ export function AppText({ variant = "body", color, style, children, ...rest }: A
     const weight = String(flat.fontWeight ?? WEIGHT_BY_GEIST[family ?? ""] ?? "400")
     resolved = {
       ...flat,
+      fontSize: responsiveFontSize ?? flat.fontSize,
       fontFamily: GEIST_BY_WEIGHT[weight] ?? "Geist-Regular",
       fontWeight: undefined,
     }
   }
 
   return (
-    <Text style={[{ color: textColor }, resolved]} {...rest}>
+    <Text
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      style={[{ color: textColor }, resolved]}
+      {...rest}
+    >
       {children}
     </Text>
   )
