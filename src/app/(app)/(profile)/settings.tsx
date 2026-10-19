@@ -58,14 +58,30 @@ export default function SettingsScreen() {
     })),
   )
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [intentionNudgesEnabled, setIntentionNudgesEnabled] = useState(true)
-  const [pujaTimersEnabled, setPujaTimersEnabled] = useState(true)
+  const notificationsEnabled = useRootStore((s) => s.notificationsEnabled)
+  const setNotificationsEnabled = useRootStore((s) => s.setNotificationsEnabled)
+  const intentionNudgesEnabled = useRootStore((s) => s.intentionNudgesEnabled)
+  const setIntentionNudgesEnabled = useRootStore((s) => s.setIntentionNudgesEnabled)
+  const pujaTimersEnabled = useRootStore((s) => s.pujaTimersEnabled)
+  const setPujaTimersEnabled = useRootStore((s) => s.setPujaTimersEnabled)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const handleSyncNow = async () => {
+    if (isSyncing) return
+    setIsSyncing(true)
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    await syncAll()
-    showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
+    try {
+      const res = await syncAll()
+      if (res.ok) {
+        showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
+      } else {
+        showToast({ message: res.error || "Cloud sync could not complete. Working in local mode.", type: "error" })
+      }
+    } catch (err: any) {
+      showToast({ message: err?.message || "Cloud sync interrupted. Working in offline mode.", type: "error" })
+    } finally {
+      setIsSyncing(false)
+    }
   }
 
   const handleSignOut = () => {
@@ -80,8 +96,8 @@ export default function SettingsScreen() {
           await signOut()
           showToast({ message: "Signed out safely. Until we meet again!", type: "info" })
           router.replace("/(auth)/sign-in")
-        } catch {
-          router.replace("/(auth)/sign-in")
+        } catch (err: any) {
+          showToast({ message: err?.message || "Sign out could not be completed. Please try again.", type: "error" })
         }
       },
     })
@@ -89,12 +105,12 @@ export default function SettingsScreen() {
 
   const handleClearCache = () => {
     showAlert({
-      title: "Purge Local Image Cache?",
-      message: "This will refresh cached images while preserving all your family calendar events, intentions, and heirloom recipes.",
-      confirmText: "Refresh Cache",
+      title: "Purge Local Cache?",
+      message: "This will refresh cached media and temporary responses while safely preserving your family tree, calendar events, intentions, and heirloom notes.",
+      confirmText: "Purge Cache",
       cancelText: "Cancel",
       onConfirm: async () => {
-        showToast({ message: "Cache refreshed successfully", type: "success" })
+        showToast({ message: "Local cache purged successfully.", type: "success" })
       },
     })
   }
@@ -146,7 +162,7 @@ export default function SettingsScreen() {
               {household.city} · Est. {household.establishedYear}
             </AppText>
             <AppText variant="caption" style={{ fontStyle: "italic", marginTop: 4, color: colors.primary }}>
-              "{household.motto}"
+              &ldquo;{household.motto}&rdquo;
             </AppText>
           </View>
         </View>
@@ -160,7 +176,7 @@ export default function SettingsScreen() {
           subtitle="Real-time multi-device synchronization via Supabase Postgres"
           trailing={
             <Badge
-              label={status === "syncing" ? "Syncing..." : "🟢 Connected"}
+              label={status === "syncing" ? "Syncing..." : "Connected"}
               variant={status === "syncing" ? "warning" : "success"}
             />
           }
@@ -248,8 +264,8 @@ export default function SettingsScreen() {
           }
         />
         <ListRow
-          title="Rituals & Muhurat Timers"
-          subtitle="Auspicious timing notices for Mandir deepam and festivals"
+          title="Traditions & Event Timers"
+          subtitle="Gentle notices for family milestones, traditions, and festivals"
           trailing={
             <Switch
               value={pujaTimersEnabled}

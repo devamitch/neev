@@ -17,6 +17,7 @@ import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useFamilyNetworkStore } from "@/stores/useFamilyNetworkStore"
 import { deterministicEngine, type ConstraintTask } from "@/services/engine/deterministicEngine"
 import { useRootStore } from "@/stores/useRootStore"
+import { toLocalDateInput } from "@/utils/textUtils"
 
 const SPACES: { key: SpaceType; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
   { key: "personal", label: "Personal Space (Private)", icon: "lock-closed-outline", desc: "Confidential goals & career" },
@@ -54,9 +55,11 @@ export default function AddTaskModal() {
   const [category, setCategory] = useState<"school" | "doctor" | "career" | "home" | "ritual">("school")
   const [priority, setPriority] = useState<"urgent" | "normal" | "low">("normal")
   const [durationMinutes, setDurationMinutes] = useState(30)
-  const [dueDate, setDueDate] = useState("Today, 05:00 PM")
+  const [dueDate, setDueDate] = useState(() => toLocalDateInput())
+  const [time, setTime] = useState("05:00 PM")
   const [assignedTo, setAssignedTo] = useState(members[0]?.name || "Me")
   const [selectedDepTaskId, setSelectedDepTaskId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const priorities = [
     { key: "urgent" as const, label: "Urgent", color: colors.error, val: 5 },
@@ -81,72 +84,77 @@ export default function AddTaskModal() {
   const isOverloaded = totalProjectedMinutes > 360 // > 6 hours per day
 
   const handleSave = () => {
+    if (isSaving) return
     if (!title.trim()) {
       showToast({ message: "Please provide a task or milestone title.", type: "error" })
       return
     }
+    setIsSaving(true)
+    try {
+      if (selectedDepTaskId) {
+        const tempTasks: ConstraintTask[] = [
+          ...allTasks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            estimatedMinutes: t.estimatedMinutes || 30,
+            priority: t.priority === "urgent" ? 5 : t.priority === "normal" ? 3 : 1,
+            dependsOn: t.dependsOn || [],
+          })),
+          {
+            id: "temp_new_task",
+            title: title.trim(),
+            estimatedMinutes: durationMinutes,
+            priority: priority === "urgent" ? 5 : priority === "normal" ? 3 : 1,
+            dependsOn: [selectedDepTaskId],
+          },
+        ]
 
-    if (selectedDepTaskId) {
-      const tempTasks: ConstraintTask[] = [
-        ...allTasks.map((t) => ({
-          id: t.id,
-          title: t.title,
-          estimatedMinutes: t.estimatedMinutes || 30,
-          priority: t.priority === "urgent" ? 5 : t.priority === "normal" ? 3 : 1,
-          dependsOn: t.dependsOn || [],
-        })),
+        const analysis = deterministicEngine.analyzeDependencies(tempTasks)
+        if (analysis.hasCycles) {
+          showToast({
+            message: "Circular dependency detected. This prerequisite would cause a deadlock.",
+            type: "error",
+          })
+          return
+        }
+      }
+
+      const prioVal = priorities.find((p) => p.key === priority)?.val || 3
+      const calculatedScore = deterministicEngine.calculatePriorityScore(
         {
-          id: "temp_new_task",
+          id: "new",
           title: title.trim(),
           estimatedMinutes: durationMinutes,
-          priority: priority === "urgent" ? 5 : priority === "normal" ? 3 : 1,
-          dependsOn: [selectedDepTaskId],
+          priority: prioVal,
+          dueAt: new Date().toISOString(),
         },
-      ]
+        selectedDepTaskId ? 1 : 0,
+      )
 
-      const analysis = deterministicEngine.analyzeDependencies(tempTasks)
-      if (analysis.hasCycles) {
-        showToast({
-          message: "Circular dependency detected. This prerequisite would cause a deadlock.",
-          type: "error",
-        })
-        return
-      }
-    }
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    const prioVal = priorities.find((p) => p.key === priority)?.val || 3
-    const calculatedScore = deterministicEngine.calculatePriorityScore(
-      {
-        id: "new",
+      addTask({
         title: title.trim(),
+        space: selectedSpace,
+        category,
+        priority,
+        dueDate,
+        time,
+        assignedTo,
+        clusterType: selectedClusterType !== "all" ? selectedClusterType : undefined,
         estimatedMinutes: durationMinutes,
-        priority: prioVal,
-        dueAt: new Date().toISOString(),
-      },
-      selectedDepTaskId ? 1 : 0,
-    )
+        dependsOn: selectedDepTaskId ? [selectedDepTaskId] : undefined,
+        priorityScore: calculatedScore,
+      })
 
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-
-    addTask({
-      title: title.trim(),
-      space: selectedSpace,
-      category,
-      priority,
-      dueDate,
-      time: "05:00 PM",
-      assignedTo,
-      clusterType: selectedClusterType !== "all" ? selectedClusterType : undefined,
-      estimatedMinutes: durationMinutes,
-      dependsOn: selectedDepTaskId ? [selectedDepTaskId] : undefined,
-      priorityScore: calculatedScore,
-    })
-
-    showToast({
-      message: `Task added to ${selectedSpace.toUpperCase()} space! Priority score: ${calculatedScore}`,
-      type: "success",
-    })
-    router.back()
+      showToast({
+        message: `Task added to ${selectedSpace.toUpperCase()} space! Priority score: ${calculatedScore}`,
+        type: "success",
+      })
+      router.back()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -345,12 +353,40 @@ export default function AddTaskModal() {
           </View>
         )}
 
+        <View style={styles.sectionMargin}>
+          <AppText variant="caption" style={styles.label}>
+            ASSIGN TO MEMBER
+          </AppText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {members.map((m) => {
+              const active = assignedTo.toLowerCase() === m.name.toLowerCase()
+              return (
+                <PressableScale
+                  key={m.id}
+                  style={[
+                    styles.durationChip,
+                    { backgroundColor: active ? colors.primary : colors.surface2 },
+                  ]}
+                  onPress={() => {
+                    void Haptics.selectionAsync()
+                    setAssignedTo(m.name)
+                  }}
+                >
+                  <AppText variant="caption" style={{ color: active ? "#FFFFFF" : colors.text.primary, fontWeight: "600" }}>
+                    {m.name}
+                  </AppText>
+                </PressableScale>
+              )
+            })}
+          </ScrollView>
+        </View>
+
         <View style={styles.rowInputs}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <TextField label="Due Date" placeholder="e.g. 2026-10-25" value={dueDate} onChangeText={setDueDate} />
+            <TextField label="Due Date" placeholder="YYYY-MM-DD" value={dueDate} onChangeText={setDueDate} />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <TextField label="Assigned Member" placeholder="e.g. Pooja" value={assignedTo} onChangeText={setAssignedTo} />
+            <TextField label="Time" placeholder="e.g. 05:00 PM" value={time} onChangeText={setTime} />
           </View>
         </View>
 
@@ -367,11 +403,6 @@ export default function AddTaskModal() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
   sectionMargin: {
     marginBottom: 18,
   },

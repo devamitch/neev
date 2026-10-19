@@ -94,7 +94,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
         <NeevLogoIcon size={46} />
         <View style={styles.brandTitleWrap}>
           <AppText variant="subheading" style={styles.brandTitle}>
-            Neev · नींव
+            Neev
           </AppText>
           <AppText variant="caption" style={{ color: colors.text.muted }}>
             Family Operating System

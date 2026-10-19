@@ -58,4 +58,28 @@ describe("Neev Deterministic Planning & Constraint Engine", () => {
 
     expect(urgentScore).toBeGreaterThan(normalScore)
   })
+
+  describe("makeExcerpt and toLocalDateInput utilities", () => {
+    it("formats local date input as YYYY-MM-DD", () => {
+      const { toLocalDateInput } = require("@/utils/textUtils")
+      const testDate = new Date(2026, 9, 19) // Oct 19, 2026
+      expect(toLocalDateInput(testDate)).toBe("2026-10-19")
+    })
+
+    it("handles makeExcerpt for empty, short, exact, and long content cleanly", () => {
+      const { makeExcerpt } = require("@/utils/textUtils")
+      expect(makeExcerpt("")).toBe("")
+      expect(makeExcerpt("A")).toBe("A")
+      expect(makeExcerpt("Short title recipe")).toBe("Short title recipe")
+      
+      const exact80 = "This is a sentence that is crafted to be exactly eighty characters in length now"
+      expect(exact80.length).toBe(80)
+      expect(makeExcerpt(exact80, 80)).toBe(exact80)
+
+      const longText = "Grandmother told us this heirloom story across many winter evenings in the ancestral courtyard with the family gathered around."
+      const excerpt = makeExcerpt(longText, 80)
+      expect(excerpt.endsWith("…")).toBe(true)
+      expect(excerpt.length).toBeLessThanOrEqual(80)
+    })
+  })
 })

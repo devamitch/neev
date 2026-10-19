@@ -21,7 +21,7 @@ interface CloudSyncState {
   healthMetrics: HealthTelemetry[]
   autoSyncEnabled: boolean
   isGoogleConnected: boolean
-  syncAll: () => Promise<void>
+  syncAll: () => Promise<{ ok: boolean; error?: string }>
   loadHealthTelemetry: () => Promise<void>
   setAutoSync: (enabled: boolean) => void
 }
@@ -120,8 +120,10 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
         status: "connected",
         lastSyncedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       })
-    } catch {
-      set({ status: "idle" })
+      return { ok: true }
+    } catch (err: any) {
+      set({ status: "error" })
+      return { ok: false, error: err?.message || "Sync connection interrupted" }
     }
   },
 

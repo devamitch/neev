@@ -1,15 +1,16 @@
-import React, { memo, useState } from "react"
-import { StyleSheet, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import React, { memo, useState } from "react"
+import { StyleSheet, View } from "react-native"
 
 import { AppButton } from "@/components/ui/AppButton"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
 import { PressableScale } from "@/components/ui/PressableScale"
-import { useScheduleStore } from "@/stores/useScheduleStore"
+import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
+import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useColors } from "@/theme/useTheme"
 
 export interface RealFamilyGame {
@@ -82,7 +83,7 @@ const REAL_FAMILY_GAMES: RealFamilyGame[] = [
     durationMins: 40,
     recommendedDay: "Wednesday Evening",
     minPlayers: "All Generations",
-    icon: "sparkles-outline",
+    icon: "book-outline",
     rules: [
       "Dadu or Dida shares a real memory from their ancestral home or youth.",
       "Grandkids listen carefully and must answer 3 riddle questions about the story.",
@@ -110,6 +111,8 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
 
   const game = REAL_FAMILY_GAMES[activeGameIdx]
 
+  const members = useFamilyStore((s) => s.members)
+
   const handleNextGame = () => {
     void Haptics.selectionAsync()
     setActiveGameIdx((prev) => (prev + 1) % REAL_FAMILY_GAMES.length)
@@ -119,6 +122,9 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
 
   const handleScheduleWeekly = () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    const primaryAssignee = members[0]?.id || ""
+    const secondaryAssignee = members[1]?.id || members[0]?.id || ""
+
     addFunction({
       title: `Weekly Real Family Game: ${game.title}`,
       date: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
@@ -127,11 +133,21 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
       category: "celebration",
       description: `${game.tagline}\n\nVibe: ${game.vibe}\nRules:\n• ${game.rules.join("\n• ")}`,
       vibe: game.vibe,
-      invitationsCount: 5,
+      invitationsCount: members.length || 1,
       reminderSet: true,
       tasks: [
-        { id: `t-${Date.now()}-1`, title: "Set up game area & chairs", assignedToMemberId: "m-3", isDone: false },
-        { id: `t-${Date.now()}-2`, title: "Prepare evening snacks & chai", assignedToMemberId: "m-4", isDone: false },
+        {
+          id: `t-${Date.now()}-1`,
+          title: "Set up game area & chairs",
+          assignedToMemberId: primaryAssignee,
+          isDone: false,
+        },
+        {
+          id: `t-${Date.now()}-2`,
+          title: "Prepare evening refreshments",
+          assignedToMemberId: secondaryAssignee,
+          isDone: false,
+        },
       ],
     })
     showToast({
@@ -166,7 +182,10 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
           onPress={handleNextGame}
         >
           <Ionicons name="shuffle-outline" size={14} color={colors.primary} />
-          <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}>
+          <AppText
+            variant="caption"
+            style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}
+          >
             Spin
           </AppText>
         </PressableScale>
@@ -174,7 +193,9 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
 
       {/* ── Active Game Details ── */}
       <View style={[styles.gameBox, { backgroundColor: colors.surface2 }]}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <View
+          style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+        >
           <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary, flex: 1 }}>
             {game.title}
           </AppText>
@@ -189,8 +210,16 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
           <View style={styles.rulesList}>
             {game.rules.map((rule, idx) => (
               <View key={idx} style={styles.ruleItem}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: 6, marginTop: 2 }} />
-                <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary, lineHeight: 18 }}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={14}
+                  color={colors.primary}
+                  style={{ marginRight: 6, marginTop: 2 }}
+                />
+                <AppText
+                  variant="caption"
+                  style={{ flex: 1, color: colors.text.secondary, lineHeight: 18 }}
+                >
                   {rule}
                 </AppText>
               </View>
@@ -201,7 +230,10 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
         {/* Real Scorekeeper Widget */}
         {isScorerActive ? (
           <View style={[styles.scorekeeperBox, { backgroundColor: colors.surface }]}>
-            <AppText variant="caption" style={{ fontWeight: "700", textAlign: "center", marginBottom: 8 }}>
+            <AppText
+              variant="caption"
+              style={{ fontWeight: "700", textAlign: "center", marginBottom: 8 }}
+            >
               REAL MATCH SCOREBOARD
             </AppText>
             <View style={styles.scoreRow}>
@@ -261,7 +293,7 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
         {/* Action Buttons */}
         <View style={styles.actionRow}>
           <AppButton
-            title={isScorerActive ? "Hide Scorekeeper" : "📊 Real Scorekeeper"}
+            title={isScorerActive ? "Hide Scorekeeper" : "Real Scorekeeper"}
             variant="outline"
             size="sm"
             onPress={() => {
@@ -272,7 +304,7 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
           />
 
           <AppButton
-            title="📅 Schedule Match"
+            title="Schedule Match"
             variant="primary"
             size="sm"
             onPress={handleScheduleWeekly}

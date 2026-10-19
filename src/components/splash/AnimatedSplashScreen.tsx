@@ -200,7 +200,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
         <Animated.View style={[styles.copy, copyStyle]}>
           <AppText variant="display" style={styles.title}>
-            Neev · नींव
+            Neev
           </AppText>
           <AppText variant="body" style={styles.tagline}>
             Family Functions Schedulers & Shared Knowledge
@@ -250,10 +250,6 @@ const styles = StyleSheet.create({
     height: LOGO_SIZE,
     borderRadius: LOGO_SIZE * 0.16,
     overflow: "hidden",
-  },
-  logo: {
-    width: "100%",
-    height: "100%",
   },
 
   copy: {

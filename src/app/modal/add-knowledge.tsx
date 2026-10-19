@@ -12,6 +12,9 @@ import { PressableScale } from "@/components/ui/PressableScale"
 import { useColors } from "@/theme/useTheme"
 import { useKnowledgeStore, type KnowledgeCategory } from "@/stores/useKnowledgeStore"
 
+import { useRootStore } from "@/stores/useRootStore"
+import { makeExcerpt } from "@/utils/textUtils"
+
 const CATEGORIES: { key: KnowledgeCategory; label: string }[] = [
   { key: "story", label: "Family Story" },
   { key: "recipe", label: "Heirloom Recipe" },
@@ -23,28 +26,35 @@ const CATEGORIES: { key: KnowledgeCategory; label: string }[] = [
 export default function AddKnowledgeModal() {
   const colors = useColors()
   const addEntry = useKnowledgeStore((s) => s.addEntry)
+  const user = useRootStore((s) => s.user)
 
   const [title, setTitle] = useState("")
-  const [authorName, setAuthorName] = useState("Aparna Chakraborty")
-  const [authorRole, setAuthorRole] = useState("Grandmother (Dida)")
+  const [authorName, setAuthorName] = useState(user?.displayName || "")
+  const [authorRole, setAuthorRole] = useState("")
   const [body, setBody] = useState("")
   const [category, setCategory] = useState<KnowledgeCategory>("recipe")
-  const [tagsInput, setTagsInput] = useState("Heritage, Family")
+  const [tagsInput, setTagsInput] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = () => {
-    if (!title.trim() || !body.trim()) return
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    addEntry({
-      title: title.trim(),
-      authorName: authorName.trim() || "Elder",
-      authorRole: authorRole.trim() || "Family Member",
-      excerpt: body.trim().slice(0, 80) + "...",
-      body: body.trim(),
-      category,
-      tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
-      isPinned: false,
-    })
-    router.back()
+    if (!title.trim() || !body.trim() || isSaving) return
+    setIsSaving(true)
+    try {
+      addEntry({
+        title: title.trim(),
+        authorName: authorName.trim() || user?.displayName || "Family Member",
+        authorRole: authorRole.trim() || "Contributor",
+        excerpt: makeExcerpt(body, 80),
+        body: body.trim(),
+        category,
+        tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
+        isPinned: false,
+      })
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      router.back()
+    } catch {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -124,10 +134,10 @@ export default function AddKnowledgeModal() {
         />
 
         <AppButton
-          title="Preserve in Sanctuary Vault"
+          title={isSaving ? "Preserving..." : "Preserve in Sanctuary Vault"}
           variant="primary"
           onPress={handleSave}
-          disabled={!title.trim() || !body.trim()}
+          disabled={!title.trim() || !body.trim() || isSaving}
           style={{ marginTop: 24, marginBottom: 40 }}
         />
     </ScreenContainer>
@@ -135,11 +145,6 @@ export default function AddKnowledgeModal() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 14,
-  },
   sectionMargin: {
     marginVertical: 4,
   },

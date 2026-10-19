@@ -58,9 +58,8 @@ export default function PrivacyPolicyScreen() {
           3. Multigenerational Family Privacy
         </AppText>
         <AppText variant="body" style={[styles.section, { color: colors.text.secondary }]}>
-          Elders' medical notes and children's school schedules remain strictly within your household.
-          When shared between family devices, data is synchronized directly using peer-to-peer or private
-          encrypted channels.
+          Elders&apos; medical notes and children&apos;s school schedules remain strictly within your authorized family scope.
+          When shared between family devices, data is synchronized through your private Supabase enclave protected by strict Row-Level Security policies.
         </AppText>
 
         <AppText variant="subheading" style={styles.sectionHeading}>

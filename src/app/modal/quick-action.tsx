@@ -31,8 +31,8 @@ export default function QuickActionModal() {
   const quickActions: QuickActionItem[] = [
     {
       id: "action-event",
-      title: "Schedule Function & Ritual",
-      subtitle: "Plan weddings, pujas, birthdays, dinners, or picnics with task delegations",
+      title: "Schedule Event & Celebration",
+      subtitle: "Plan weddings, milestone birthdays, dinners, or outings with task delegations",
       badge: "Calendar & Google Sync",
       tone: "primary",
       icon: "calendar-outline",
@@ -148,11 +148,6 @@ export default function QuickActionModal() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 40,
-  },
   brandBanner: {
     padding: 16,
     borderRadius: 20,

@@ -20,10 +20,16 @@ export interface AppSlice {
   themePreference: ThemePreference
   theme: "light" | "dark"
   hasCompletedOnboarding: boolean
+  notificationsEnabled: boolean
+  intentionNudgesEnabled: boolean
+  pujaTimersEnabled: boolean
   gameHistory: GameSessionSummary[]
   setThemePreference: (pref: ThemePreference) => void
   setTheme: (theme: "light" | "dark") => void
   setHasCompletedOnboarding: (completed: boolean) => void
+  setNotificationsEnabled: (enabled: boolean) => void
+  setIntentionNudgesEnabled: (enabled: boolean) => void
+  setPujaTimersEnabled: (enabled: boolean) => void
   recordGameResult: (result: GameSessionSummary) => void
   resetPreferences: () => void
 }
@@ -34,6 +40,9 @@ export const createAppSlice: ImmerStateCreator<AppSlice> = (set) => ({
   themePreference: "system",
   theme: "light",
   hasCompletedOnboarding: false,
+  notificationsEnabled: true,
+  intentionNudgesEnabled: true,
+  pujaTimersEnabled: true,
   gameHistory: [],
 
   setThemePreference: (themePreference) =>
@@ -47,6 +56,18 @@ export const createAppSlice: ImmerStateCreator<AppSlice> = (set) => ({
   setHasCompletedOnboarding: (hasCompletedOnboarding) =>
     set((state) => {
       state.hasCompletedOnboarding = hasCompletedOnboarding
+    }),
+  setNotificationsEnabled: (enabled) =>
+    set((state) => {
+      state.notificationsEnabled = enabled
+    }),
+  setIntentionNudgesEnabled: (enabled) =>
+    set((state) => {
+      state.intentionNudgesEnabled = enabled
+    }),
+  setPujaTimersEnabled: (enabled) =>
+    set((state) => {
+      state.pujaTimersEnabled = enabled
     }),
 
   recordGameResult: (result) =>

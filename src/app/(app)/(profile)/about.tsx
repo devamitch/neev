@@ -37,7 +37,7 @@ export default function AboutScreen() {
           <NeevLogoIcon size={80} />
         </View>
         <AppText variant="h1" style={styles.brandTitle}>
-          Neev · नींव
+          Neev
         </AppText>
         <AppText variant="caption" style={[styles.tagline, { color: colors.primary }]}>
           ONE APP · EVERY ROLE · EVERY STAGE
@@ -66,7 +66,7 @@ export default function AboutScreen() {
           • <AppText style={{ fontWeight: "700" }}>Multigenerational Inclusion:</AppText> Respectful interfaces tailored for grandparents, parents, and youth.
         </AppText>
         <AppText variant="body" style={[styles.manifestoBody, { color: colors.text.secondary }]}>
-          • <AppText style={{ fontWeight: "700" }}>Offline Resilience:</AppText> Works flawlessly without internet via local SQLite database synchronization.
+          • <AppText style={{ fontWeight: "700" }}>Offline Resilience & Cloud Enclave:</AppText> Operates reliably offline on-device, and synchronizes to your private Supabase enclave with Row-Level Security when connected.
         </AppText>
       </Card>
 

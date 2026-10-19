@@ -21,7 +21,7 @@ export interface AnimatedNeevLogoIconProps {
 const LOOP_MS = 9000
 
 /**
- * Living Neev (नींव) Vector Mark for the Bottom Action Orb:
+ * Living Neev Vector Mark for the Bottom Action Orb:
  * Exact geometric vector translation of the canonical Neev "N" brand emblem:
  * - Terracotta Foundation Arch (#C98A60)
  * - Living Sage/Pista Sprout Leaf (#7D8C7D / #8DAE88) with delicate white veins

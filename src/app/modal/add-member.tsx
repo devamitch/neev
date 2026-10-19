@@ -47,7 +47,7 @@ export default function AddMemberModal() {
 
   const [name, setName] = useState("")
   const [nickname, setNickname] = useState("")
-  const [relationship, setRelationship] = useState("Aunt")
+  const [relationship, setRelationship] = useState("")
   const [role, setRole] = useState<FamilyRole>("elder")
   const [hasPhone, setHasPhone] = useState(false)
   const [phone, setPhone] = useState("")
@@ -55,6 +55,7 @@ export default function AddMemberModal() {
   const [favoriteTreat, setFavoriteTreat] = useState("")
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
   const [notes, setNotes] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const [selectedRelativeId, setSelectedRelativeId] = useState<string>(members[0]?.id || "")
   const [selectedRelation, setSelectedRelation] = useState<KinshipType>("parent")
@@ -71,10 +72,13 @@ export default function AddMemberModal() {
   }
 
   const handleSave = () => {
+    if (isSaving) return
     if (!name.trim()) {
       showToast({ message: "Please enter the member's full name.", type: "error" })
       return
     }
+    setIsSaving(true)
+    try {
 
     const initials =
       name
@@ -136,9 +140,12 @@ export default function AddMemberModal() {
       type: "success",
     })
     router.back()
+  } finally {
+    setIsSaving(false)
   }
+}
 
-  return (
+return (
     <ScreenContainer
       safeArea
       scrollable
@@ -324,11 +331,6 @@ export default function AddMemberModal() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
   sectionMargin: {
     marginBottom: 18,
   },

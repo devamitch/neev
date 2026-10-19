@@ -140,7 +140,7 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     nickname: "Sheru",
     relationship: "Golden Retriever Pup",
     role: "pet",
-    avatarText: "🐾",
+    avatarText: "S",
     avatarColor: "#DA7756",
     favoriteTreat: "Crunchy Peanut Butter Biscuits",
     superpower: "Morning tail wags that wake the whole house with joy",

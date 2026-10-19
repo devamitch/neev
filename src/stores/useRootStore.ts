@@ -58,6 +58,9 @@ export const useRootStore = create<RootStoreState>()(
         themePreference: state.themePreference,
         theme: state.theme,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        notificationsEnabled: state.notificationsEnabled,
+        intentionNudgesEnabled: state.intentionNudgesEnabled,
+        pujaTimersEnabled: state.pujaTimersEnabled,
 
         // Sacred Spaces & Tasks
         currentSpace: state.currentSpace,

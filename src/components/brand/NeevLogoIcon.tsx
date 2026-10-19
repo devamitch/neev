@@ -9,7 +9,7 @@ export interface NeevLogoIconProps {
 }
 
 /**
- * Official Neev (नींव) Vector Brand Emblem:
+ * Official Neev Vector Brand Emblem:
  * Terracotta Arch (#C98A60) + Sage Leaf Sprout (#8DAE88) forming the "N" mark
  * on porcelain medallion (#FAF9F5).
  */

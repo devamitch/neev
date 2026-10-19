@@ -47,7 +47,7 @@ export interface MindfulNotificationsSlice {
 // export const SAMPLE_MINDFUL_NOTIFICATIONS: MindfulNotification[] = [
 //   {
 //     id: "notif-1",
-//     title: "🍵 Dadu's Evening Warmth",
+//     title: "Dadu's Evening Warmth",
 //     body: "Shyamal (Dadu) completed his gentle evening stroll. Ginger chai & Marie biscuits are ready.",
 //     category: "care_circle",
 //     space: "family",
@@ -59,7 +59,7 @@ export interface MindfulNotificationsSlice {
 //   },
 //   {
 //     id: "notif-2",
-//     title: "🌸 Saraswati Puja Coordination",
+//     title: "Family Celebration Coordination",
 //     body: "Ritual checklist and sweet offerings preparation ready for tomorrow.",
 //     category: "family_event",
 //     space: "family",
@@ -71,7 +71,7 @@ export interface MindfulNotificationsSlice {
 //   },
 //   {
 //     id: "notif-3",
-//     title: "🛡️ Sanctuary Offline Shield Active",
+//     title: "Sanctuary Offline Shield Active",
 //     body: "Your family kinship tree and sacred memories are encrypted and synced locally with MMKV.",
 //     category: "system",
 //     space: "personal",

@@ -25,6 +25,7 @@ import Animated, {
 import { useTheme } from "@/theme/useTheme"
 
 import { BlurView } from "expo-blur"
+import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
 import {
   HEADER_BAR_HEIGHT,
   HEADER_BUTTON_SIZE,
@@ -106,7 +107,7 @@ export function CollapsingHeaderBar({
   }))
 
   const renderLogo = () => {
-    if (props.logo === false || props.showLogo === false) {
+    if (!props.showLogo && !props.logo) {
       return null
     }
     if (isValidElement(props.logo)) {
@@ -125,15 +126,10 @@ export function CollapsingHeaderBar({
         />
       )
     }
-    return (
-      <Image
-        source={require("@assets/images/logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-        accessibilityRole="image"
-        accessibilityLabel="Neev logo"
-      />
-    )
+    if (props.showLogo) {
+      return <NeevLogoIcon size={22} withBackground={false} />
+    }
+    return null
   }
 
   const sideWidth = Math.max(props.showBack ? HEADER_BUTTON_SIZE : 0, rightWidth)

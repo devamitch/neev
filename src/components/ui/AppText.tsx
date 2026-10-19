@@ -1,4 +1,4 @@
-import { normalize, SetuTypography } from "@/theme/setuTypography"
+import { SetuTypography } from "@/theme/setuTypography"
 import { useTheme } from "@/theme/useTheme"
 import React from "react"
 import { StyleProp, StyleSheet, Text, TextProps, TextStyle } from "react-native"
@@ -96,14 +96,10 @@ export function AppText({
   const flat = StyleSheet.flatten([variantStyle, style]) ?? {}
   const family = flat.fontFamily
   
-  // Make custom fontSizes responsive if specified directly in style
-  const responsiveFontSize = typeof flat.fontSize === "number" ? normalize(flat.fontSize) : undefined
-
   let resolved: TextStyle
   if (family && PASSTHROUGH_FAMILIES.has(family)) {
     resolved = {
       ...flat,
-      fontSize: responsiveFontSize ?? flat.fontSize,
       fontFamily: family,
       fontWeight: family === "monospace" || family === "Courier" ? flat.fontWeight : undefined,
     }
@@ -111,7 +107,6 @@ export function AppText({
     const weight = String(flat.fontWeight ?? WEIGHT_BY_GEIST[family ?? ""] ?? "400")
     resolved = {
       ...flat,
-      fontSize: responsiveFontSize ?? flat.fontSize,
       fontFamily: GEIST_BY_WEIGHT[weight] ?? "Geist-Regular",
       fontWeight: undefined,
     }

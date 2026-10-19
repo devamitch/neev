@@ -153,10 +153,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   titleText: {
-    fontSize: 23,
-    lineHeight: 28,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: "700",
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   iconButton: {
     alignItems: "center",
@@ -173,6 +173,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 2,
     fontSize: 12,
+    lineHeight: 16,
   },
   toolbar: {
     alignItems: "center",

@@ -73,9 +73,9 @@ const SLIDES: readonly IntroSlide[] = [
   },
   {
     id: "functions",
-    title: "Shared Functions & Rituals",
+    title: "Shared Events & Traditions",
     description:
-      "Plan weddings, pujas, milestone birthdays, and school events with shared task delegations for everyone.",
+      "Plan weddings, family traditions, milestone birthdays, and school events with shared task delegations for everyone.",
     image: AssetIllustrations.functionsRituals,
     background: "#FAF6F0",
     accent: "#C27835",
