@@ -7,15 +7,15 @@
 
 ## 1. The decision: Firebase vs Supabase
 
-| | **Firebase** | **Supabase** |
-|---|---|---|
-| Auth | Google/Apple/email/phone sign-in, native SDKs, works offline-first | Google/Apple/email/magic-link, REST-based, needs network for most calls |
-| Database | Firestore (NoSQL, realtime) | Postgres (SQL, realtime via replication) |
-| Crash analytics | **Crashlytics** — already partially wired into this repo (`app.config.ts` loads it conditionally when `google-services.json` exists) | None built-in; you'd add Sentry separately |
-| Android native setup | `google-services.json` + SHA-1 fingerprint | Just an API URL + anon key (no native file) |
-| Self-hostable | No (Google-owned) | Yes (Supabase is open-source; can self-host later) |
-| Cost at your scale | Free tier covers auth + Crashlytics + small Firestore usage indefinitely | Free tier covers auth + 500MB Postgres; generous too |
-| One backend for *all* your apps | Yes — one Firebase project, multiple "apps" (Android/iOS/web) registered under it, shared Auth user pool optional per-project or shared via a single project | Yes — one Supabase project, same idea |
+|                                 | **Firebase**                                                                                                                                                 | **Supabase**                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Auth                            | Google/Apple/email/phone sign-in, native SDKs, works offline-first                                                                                           | Google/Apple/email/magic-link, REST-based, needs network for most calls |
+| Database                        | Firestore (NoSQL, realtime)                                                                                                                                  | Postgres (SQL, realtime via replication)                                |
+| Crash analytics                 | **Crashlytics** — already partially wired into this repo (`app.config.ts` loads it conditionally when `google-services.json` exists)                         | None built-in; you'd add Sentry separately                              |
+| Android native setup            | `google-services.json` + SHA-1 fingerprint                                                                                                                   | Just an API URL + anon key (no native file)                             |
+| Self-hostable                   | No (Google-owned)                                                                                                                                            | Yes (Supabase is open-source; can self-host later)                      |
+| Cost at your scale              | Free tier covers auth + Crashlytics + small Firestore usage indefinitely                                                                                     | Free tier covers auth + 500MB Postgres; generous too                    |
+| One backend for _all_ your apps | Yes — one Firebase project, multiple "apps" (Android/iOS/web) registered under it, shared Auth user pool optional per-project or shared via a single project | Yes — one Supabase project, same idea                                   |
 
 **Recommendation: Firebase.** Two concrete reasons specific to this codebase, not a generic preference:
 
@@ -29,7 +29,7 @@ If later you want Postgres, row-level security, or to self-host — Supabase is 
 ## 2. What "one centralized backend for all projects" looks like with Firebase
 
 - **One Firebase project** (e.g. `amit-apps-prod`), with each app (BlinkQuest, Setu, …) registered as a separate **Android app** inside it (separate `applicationId`, separate `google-services.json` per app, same project).
-- **Shared or separate Auth user pools:** Firebase Auth users belong to the *project*, not the individual app registration. If you want "sign in once, recognized everywhere," use the same project for every app. If you want each app's users to be fully separate, make a Firebase project per app instead. For BlinkQuest (wellness data, no social features) separate is arguably more private-by-default; your call.
+- **Shared or separate Auth user pools:** Firebase Auth users belong to the _project_, not the individual app registration. If you want "sign in once, recognized everywhere," use the same project for every app. If you want each app's users to be fully separate, make a Firebase project per app instead. For BlinkQuest (wellness data, no social features) separate is arguably more private-by-default; your call.
 - **Crashlytics** is per-app automatically (each app's crashes are tagged by its own `google-services.json`), no extra config needed once the project exists.
 
 ---
@@ -41,7 +41,7 @@ The code is done: `src/services/auth/googleSignIn.ts` uses `@react-native-google
 In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), in the project you want BlinkQuest's users in:
 
 1. **OAuth consent screen**: app name BlinkQuest, your support email, scopes `email` and `profile`. Publish it (External, In production) before release.
-2. **Create credentials → OAuth client ID → Android**, package `com.amit.blinkquest`, SHA-1 of the **upload key** used by local release builds:
+2. **Create credentials → OAuth client ID → Android**, package `com.amit.neev`, SHA-1 of the **upload key** used by local release builds:
    `A8:5D:4D:F3:E6:56:7C:24:C4:6D:44:A3:F6:1B:77:D4:A5:A2:BA:37`
 3. **A second Android client** with the **Play App Signing** SHA-1 (Play Console → BlinkQuest → Test and release → App integrity → App signing key certificate). Builds installed from Play are re-signed with that key, so without this client Google sign-in fails only in Play builds.
 4. **Create credentials → OAuth client ID → Web application** (no redirect URIs needed). Copy its **Client ID**.
@@ -53,7 +53,7 @@ The Web client ID is public by design (it ships inside the app); the Android cli
 
 ## 4. Setu sign-in
 
-No credentials needed. BlinkQuest opens `setu://sso?app_id=com.amit.blinkquest&callback_url=blinkquest://auth/callback&state=…`, Setu shows a consent screen and calls back. BlinkQuest only accepts a reply whose `state` matches the request it sent. Needs a Setu build that includes `src/app/(main)/sso.tsx` (Setu commit fe4d2f5 or later).
+No credentials needed. BlinkQuest opens `setu://sso?app_id=com.amit.neev&callback_url=blinkquest://auth/callback&state=…`, Setu shows a consent screen and calls back. BlinkQuest only accepts a reply whose `state` matches the request it sent. Needs a Setu build that includes `src/app/(main)/sso.tsx` (Setu commit fe4d2f5 or later).
 
 ## 5. What's in this repo
 

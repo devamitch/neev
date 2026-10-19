@@ -5,7 +5,7 @@ Last revision: 2026-10-16. Keep this file short: update the **Current state** an
 
 ## 1. Product in one paragraph
 
-BlinkQuest (`com.amit.blinkquest`) is an Android-first, offline, light-mode-only eye-wellness app: one on-device scanner (VisionCamera + MediaPipe Face Landmarker in Kotlin) measures blinks, closure and iris-based distance; short games and guided breaks build eye habits (blinking, eye movement, focus, relax) with XP/levels/streaks; history and metrics stay in local SQLite. It is **not a medical device** — no diagnosis, no clinical claims.
+BlinkQuest (`com.amit.neev`) is an Android-first, offline, light-mode-only eye-wellness app: one on-device scanner (VisionCamera + MediaPipe Face Landmarker in Kotlin) measures blinks, closure and iris-based distance; short games and guided breaks build eye habits (blinking, eye movement, focus, relax) with XP/levels/streaks; history and metrics stay in local SQLite. It is **not a medical device** — no diagnosis, no clinical claims.
 
 ## 2. Hard rules
 
@@ -22,22 +22,22 @@ BlinkQuest (`com.amit.blinkquest`) is an Android-first, offline, light-mode-only
 
 ## 3. Map — where things live
 
-| Area | Path |
-| --- | --- |
-| Routes (Expo Router) | `src/app/` — `(app)/(tabs)` Home/Activities/Discover/You, `(app)/(games)` 8 activities + `activity/[id]`, `(app)/(profile)` settings/metrics/history/patterns/…, `onboarding.tsx` |
-| Screen wrapper + header | `src/components/ui/ScreenContainer.tsx` (pass `header={<AppHeader …/>}` → collapsing large-title header + dock auto-hide), `AppHeader.tsx`, `CollapsingHeader.tsx` |
-| Bottom dock | `src/components/navigation/CustomTabBar.tsx` (raised-cosine hump traced from `BlinkQuest_BottomTab_Bar.png`), `useScrollAwareDock.ts` |
-| Brand | `src/components/brand/` — `bqGeometry.ts`, static `BlinkQuestLogoIcon`, animated mascot `AnimatedBlinkQuestLogoIcon` (Scan orb) |
-| Scanner | `src/components/scanner/ScannerHost.tsx`, `src/core/session/scan-session.ts`, overlay `src/components/vision/EyeLandmarkOverlay.tsx`, topology `src/core/vision/landmark-topology.ts`, engine `observation-engine.ts` (obs-1.4.0), gaze `core/vision/gaze.ts` |
-| Native vision | `modules/blinkquest-vision/android/.../BlinkQuestVisionRuntime.kt` (MediaPipe Face Landmarker v2, bundled model) |
-| Games | `src/core/games/` — catalogue `activities.ts` (each has `focus` + `benefit`), `progression.ts` (XP/levels/streak/achievements/recommendations), `useActivityRecorder.ts`, `useRecentScan.ts`; reward card `src/components/games/RunReward.tsx` |
-| Eye Battery & alerts | `src/core/metrics/eye-battery.ts`, `eye-alerts.ts` (banner + expo-notifications), UI `src/components/vision/EyeBatteryCard.tsx`, `EyeAlertBanner.tsx` |
-| Eye games | `src/components/games/EyeGame.tsx` (Orb Pop, Direction Trail, Slider Chase, Orbit Follow), `src/core/games/eye-routines.tsx` (Focus Garden, Near/Far) — camera runs in hidden `background` presentation |
-| Data | `src/services/db/` (expo-sqlite schema v3: sessions, 1 Hz samples, rollups, game results) |
-| Theme | `src/theme/useTheme.ts`, `setuColors.ts`, `setuTypography.ts` |
-| Config | `app.json` (static), `app.config.ts` (env/version/plugins), `plugins/` (PiP, release signing), `eas.json` |
-| Store assets | `assets/playstore/` (listing in `docs/playstore/PLAY_STORE_LISTING_PACKAGE.md`; real device screenshots in `assets/playstore/screenshots/device/`) |
-| SETU Beta Camera Lab | `src/features/beta-camera-lab/` (React Native UI), `modules/setu-beta-scanner/` (MediaPipe Expo module), `docs/BETA_CAMERA_LAB_TRACEABILITY_MATRIX.md` (feature inventory) |
+| Area                    | Path                                                                                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routes (Expo Router)    | `src/app/` — `(app)/(tabs)` Home/Activities/Discover/You, `(app)/(games)` 8 activities + `activity/[id]`, `(app)/(profile)` settings/metrics/history/patterns/…, `onboarding.tsx`                                                                             |
+| Screen wrapper + header | `src/components/ui/ScreenContainer.tsx` (pass `header={<AppHeader …/>}` → collapsing large-title header + dock auto-hide), `AppHeader.tsx`, `CollapsingHeader.tsx`                                                                                            |
+| Bottom dock             | `src/components/navigation/CustomTabBar.tsx` (raised-cosine hump traced from `BlinkQuest_BottomTab_Bar.png`), `useScrollAwareDock.ts`                                                                                                                         |
+| Brand                   | `src/components/brand/` — `bqGeometry.ts`, static `BlinkQuestLogoIcon`, animated mascot `AnimatedBlinkQuestLogoIcon` (Scan orb)                                                                                                                               |
+| Scanner                 | `src/components/scanner/ScannerHost.tsx`, `src/core/session/scan-session.ts`, overlay `src/components/vision/EyeLandmarkOverlay.tsx`, topology `src/core/vision/landmark-topology.ts`, engine `observation-engine.ts` (obs-1.4.0), gaze `core/vision/gaze.ts` |
+| Native vision           | `modules/blinkquest-vision/android/.../BlinkQuestVisionRuntime.kt` (MediaPipe Face Landmarker v2, bundled model)                                                                                                                                              |
+| Games                   | `src/core/games/` — catalogue `activities.ts` (each has `focus` + `benefit`), `progression.ts` (XP/levels/streak/achievements/recommendations), `useActivityRecorder.ts`, `useRecentScan.ts`; reward card `src/components/games/RunReward.tsx`                |
+| Eye Battery & alerts    | `src/core/metrics/eye-battery.ts`, `eye-alerts.ts` (banner + expo-notifications), UI `src/components/vision/EyeBatteryCard.tsx`, `EyeAlertBanner.tsx`                                                                                                         |
+| Eye games               | `src/components/games/EyeGame.tsx` (Orb Pop, Direction Trail, Slider Chase, Orbit Follow), `src/core/games/eye-routines.tsx` (Focus Garden, Near/Far) — camera runs in hidden `background` presentation                                                       |
+| Data                    | `src/services/db/` (expo-sqlite schema v3: sessions, 1 Hz samples, rollups, game results)                                                                                                                                                                     |
+| Theme                   | `src/theme/useTheme.ts`, `setuColors.ts`, `setuTypography.ts`                                                                                                                                                                                                 |
+| Config                  | `app.json` (static), `app.config.ts` (env/version/plugins), `plugins/` (PiP, release signing), `eas.json`                                                                                                                                                     |
+| Store assets            | `assets/playstore/` (listing in `docs/playstore/PLAY_STORE_LISTING_PACKAGE.md`; real device screenshots in `assets/playstore/screenshots/device/`)                                                                                                            |
+| SETU Beta Camera Lab    | `src/features/beta-camera-lab/` (React Native UI), `modules/setu-beta-scanner/` (MediaPipe Expo module), `docs/BETA_CAMERA_LAB_TRACEABILITY_MATRIX.md` (feature inventory)                                                                                    |
 
 ## 4. Docs (read only what the task needs)
 

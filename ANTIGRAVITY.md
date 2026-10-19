@@ -12,14 +12,14 @@ Current priority: the **SETU Beta Camera Lab** (`src/features/beta-camera-lab/`,
 
 Before building or fixing any camera feature, read these and copy their patterns. Do not invent a different architecture.
 
-| Concern | Reference file |
-| --- | --- |
-| Session state, start/pause/stop, PiP, summaries | `src/core/session/scan-session.ts` |
-| Camera, layout modes (full / floating / background / pip), chrome | `src/components/scanner/ScannerHost.tsx` |
-| Landmark overlay (Skia, projection must match the Camera's `resizeMode`) | `src/components/vision/EyeLandmarkOverlay.tsx` |
-| Native inference | `modules/blinkquest-vision/android/.../BlinkQuestVisionRuntime.kt` |
-| Metrics from landmarks | `src/core/vision/observation-engine.ts` |
-| On-camera colours | `src/theme/onGlass.ts`, `src/components/ui/GlassOrbButton.tsx` |
+| Concern                                                                  | Reference file                                                     |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Session state, start/pause/stop, PiP, summaries                          | `src/core/session/scan-session.ts`                                 |
+| Camera, layout modes (full / floating / background / pip), chrome        | `src/components/scanner/ScannerHost.tsx`                           |
+| Landmark overlay (Skia, projection must match the Camera's `resizeMode`) | `src/components/vision/EyeLandmarkOverlay.tsx`                     |
+| Native inference                                                         | `modules/blinkquest-vision/android/.../BlinkQuestVisionRuntime.kt` |
+| Metrics from landmarks                                                   | `src/core/vision/observation-engine.ts`                            |
+| On-camera colours                                                        | `src/theme/onGlass.ts`, `src/components/ui/GlassOrbButton.tsx`     |
 
 The rules those files encode, which every camera feature must follow:
 
@@ -67,21 +67,21 @@ These are the habits that made the eye scanner work. Follow them on every task.
 
 Read the `.agents/skills/*/SKILL.md` that match the task before touching code:
 
-| Task touches | Skill |
-| --- | --- |
-| Which doc or file owns what | `blinkquest-source-of-truth` |
-| Camera, MediaPipe, frames, overlay | `blinkquest-vision-pipeline` |
-| Blink rate, closure, Eye Battery | `blinkquest-eye-metrics` |
-| Games and guided routines | `blinkquest-game-engine` |
-| Build, adb, device checks | `blinkquest-android-verification` |
-| Data, camera privacy | `blinkquest-privacy-security` |
-| Tracker, handoffs | `blinkquest-agentic-workflow` |
-| Any bug, crash, wrong number, lag | `blinkquest-debugging` |
-| Any screen, card, copy | `blinkquest-ui-design` |
-| Any camera / MediaPipe feature | `blinkquest-camera-feature` |
-| Lag, fps, CPU, memory | `blinkquest-performance` |
-| Before every commit | `blinkquest-code-review` |
-| Finishing and reporting | `blinkquest-task-completion` |
+| Task touches                           | Skill                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| Which doc or file owns what            | `blinkquest-source-of-truth`                                          |
+| Camera, MediaPipe, frames, overlay     | `blinkquest-vision-pipeline`                                          |
+| Blink rate, closure, Eye Battery       | `blinkquest-eye-metrics`                                              |
+| Games and guided routines              | `blinkquest-game-engine`                                              |
+| Build, adb, device checks              | `blinkquest-android-verification`                                     |
+| Data, camera privacy                   | `blinkquest-privacy-security`                                         |
+| Tracker, handoffs                      | `blinkquest-agentic-workflow`                                         |
+| Any bug, crash, wrong number, lag      | `blinkquest-debugging`                                                |
+| Any screen, card, copy                 | `blinkquest-ui-design`                                                |
+| Any camera / MediaPipe feature         | `blinkquest-camera-feature`                                           |
+| Lag, fps, CPU, memory                  | `blinkquest-performance`                                              |
+| Before every commit                    | `blinkquest-code-review`                                              |
+| Finishing and reporting                | `blinkquest-task-completion`                                          |
 | **Beta Camera Lab (current priority)** | **`blinkquest-beta-lab`**: step-by-step plan and per-feature verdicts |
 
 ### Investigate before you change anything
@@ -89,7 +89,7 @@ Read the `.agents/skills/*/SKILL.md` that match the task before touching code:
 - **Read the real code.** Open the actual files and follow the data from start to finish (native → event → store → component). Don't assume from names or docs; docs drift.
 - **Gather evidence**, and state the cause only once the evidence shows it:
   - screenshots;
-  - `adb logcat --pid=$(adb shell pidof com.amit.blinkquest)`;
+  - `adb logcat --pid=$(adb shell pidof com.amit.neev)`;
   - `adb shell top -H -p <pid>` for which thread burns CPU;
   - `dumpsys gfxinfo … framestats` for where frame time goes;
   - `uiautomator dump` for what's really on screen.
@@ -116,7 +116,7 @@ Read the `.agents/skills/*/SKILL.md` that match the task before touching code:
 
 - TypeScript strict, no `any` unless an external type forces it. Name things for what they are; well-named code needs no narration.
 - **Comments:**
-  - Only when the *why* is non-obvious: a hidden constraint, a workaround, or a threshold with its reason. One short line.
+  - Only when the _why_ is non-obvious: a hidden constraint, a workaround, or a threshold with its reason. One short line.
   - Never "added for task X" or "used by Y".
   - No commented-out code; delete it (git has it).
 - Theme tokens only (`useTheme()` colours, `setuSpacing`, typography variants). No hex colours in components except on-camera `onGlass` constants.
@@ -161,6 +161,7 @@ Read the `.agents/skills/*/SKILL.md` that match the task before touching code:
      - Record with `adb shell screenrecord --size 720x1600 --time-limit 6`.
      - Count frames with `ffprobe -count_frames`. Aim for ≥ 40 fps while scrolling with the camera on.
      - `dumpsys gfxinfo` "janky" counts are unreliable with a live camera; use the recording.
+
 5. **Commit feature-wise** (authorized; never push):
    - `type(scope): summary`, at most 72 characters, types `fix|feat|chore|refactor|docs|test|perf|style`, no trailing period.
    - Never the word "phase" (the hook rejects it).
@@ -177,6 +178,7 @@ Read the `.agents/skills/*/SKILL.md` that match the task before touching code:
   ```
 
   Use `adb shell svc power stayon usb` while testing, and turn it off after.
+
 - **Deep links:** `blinkquest://<route>` (for example `blinkquest://beta-lab`, `blinkquest://diagnostics`).
 - **Stray overlays:** a YouTube PiP or another app on screen isn't a BlinkQuest bug; close it and retake.
 

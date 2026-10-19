@@ -1,34 +1,40 @@
 # BlinkQuest — Google Play Store Complete Publishing & Review Package
 
-**Application ID:** `com.amit.blinkquest`  
+**Application ID:** `com.amit.neev`  
 **App Version:** `1.0.0` (Build `1`)  
 **Target Platform:** Android 12+ (API 31–36)  
 **Package Manager:** `pnpm`  
-**Compliance Standard:** Google Play Health & Fitness Policy, Zero-Telemetry Offline Guarantee  
+**Compliance Standard:** Google Play Health & Fitness Policy, Zero-Telemetry Offline Guarantee
 
 ---
 
 ## 1. Store Listing Metadata & Copy
 
 ### 1.1 App Title
+
 ```text
 BlinkQuest: Mindful Eye Breaks
 ```
-*(Exact length: 30 characters — precisely meets Google Play's 30-character maximum limit)*
+
+_(Exact length: 30 characters — precisely meets Google Play's 30-character maximum limit)_
 
 **Alternative titles:**
+
 - `BlinkQuest: Eye Care & Games` (28 chars)
 - `BlinkQuest: Eye Wellness & PiP` (30 chars)
 
 ---
 
 ### 1.2 Short Description
+
 ```text
 Mindful eye breaks, blink tracking, and focus games. 100% private and on-device.
 ```
-*(Exact length: 78 characters — within Google Play's 80-character maximum limit)*
+
+_(Exact length: 78 characters — within Google Play's 80-character maximum limit)_
 
 **Alternative short descriptions:**
+
 - `Train focus, track blinks, and refresh tired eyes with 100% on-device vision.` (76 chars)
 - `Rest your eyes with quick games, blink tracking, and private offline exercises.` (78 chars)
 
@@ -94,17 +100,17 @@ BlinkQuest is an ergonomic digital wellness and visual exercise application inte
 
 ## 2. Play Store Categorization & Setup Details
 
-| Setting | Selection |
-|---|---|
-| **Primary Category** | `Health & Fitness` |
-| **Secondary Category** | `Casual / Board Games` |
-| **Tags** | `Eye care`, `Digital wellbeing`, `Screen time`, `Focus games`, `Vision exercises` |
-| **Target Audience** | Everyone (Ages 3+) |
-| **Contains Ads** | **No** (Strict zero-ads policy) |
-| **In-App Purchases** | **No** (100% free open wellness software) |
-| **App Access / Login** | **All features available without credentials** |
-| **Content Rating** | `PEGI 3` / `ESRB Everyone` |
-| **Primary Language** | English (United States) — `en-US` |
+| Setting                | Selection                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| **Primary Category**   | `Health & Fitness`                                                                |
+| **Secondary Category** | `Casual / Board Games`                                                            |
+| **Tags**               | `Eye care`, `Digital wellbeing`, `Screen time`, `Focus games`, `Vision exercises` |
+| **Target Audience**    | Everyone (Ages 3+)                                                                |
+| **Contains Ads**       | **No** (Strict zero-ads policy)                                                   |
+| **In-App Purchases**   | **No** (100% free open wellness software)                                         |
+| **App Access / Login** | **All features available without credentials**                                    |
+| **Content Rating**     | `PEGI 3` / `ESRB Everyone`                                                        |
+| **Primary Language**   | English (United States) — `en-US`                                                 |
 
 ---
 
@@ -140,13 +146,13 @@ The app requests 'android.permission.CAMERA' exclusively to run Google MediaPipe
 
 When completing the **Data Safety** questionnaire in Google Play Console, declare:
 
-| Question | Answer | Notes |
-|---|---|---|
-| **Does your app collect or share any of the required user data types?** | **No** | Camera frames are processed ephemerally in RAM and never collected or shared. |
-| **Is all of the user data collected by your app encrypted in transit?** | **Not Applicable / Yes** | The app operates 100% offline and makes zero cloud requests. |
-| **Do you provide a way for users to request that their data be deleted?** | **Yes** | Settings & data → Erase everything permanently wipes local SQLite and app storage. |
-| **Is this app designed for families or children?** | **No (General Audience)** | Target age is general audience (13+ / All ages). |
-| **Does your app declare any sensitive permissions?** | **`CAMERA`** | Disclosed with clear in-app rationale before prompting. |
+| Question                                                                  | Answer                    | Notes                                                                              |
+| ------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------- |
+| **Does your app collect or share any of the required user data types?**   | **No**                    | Camera frames are processed ephemerally in RAM and never collected or shared.      |
+| **Is all of the user data collected by your app encrypted in transit?**   | **Not Applicable / Yes**  | The app operates 100% offline and makes zero cloud requests.                       |
+| **Do you provide a way for users to request that their data be deleted?** | **Yes**                   | Settings & data → Erase everything permanently wipes local SQLite and app storage. |
+| **Is this app designed for families or children?**                        | **No (General Audience)** | Target age is general audience (13+ / All ages).                                   |
+| **Does your app declare any sensitive permissions?**                      | **`CAMERA`**              | Disclosed with clear in-app rationale before prompting.                            |
 
 ---
 
@@ -154,18 +160,18 @@ When completing the **Data Safety** questionnaire in Google Play Console, declar
 
 All production assets have been generated and calibrated to Google Play's exact technical specifications:
 
-| Asset Name | Resolution / Specs | Format | File Path |
-|---|---|---|---|
-| **App Icon** | 512 × 512 px, 32-bit color, <1024 KB | PNG | `assets/playstore/playstore_icon_512x512.png` |
-| **Feature Graphic (Banner)** | 1024 × 500 px, exact 1024:500 ratio | PNG | `assets/playstore/feature_graphic_1024x500.png` |
-| **Feature Graphic (Banner JPEG)** | 1024 × 500 px, high quality (Q=95) | JPEG | `assets/playstore/feature_graphic_1024x500.jpg` |
-| **Real device screenshots (use these)** | 1200 × 2400 px (2:1, Moto G71 captures padded) | PNG | `assets/playstore/screenshots/device/` |
-| **Phone Screenshot 1 (Home)** | 1080 × 2400 px (9:20), crisp UI | PNG | `assets/playstore/screenshots/01_home_dashboard.png` |
-| **Phone Screenshot 2 (Scanner)** | 1080 × 2400 px (9:20), MediaPipe | PNG | `assets/playstore/screenshots/02_unified_scanner.png` |
-| **Phone Screenshot 3 (PiP Mode)** | 1080 × 2400 px (9:20), Multitask | PNG | `assets/playstore/screenshots/03_pip_multitasking.png` |
-| **Phone Screenshot 4 (Games)** | 1080 × 2400 px (9:20), Activities | PNG | `assets/playstore/screenshots/04_mindful_games.png` |
-| **Phone Screenshot 5 (Trends)** | 1080 × 2400 px (9:20), Analytics | PNG | `assets/playstore/screenshots/05_wellness_trends.png` |
-| **Phone Screenshot 6 (Privacy)** | 1080 × 2400 px (9:20), On-device | PNG | `assets/playstore/screenshots/06_privacy_offline.png` |
+| Asset Name                              | Resolution / Specs                             | Format | File Path                                              |
+| --------------------------------------- | ---------------------------------------------- | ------ | ------------------------------------------------------ |
+| **App Icon**                            | 512 × 512 px, 32-bit color, <1024 KB           | PNG    | `assets/playstore/playstore_icon_512x512.png`          |
+| **Feature Graphic (Banner)**            | 1024 × 500 px, exact 1024:500 ratio            | PNG    | `assets/playstore/feature_graphic_1024x500.png`        |
+| **Feature Graphic (Banner JPEG)**       | 1024 × 500 px, high quality (Q=95)             | JPEG   | `assets/playstore/feature_graphic_1024x500.jpg`        |
+| **Real device screenshots (use these)** | 1200 × 2400 px (2:1, Moto G71 captures padded) | PNG    | `assets/playstore/screenshots/device/`                 |
+| **Phone Screenshot 1 (Home)**           | 1080 × 2400 px (9:20), crisp UI                | PNG    | `assets/playstore/screenshots/01_home_dashboard.png`   |
+| **Phone Screenshot 2 (Scanner)**        | 1080 × 2400 px (9:20), MediaPipe               | PNG    | `assets/playstore/screenshots/02_unified_scanner.png`  |
+| **Phone Screenshot 3 (PiP Mode)**       | 1080 × 2400 px (9:20), Multitask               | PNG    | `assets/playstore/screenshots/03_pip_multitasking.png` |
+| **Phone Screenshot 4 (Games)**          | 1080 × 2400 px (9:20), Activities              | PNG    | `assets/playstore/screenshots/04_mindful_games.png`    |
+| **Phone Screenshot 5 (Trends)**         | 1080 × 2400 px (9:20), Analytics               | PNG    | `assets/playstore/screenshots/05_wellness_trends.png`  |
+| **Phone Screenshot 6 (Privacy)**        | 1080 × 2400 px (9:20), On-device               | PNG    | `assets/playstore/screenshots/06_privacy_offline.png`  |
 
 ---
 
@@ -173,7 +179,7 @@ All production assets have been generated and calibrated to Google Play's exact 
 
 ## 6. Pre-Submission Checklist
 
-- [x] App ID configured as `com.amit.blinkquest` in `app.json` and `build.gradle`.
+- [x] App ID configured as `com.amit.neev` in `app.json` and `build.gradle`.
 - [x] Version code incremented (`versionCode: 1`, `version: 1.0.0`).
 - [x] Light theme forced (`userInterfaceStyle: "light"`), no jarring color inconsistencies.
 - [x] App icon tested and verified at 512×512 without missing corners.
