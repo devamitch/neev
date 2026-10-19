@@ -5,7 +5,7 @@
  */
 
 import { create } from "zustand"
-import { firebaseService, type HealthTelemetry } from "@/services/firebase/firebaseClient"
+import { supabaseSyncService, type HealthTelemetry } from "@/services/supabase/supabaseSyncService"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
@@ -80,7 +80,7 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
       const householdId = "household_primary_01"
 
       // 1. Save household metadata
-      await firebaseService.saveHousehold({
+      await supabaseSyncService.saveHousehold({
         id: householdId,
         name: household.name,
         motto: household.motto,
@@ -93,27 +93,27 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
 
       // 2. Batch push members
       for (const m of members) {
-        await firebaseService.syncMember(householdId, m)
+        await supabaseSyncService.syncMember(householdId, m)
       }
 
       // 3. Batch push functions
       for (const f of functions) {
-        await firebaseService.syncFunction(householdId, f)
+        await supabaseSyncService.syncFunction(householdId, f)
       }
 
       // 4. Batch push intentions
       for (const i of intentions) {
-        await firebaseService.syncIntention(householdId, i)
+        await supabaseSyncService.syncIntention(householdId, i)
       }
 
       // 5. Batch push knowledge
       for (const k of entries) {
-        await firebaseService.syncKnowledge(householdId, k)
+        await supabaseSyncService.syncKnowledge(householdId, k)
       }
 
       // 6. Batch push routines
       for (const r of routines) {
-        await firebaseService.syncRoutine(householdId, r)
+        await supabaseSyncService.syncRoutine(householdId, r)
       }
 
       set({

@@ -117,7 +117,7 @@ export default function DashboardScreen() {
           <View style={styles.cloudStatusLeft}>
             <View style={[styles.statusDot, { backgroundColor: status === "syncing" ? "#D97706" : "#10B981" }]} />
             <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-              {status === "syncing" ? "Syncing to Firebase..." : "Firebase Cloud Connected"}
+              {status === "syncing" ? "Syncing to Supabase..." : "Supabase Cloud Connected"}
             </AppText>
           </View>
           <View style={styles.cloudStatusRight}>

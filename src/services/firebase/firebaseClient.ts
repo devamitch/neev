@@ -34,7 +34,10 @@ import type { FamilyIntention } from "@/stores/slices/createIntentionsSlice"
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 
 export const auth: Auth = getAuth(app)
-export const db: Firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId)
+export const db: Firestore =
+  firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)"
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
 
 export interface HouseholdCloudData {

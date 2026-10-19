@@ -47,7 +47,7 @@ export default function SettingsScreen() {
   const handleSyncNow = async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     await syncAll()
-    showToast({ message: "Household synchronized with Firebase cloud!", type: "success" })
+    showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
   }
 
   const handleClearCache = () => {
@@ -87,11 +87,11 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Cloud Backend & Scaled Multi-User Sync */}
-      <SectionHeader title="FIREBASE & GOOGLE CLOUD BACKEND" />
+      <SectionHeader title="SUPABASE & GOOGLE CLOUD BACKEND" />
       <ListGroup>
         <ListRow
           title="Cloud Backend Connection"
-          subtitle="Real-time multi-device synchronization via Firebase Firestore"
+          subtitle="Real-time multi-device synchronization via Supabase Postgres"
           trailing={
             <Badge
               label={status === "syncing" ? "Syncing..." : "🟢 Connected"}
