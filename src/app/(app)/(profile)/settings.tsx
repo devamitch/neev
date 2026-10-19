@@ -25,6 +25,8 @@ import { useRootStore, useShallow } from "@/stores/useRootStore"
 export default function SettingsScreen() {
   const colors = useColors()
 
+  const user = useRootStore((s) => s.user)
+  const signOut = useRootStore((s) => s.signOut)
   const household = useFamilyStore((s) => s.household)
   const members = useFamilyStore((s) => s.members)
   const functions = useScheduleStore((s) => s.functions)
@@ -66,6 +68,25 @@ export default function SettingsScreen() {
     showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
   }
 
+  const handleSignOut = () => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    showAlert({
+      title: "Sign Out of Sanctuary?",
+      message: "Your local family data is safely preserved and backed up to your encrypted cloud enclave.",
+      confirmText: "Sign Out",
+      cancelText: "Stay in Sanctuary",
+      onConfirm: async () => {
+        try {
+          await signOut()
+          showToast({ message: "Signed out safely. Until we meet again!", type: "info" })
+          router.replace("/(auth)/sign-in")
+        } catch {
+          router.replace("/(auth)/sign-in")
+        }
+      },
+    })
+  }
+
   const handleClearCache = () => {
     showAlert({
       title: "Purge Local Image Cache?",
@@ -79,15 +100,44 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScreenContainer scrollable={true} contentContainerStyle={styles.scrollContent}>
-      <AppHeader
-        title="Sanctuary Settings"
-        subtitle="Household Preferences & Multi-User Cloud Hub"
-        showBack
-      />
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          sticky
+          title="Sanctuary Settings"
+          subtitle="Household Preferences & Multi-User Cloud Hub"
+          showBack
+        />
+      }
+    >
+      {/* Active User Account & Profile */}
+      <Card level={2} style={styles.accountCard}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.avatarBadge, { backgroundColor: colors.surface2 }]}>
+            <Ionicons name="person" size={24} color={colors.primary} />
+          </View>
+          <View style={styles.householdMeta}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <AppText variant="subheading" style={{ fontWeight: "700" }}>
+                {user?.displayName || "Family Guardian"}
+              </AppText>
+              <Badge
+                label={user?.provider ? `${user.provider.toUpperCase()} LINKED` : "ACTIVE SESSION"}
+                tone="success"
+                size="small"
+              />
+            </View>
+            <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 2 }}>
+              {user?.email || "Encrypted Local & Cloud Sync"}
+            </AppText>
+          </View>
+        </View>
+      </Card>
 
       {/* Household Overview Card */}
-      <Card level={2} style={styles.householdCard}>
+      <Card level={1} style={styles.householdCard}>
         <View style={styles.cardHeader}>
           <NeevLogoIcon size={38} />
           <View style={styles.householdMeta}>
@@ -237,6 +287,7 @@ export default function SettingsScreen() {
       </ListGroup>
 
       {/* Privacy & Legal */}
+      {/* Privacy & Legal */}
       <SectionHeader title="SANCTUARY COVENANT" />
       <ListGroup>
         <ListRow
@@ -254,22 +305,44 @@ export default function SettingsScreen() {
           onPress={handleClearCache}
         />
       </ListGroup>
+
+      {/* Account & Session Management */}
+      <SectionHeader title="ACCOUNT & ENCLAVE SESSION" />
+      <ListGroup>
+        <ListRow
+          title="Sign Out of Sanctuary"
+          subtitle="Preserves all local data and safely closes cloud session"
+          icon="log-out-outline"
+          destructive
+          onPress={handleSignOut}
+        />
+      </ListGroup>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 48,
+  accountCard: {
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 20,
   },
   householdCard: {
     marginBottom: 20,
     padding: 16,
+    borderRadius: 20,
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
+  },
+  avatarBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
   householdMeta: {
     flex: 1,

@@ -125,10 +125,7 @@ export function ScreenContainer({
     stickyHeader &&
     isValidElement(header) &&
     (header.type === AppHeader ||
-      (typeof (header.props as AppHeaderProps)?.title === "string" &&
-        ("showBack" in (header.props as object) ||
-          "eyebrow" in (header.props as object) ||
-          "subtitle" in (header.props as object))))
+      typeof (header.props as AppHeaderProps)?.title === "string")
       ? (header.props as AppHeaderProps)
       : null
   const statusInset = safeArea ? insets.top : 0

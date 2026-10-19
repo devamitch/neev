@@ -25,6 +25,39 @@ export interface HouseholdInfo {
   establishedYear: number
 }
 
+/**
+ * Underaged kids (under 18) hold Read-Only permissions across sanctuary settings,
+ * member invites, administrative deletions and financial spaces until they come of age.
+ */
+export function isMemberUnderage(member?: FamilyMember | null): boolean {
+  if (!member) return false
+  if (member.role === "youth") return true
+  if (member.dateOfBirth) {
+    const birthYear = new Date(member.dateOfBirth).getFullYear()
+    const currentYear = new Date().getFullYear()
+    if (currentYear - birthYear < 18) return true
+  }
+  const rel = (member.relationship || "").toLowerCase()
+  if (rel.includes("child") || rel.includes("son") || rel.includes("daughter")) {
+    return true
+  }
+  return false
+}
+
+export function getMemberPermissions(member?: FamilyMember | null) {
+  if (!member) {
+    return { canEdit: false, canDelete: false, canInvite: false, canManageSettings: false, isReadOnly: true }
+  }
+  const underage = isMemberUnderage(member)
+  return {
+    canEdit: !underage,
+    canDelete: !underage && (member.role === "parent" || member.role === "elder"),
+    canInvite: !underage,
+    canManageSettings: !underage && member.role === "parent",
+    isReadOnly: underage,
+  }
+}
+
 export interface FamilySlice {
   household: HouseholdInfo
   members: FamilyMember[]

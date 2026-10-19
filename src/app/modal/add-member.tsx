@@ -13,18 +13,18 @@ import { PressableScale } from "@/components/ui/PressableScale"
 import { Badge } from "@/components/ui/Badge"
 import { useColors } from "@/theme/useTheme"
 import { useFamilyStore, type FamilyRole } from "@/stores/useFamilyStore"
-import { useFamilyNetworkStore, type KinshipType, type ClusterType } from "@/stores/useFamilyNetworkStore"
+import { useFamilyNetworkStore, type KinshipType } from "@/stores/useFamilyNetworkStore"
 import { familyNetworkService } from "@/services/network/familyNetworkService"
 import { useRootStore } from "@/stores/useRootStore"
 
 const ROLES: { key: FamilyRole; label: string; description: string; defaultColor: string }[] = [
-  { key: "elder", label: "Elder", description: "Pillar of wisdom & traditions", defaultColor: "#D97706" },
-  { key: "parent", label: "Parent", description: "Organizer & protector", defaultColor: "#3B82F6" },
-  { key: "youth", label: "Youth & Child", description: "Learner & bright future", defaultColor: "#8B5CF6" },
-  { key: "pet", label: "Pet", description: "Beloved furry companion", defaultColor: "#10B981" },
+  { key: "elder", label: "Elder", description: "Pillar of wisdom & traditions", defaultColor: "#C27835" },
+  { key: "parent", label: "Parent", description: "Organizer & protector", defaultColor: "#709758" },
+  { key: "youth", label: "Youth & Child", description: "Learner & bright future", defaultColor: "#588D6A" },
+  { key: "pet", label: "Pet", description: "Beloved furry companion", defaultColor: "#5A8B49" },
 ]
 
-const AVATAR_COLORS = ["#D97706", "#C85A32", "#3B82F6", "#10B981", "#8B5CF6", "#EC4899", "#06B6D4"]
+const AVATAR_COLORS = ["#709758", "#5A8B49", "#8EB574", "#C27835", "#588D6A", "#789262", "#485642"]
 
 const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
   { relation: "parent", label: "Parent of" },
@@ -56,11 +56,9 @@ export default function AddMemberModal() {
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
   const [notes, setNotes] = useState("")
 
-  // Kinship edge state
   const [selectedRelativeId, setSelectedRelativeId] = useState<string>(members[0]?.id || "")
   const [selectedRelation, setSelectedRelation] = useState<KinshipType>("parent")
 
-  // Cluster assignment state
   const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>(
     clusters.filter((c) => c.type === "care_circle" || c.type === "puja_tradition").map((c) => c.id),
   )
@@ -89,7 +87,6 @@ export default function AddMemberModal() {
 
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // 1. Add member to Family Store
     const newMemberId = addMember({
       name: name.trim(),
       nickname: nickname.trim() || undefined,
@@ -103,7 +100,6 @@ export default function AddMemberModal() {
       notes: notes.trim() || undefined,
     })
 
-    // 2. Add Kinship Graph Edge if relative selected
     if (selectedRelativeId) {
       const targetRelative = members.find((m) => m.id === selectedRelativeId)
       const relLabel = KINSHIP_OPTIONS.find((k) => k.relation === selectedRelation)?.label || "Relative of"
@@ -115,19 +111,17 @@ export default function AddMemberModal() {
       })
     }
 
-    // 3. Assign to selected clusters
     selectedClusterIds.forEach((clusterId) => {
       assignMemberToCluster(clusterId, newMemberId)
     })
 
-    // 4. If sanctuary profile (no phone), generate private claim code
     if (!hasPhone) {
       const inv = createInvitation(name.trim(), "Sanctuary Circle")
       void familyNetworkService.syncInvitation(inv)
 
       showAlert({
-        title: "Sanctuary Profile Created 🕊️",
-        message: `${name} has been welcomed to the family graph without requiring a phone number or app installation.\n\n🔑 One-Time Claim Code:\n${inv.inviteCode}\n\nThey or a trusted guardian can claim this profile at any time.`,
+        title: "Sanctuary Profile Created",
+        message: `${name} has been welcomed to the family graph.\n\nClaim Code:\n${inv.inviteCode}\n\nThey or a trusted guardian can claim this profile at any time.`,
         confirmText: "Copy Code & Continue",
         onConfirm: async () => {
           showToast({ message: `Welcomed ${name} to Family Sanctuary!`, type: "success" })
@@ -145,14 +139,17 @@ export default function AddMemberModal() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Welcome Family Member"
-        subtitle="Multi-Generational Kinship & Clusters"
-        showBack
-      />
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          title="Welcome Family Member"
+          subtitle="Multi-Generational Kinship & Clusters"
+          showBack
+        />
+      }
+    >
         {/* Name Fields */}
         <TextField
           label="Full Name"
@@ -195,7 +192,6 @@ export default function AddMemberModal() {
                     styles.roleCard,
                     {
                       backgroundColor: active ? colors.primaryAlpha : colors.surface,
-                      borderColor: active ? colors.primary : colors.border,
                     },
                   ]}
                   onPress={() => {
@@ -204,9 +200,9 @@ export default function AddMemberModal() {
                     setSelectedColor(r.defaultColor)
                   }}
                 >
-                  <View style={[styles.roleColorDot, { backgroundColor: r.defaultColor }]} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <AppText variant="subheading" style={{ fontSize: 15, fontWeight: "700" }}>
+                  <View style={[styles.roleColorDot, { backgroundColor: r.defaultColor, marginRight: 12 }]} />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="body" style={{ fontWeight: "700", color: active ? colors.primary : colors.text.primary }}>
                       {r.label}
                     </AppText>
                     <AppText variant="caption" style={{ color: colors.text.secondary }}>
@@ -219,51 +215,51 @@ export default function AddMemberModal() {
           </View>
         </View>
 
-        {/* Sanctuary Profile vs Phone Account Toggle */}
+        {/* Profile Connection Mode */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
-            ACCOUNT & PHONE ACCESS (SECTION 45 & 53)
+            PROFILE ACCESS & CLAIM
           </AppText>
           <View style={styles.phoneModeRow}>
             <PressableScale
               style={[
                 styles.modeCard,
-                !hasPhone
-                  ? [styles.modeCardActive, { backgroundColor: colors.primaryAlpha, borderColor: colors.primary }]
-                  : [styles.modeCardInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
+                {
+                  backgroundColor: !hasPhone ? colors.primaryAlpha : colors.surface2,
+                },
               ]}
               onPress={() => {
                 void Haptics.selectionAsync()
                 setHasPhone(false)
               }}
             >
-              <Ionicons name="sparkles" size={18} color={!hasPhone ? colors.primary : colors.text.muted} />
-              <AppText variant="bodyMedium" style={{ fontWeight: "700", marginTop: 4 }}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={!hasPhone ? colors.primary : colors.text.secondary} />
+              <AppText variant="caption" style={{ fontWeight: "700", marginTop: 4, color: !hasPhone ? colors.primary : colors.text.primary }}>
                 Sanctuary Profile
               </AppText>
-              <AppText variant="caption" style={{ color: colors.text.secondary, textAlign: "center" }}>
-                No phone required. Ideal for elders, children & pets.
+              <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 10, textAlign: "center", marginTop: 2 }}>
+                For elders or young children
               </AppText>
             </PressableScale>
 
             <PressableScale
               style={[
                 styles.modeCard,
-                hasPhone
-                  ? [styles.modeCardActive, { backgroundColor: colors.primaryAlpha, borderColor: colors.primary }]
-                  : [styles.modeCardInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
+                {
+                  backgroundColor: hasPhone ? colors.primaryAlpha : colors.surface2,
+                },
               ]}
               onPress={() => {
                 void Haptics.selectionAsync()
                 setHasPhone(true)
               }}
             >
-              <Ionicons name="phone-portrait-outline" size={18} color={hasPhone ? colors.primary : colors.text.muted} />
-              <AppText variant="bodyMedium" style={{ fontWeight: "700", marginTop: 4 }}>
-                Phone Account
+              <Ionicons name="phone-portrait-outline" size={20} color={hasPhone ? colors.primary : colors.text.secondary} />
+              <AppText variant="caption" style={{ fontWeight: "700", marginTop: 4, color: hasPhone ? colors.primary : colors.text.primary }}>
+                Mobile Connected
               </AppText>
-              <AppText variant="caption" style={{ color: colors.text.secondary, textAlign: "center" }}>
-                Active app login with mobile number.
+              <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 10, textAlign: "center", marginTop: 2 }}>
+                Direct app invitations
               </AppText>
             </PressableScale>
           </View>
@@ -271,214 +267,70 @@ export default function AddMemberModal() {
           {hasPhone && (
             <View style={{ marginTop: 12 }}>
               <TextField
-                label="Mobile Phone"
+                label="Mobile Number (Optional)"
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChangeText={setPhone}
+                keyboardType="phone-pad"
               />
             </View>
           )}
         </View>
 
-        {/* Kinship Connection to Existing Member */}
-        {members.length > 0 && (
-          <View style={styles.sectionMargin}>
-            <AppText variant="caption" style={styles.label}>
-              KINSHIP GRAPH CONNECTION (SECTION 52)
-            </AppText>
-            <View style={[styles.kinshipBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.kinshipHeaderRow}>
-                <Ionicons name="git-branch-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-                  Connect to relative in the tree:
-                </AppText>
-              </View>
-
-              {/* Relative Selector Chips */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-                {members.map((m) => {
-                  const isTarget = selectedRelativeId === m.id
-                  return (
-                    <PressableScale
-                      key={m.id}
-                      style={[
-                        styles.relativeChip,
-                        {
-                          backgroundColor: isTarget ? colors.primary : colors.surface2,
-                          borderColor: isTarget ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        void Haptics.selectionAsync()
-                        setSelectedRelativeId(m.id)
-                      }}
-                    >
-                      <AppText
-                        variant="caption"
-                        style={{ color: isTarget ? "#FFFFFF" : colors.text.primary, fontWeight: "600" }}
-                      >
-                        {m.name.split(" ")[0]} ({m.relationship})
-                      </AppText>
-                    </PressableScale>
-                  )
-                })}
-              </ScrollView>
-
-              {/* Relation Type Chips */}
-              <View style={styles.relationGrid}>
-                {KINSHIP_OPTIONS.map((k) => {
-                  const isRelActive = selectedRelation === k.relation
-                  return (
-                    <PressableScale
-                      key={k.relation}
-                      style={[
-                        styles.relTypeChip,
-                        {
-                          backgroundColor: isRelActive ? colors.primaryAlpha : colors.surface2,
-                          borderColor: isRelActive ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        void Haptics.selectionAsync()
-                        setSelectedRelation(k.relation)
-                      }}
-                    >
-                      <AppText
-                        variant="caption"
-                        style={{
-                          fontSize: 11,
-                          color: isRelActive ? colors.primary : colors.text.secondary,
-                          fontWeight: isRelActive ? "700" : "500",
-                        }}
-                      >
-                        {k.label}
-                      </AppText>
-                    </PressableScale>
-                  )
-                })}
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Overlapping Cluster Membership */}
+        {/* Color Palette Selector */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
-            FAMILY CLUSTERS (SECTION 47)
-          </AppText>
-          <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 8 }}>
-            Assign this member to one or more overlapping circles:
-          </AppText>
-
-          <View style={styles.clusterGrid}>
-            {clusters.map((c) => {
-              const isSelected = selectedClusterIds.includes(c.id)
-              return (
-                <PressableScale
-                  key={c.id}
-                  style={[
-                    styles.clusterCard,
-                    {
-                      backgroundColor: isSelected ? c.color + "18" : colors.surface,
-                      borderColor: isSelected ? c.color : colors.border,
-                    },
-                  ]}
-                  onPress={() => toggleCluster(c.id)}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons
-                      name={c.icon as any}
-                      size={16}
-                      color={isSelected ? c.color : colors.text.secondary}
-                      style={{ marginRight: 6 }}
-                    />
-                    <AppText
-                      variant="caption"
-                      style={{
-                        fontWeight: "700",
-                        color: isSelected ? c.color : colors.text.primary,
-                        flex: 1,
-                      }}
-                    >
-                      {c.name}
-                    </AppText>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={16} color={c.color} />
-                    )}
-                  </View>
-                </PressableScale>
-              )
-            })}
-          </View>
-        </View>
-
-        {/* Color Palette */}
-        <View style={styles.sectionMargin}>
-          <AppText variant="caption" style={styles.label}>
-            AVATAR COLOR TONE
+            AVATAR TONE
           </AppText>
           <View style={styles.colorRow}>
-            {AVATAR_COLORS.map((col) => {
-              const active = selectedColor === col
+            {AVATAR_COLORS.map((c) => {
+              const active = selectedColor === c
               return (
                 <PressableScale
-                  key={col}
+                  key={c}
                   style={[
                     styles.colorCircle,
-                    { backgroundColor: col },
+                    { backgroundColor: c },
                     active && styles.colorCircleActive,
                   ]}
-                  onPress={() => setSelectedColor(col)}
+                  onPress={() => {
+                    void Haptics.selectionAsync()
+                    setSelectedColor(c)
+                  }}
                 />
               )
             })}
           </View>
         </View>
 
-        {/* Superpower & Treats */}
+        {/* Superpower or Treat */}
         <TextField
-          label="Unique Superpower"
-          placeholder="e.g. Calming storyteller, master gardener, math wizard"
-          value={superpower}
-          onChangeText={setSuperpower}
+          label={role === "pet" ? "Favorite Treat & Habits" : "Family Superpower & Role"}
+          placeholder={role === "pet" ? "Chicken jerky, likes afternoon naps" : "Master storyteller, quick problem solver"}
+          value={role === "pet" ? favoriteTreat : superpower}
+          onChangeText={role === "pet" ? setFavoriteTreat : setSuperpower}
         />
 
-        <TextField
-          label="Favorite Comfort Food / Treat"
-          placeholder="e.g. Warm ginger chai, mango kulfi, peanut butter biscuits"
-          value={favoriteTreat}
-          onChangeText={setFavoriteTreat}
-        />
-
-        <TextField
-          label="Sanctuary Notes & Traditions"
-          placeholder="e.g. Morning walk cadence, likes classical rabindra sangeet"
-          value={notes}
-          onChangeText={setNotes}
-        />
-
-        {/* Save Button */}
         <View style={styles.btnWrap}>
           <AppButton
-            title="Welcome to Family Sanctuary"
-            onPress={handleSave}
+            title={`Welcome ${name.trim() ? name.trim().split(" ")[0] : "Member"} to Sanctuary`}
             variant="primary"
-            size="large"
+            onPress={handleSave}
+            disabled={!name.trim()}
           />
         </View>
-      </ScrollView>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 48,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
   sectionMargin: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   label: {
     fontWeight: "700",
@@ -498,7 +350,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1,
   },
   roleColorDot: {
     width: 14,
@@ -513,51 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1.5,
     alignItems: "center",
-  },
-  modeCardActive: {},
-  modeCardInactive: {},
-  kinshipBox: {
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  kinshipHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  chipsScroll: {
-    flexDirection: "row",
-    gap: 8,
-    paddingBottom: 10,
-  },
-  relativeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  relationGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 4,
-  },
-  relTypeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  clusterGrid: {
-    gap: 8,
-  },
-  clusterCard: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
   },
   colorRow: {
     flexDirection: "row",
@@ -574,6 +381,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.15 }],
   },
   btnWrap: {
-    marginTop: 20,
+    marginTop: 16,
+    marginBottom: 24,
   },
 })

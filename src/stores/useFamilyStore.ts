@@ -5,5 +5,6 @@
 
 import { useRootStore } from "./useRootStore"
 export type { FamilyRole, FamilyMember, HouseholdInfo, FamilySlice } from "./slices/createFamilySlice"
+export { isMemberUnderage, getMemberPermissions } from "./slices/createFamilySlice"
 
 export const useFamilyStore = useRootStore

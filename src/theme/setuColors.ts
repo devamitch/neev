@@ -24,6 +24,11 @@ export interface ThemeColors {
   primary: string
   /** Ink for text and icons on `primary` fill. */
   onPrimary: string
+  primaryContainer: string
+  onPrimaryContainer: string
+  primaryFixed: string
+  primaryFixedDim: string
+  primaryDim: string
   /** Low-alpha tint for chips and icon tiles. */
   primaryAlpha: string
   /** Accent that is readable as text/icon colour on neutral surfaces. */
@@ -60,34 +65,39 @@ export interface ThemeColors {
 
 export const lightColors: ThemeColors = {
   scheme: "light",
-  background: "#FBFDF9",
+  background: "#FAFBF9",
   surface: "#FFFFFF",
   surface1: "#FFFFFF",
-  surface2: "#F0F5EC",
-  surface3: "#E2ECDC",
+  surface2: "#E0EDE8",
+  surface3: "#D3E5DC",
   surfaceGlass: "rgba(255, 255, 255, 0.92)",
   text: {
-    primary: "#1E271A",
-    secondary: "#485642",
-    muted: "#6E7E68",
+    primary: "#0E1E1B",
+    secondary: "#3D4946",
+    muted: "#5A6F69",
   },
-  primary: "#709758",
+  primary: "#7D8C7D",
   onPrimary: "#FFFFFF",
-  primaryAlpha: "rgba(112, 151, 88, 0.12)",
-  primaryGradient: ["#709758", "#709758", "#709758"],
-  primaryVivid: "#709758",
+  primaryContainer: "#E0EDE8",
+  onPrimaryContainer: "#3D5250",
+  primaryFixed: "#D3E5DC",
+  primaryFixedDim: "#A8C0B8",
+  primaryDim: "#5A6F69",
+  primaryAlpha: "rgba(125, 140, 125, 0.16)",
+  primaryGradient: ["#7D8C7D", "#7D8C7D", "#7D8C7D"],
+  primaryVivid: "#7D8C7D",
   gloss: "#FFFFFF",
-  actionTints: { camera: "#709758", share: "#588D6A", emergency: "#BE3434" },
-  accentText: "#54773F",
-  border: "rgba(30, 39, 26, 0.08)",
-  borderStrong: "rgba(30, 39, 26, 0.16)",
+  actionTints: { camera: "#7D8C7D", share: "#5A6F69", emergency: "#BE3434" },
+  accentText: "#5A6F69",
+  border: "rgba(14, 30, 27, 0.06)",
+  borderStrong: "rgba(14, 30, 27, 0.12)",
   success: "#5A8B49",
   warning: "#C27835",
-  info: "#709758",
+  info: "#7D8C7D",
   error: "#BE3434",
   successSurface: "rgba(90, 139, 73, 0.12)",
   warningSurface: "rgba(194, 120, 53, 0.10)",
-  infoSurface: "rgba(112, 151, 88, 0.10)",
+  infoSurface: "rgba(125, 140, 125, 0.12)",
   errorSurface: "rgba(190, 52, 52, 0.08)",
   scrim: "rgba(20, 26, 17, 0.45)",
   media: "#1B2218",
@@ -119,6 +129,11 @@ export const darkColors: ThemeColors = {
   },
   primary: "#8EB574",
   onPrimary: "#121710",
+  primaryContainer: "#2E3A2A",
+  onPrimaryContainer: "#D3E5DC",
+  primaryFixed: "#3D4946",
+  primaryFixedDim: "#2A3633",
+  primaryDim: "#A8C0B8",
   primaryAlpha: "rgba(142, 181, 116, 0.18)",
   primaryGradient: ["#8EB574", "#8EB574", "#8EB574"],
   primaryVivid: "#8EB574",

@@ -102,8 +102,8 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
         </View>
       </View>
 
-      {/* Household Status Card */}
-      <View style={[styles.householdBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+      {/* Household Status Card (Zero Borders) */}
+      <View style={[styles.householdBox, { backgroundColor: colors.surface2 }]}>
         <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary, letterSpacing: 0.5 }}>
           ACTIVE HOUSEHOLD
         </AppText>
@@ -125,7 +125,7 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
             {group.items.map((item) => (
               <PressableScale
                 key={item.label}
-                style={[styles.menuItem, { borderColor: colors.border }]}
+                style={styles.menuItem}
                 onPress={() => handlePress(item)}
               >
                 <View style={[styles.iconBox, { backgroundColor: colors.surface2 }]}>

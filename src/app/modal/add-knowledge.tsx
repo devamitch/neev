@@ -48,14 +48,17 @@ export default function AddKnowledgeModal() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Record Knowledge"
-        subtitle="Shared Family Sanctuary Vault"
-        showBack
-      />
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          title="Record Knowledge"
+          subtitle="Shared Family Sanctuary Vault"
+          showBack
+        />
+      }
+    >
         <TextField
           label="Title"
           placeholder="e.g. Dadi's Spiced Kadha, Ancestral Land Location"
@@ -76,8 +79,7 @@ export default function AddKnowledgeModal() {
                   style={[
                     styles.catChip,
                     {
-                      backgroundColor: active ? colors.primary : colors.surface,
-                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primary : colors.surface2,
                     },
                   ]}
                   onPress={() => {
@@ -128,14 +130,13 @@ export default function AddKnowledgeModal() {
           disabled={!title.trim() || !body.trim()}
           style={{ marginTop: 24, marginBottom: 40 }}
         />
-      </ScrollView>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     gap: 14,
   },
@@ -155,10 +156,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   catChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 16,
-    borderWidth: 1,
   },
   rowInputs: {
     flexDirection: "row",

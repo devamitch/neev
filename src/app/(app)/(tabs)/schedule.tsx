@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
+import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useScheduleStore, type FunctionCategory } from "@/stores/useScheduleStore"
@@ -52,24 +53,25 @@ export default function ScheduleScreen() {
   )
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Family Functions"
-        subtitle="Shared Schedulers, Rituals & Delegations"
-        showBack={false}
-        rightAction={
-          <HeaderIconButton
-            icon="add"
-            label="Schedule Function"
-            onPress={() => router.push("/modal/add-event")}
-          />
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          sticky
+          title="Family Functions"
+          subtitle="Shared Schedulers, Rituals & Delegations"
+          showBack={false}
+          rightAction={
+            <HeaderIconButton
+              icon="add"
+              label="Schedule Function"
+              onPress={() => router.push("/modal/add-event")}
+            />
+          }
+        />
+      }
+    >
         {/* Category Filter Pills (Zero Borders) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
@@ -188,6 +190,11 @@ export default function ScheduleScreen() {
           })}
         </View>
 
+        {/* ── Real Weekly Multigenerational Family Games ── */}
+        <View style={{ marginTop: 20 }}>
+          <FamilyWeeklyGamesCard />
+        </View>
+
         {/* Schedule a new function button */}
         <AppButton
           title="+ Schedule New Family Function"
@@ -195,7 +202,6 @@ export default function ScheduleScreen() {
           onPress={() => router.push("/modal/add-event")}
           style={{ marginTop: 16 }}
         />
-      </ScrollView>
     </ScreenContainer>
   )
 }

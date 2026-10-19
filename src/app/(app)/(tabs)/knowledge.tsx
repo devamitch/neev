@@ -43,24 +43,25 @@ export default function KnowledgeScreen() {
     : entries.filter((e) => e.category === selectedCategory)
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Knowledge Sanctuary"
-        subtitle="Family Stories, Heirloom Recipes & Traditions Vault"
-        showBack={false}
-        rightAction={
-          <HeaderIconButton
-            icon="add"
-            label="Preserve Knowledge"
-            onPress={() => router.push("/modal/add-knowledge")}
-          />
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          sticky
+          title="Knowledge Sanctuary"
+          subtitle="Family Stories, Heirloom Recipes & Traditions Vault"
+          showBack={false}
+          rightAction={
+            <HeaderIconButton
+              icon="add"
+              label="Preserve Knowledge"
+              onPress={() => router.push("/modal/add-knowledge")}
+            />
+          }
+        />
+      }
+    >
         {/* Category Pills (Zero Borders) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
@@ -173,7 +174,6 @@ export default function KnowledgeScreen() {
           onPress={() => router.push("/modal/add-knowledge")}
           style={{ marginTop: 16 }}
         />
-      </ScrollView>
     </ScreenContainer>
   )
 }

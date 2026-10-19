@@ -11,7 +11,7 @@
  * Everything is driven on the UI thread by the screen's scroll offset.
  */
 import { isValidElement, useState } from "react"
-import { Image, LayoutChangeEvent, StyleSheet, View, type ImageSourcePropType } from "react-native"
+import { Image, LayoutChangeEvent, Platform, StyleSheet, View, type ImageSourcePropType } from "react-native"
 
 import Animated, {
   Extrapolation,
@@ -150,16 +150,15 @@ export function CollapsingHeaderBar({
       ]}
     >
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, barBg]}>
-        {/* Frosted bar: real blur on Android 12+, with a light wash so text
-            underneath never competes with the title and buttons. */}
+        {/* Frosted bar: clean surface wash with native blur where supported */}
         <BlurView
           style={StyleSheet.absoluteFill}
-          intensity={80}
+          intensity={60}
           tint="light"
-          blurMethod={"dimezisBlurViewSdk31Plus"}
+          blurMethod={Platform.OS === "android" ? "none" : undefined}
         />
         <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background, opacity: 0.93 }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background, opacity: 0.94 }]}
         />
       </Animated.View>
       <Animated.View

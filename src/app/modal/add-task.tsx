@@ -12,16 +12,16 @@ import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { Badge } from "@/components/ui/Badge"
 import { useColors } from "@/theme/useTheme"
-import { useSpacesStore, type SpaceType, type SpaceTask } from "@/stores/useSpacesStore"
+import { useSpacesStore, type SpaceType } from "@/stores/useSpacesStore"
 import { useFamilyStore } from "@/stores/useFamilyStore"
-import { useFamilyNetworkStore, type ClusterType } from "@/stores/useFamilyNetworkStore"
+import { useFamilyNetworkStore } from "@/stores/useFamilyNetworkStore"
 import { deterministicEngine, type ConstraintTask } from "@/services/engine/deterministicEngine"
 import { useRootStore } from "@/stores/useRootStore"
 
-const SPACES: { key: SpaceType; label: string; icon: string; desc: string }[] = [
-  { key: "personal", label: "Personal Space (Private)", icon: "lock-closed", desc: "Confidential goals & career" },
-  { key: "nuclear", label: "Nuclear Space (Home & Kids)", icon: "home", desc: "School, doctor & daily needs" },
-  { key: "family", label: "Family Sanctuary (All)", icon: "people", desc: "Grandparents, rituals & pets" },
+const SPACES: { key: SpaceType; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
+  { key: "personal", label: "Personal Space (Private)", icon: "lock-closed-outline", desc: "Confidential goals & career" },
+  { key: "nuclear", label: "Nuclear Space (Home & Kids)", icon: "home-outline", desc: "School, doctor & daily needs" },
+  { key: "family", label: "Family Sanctuary (All)", icon: "people-outline", desc: "Grandparents, rituals & pets" },
 ]
 
 const CATEGORIES: { key: "school" | "doctor" | "career" | "home" | "ritual"; label: string }[] = [
@@ -30,12 +30,6 @@ const CATEGORIES: { key: "school" | "doctor" | "career" | "home" | "ritual"; lab
   { key: "career", label: "Career & Interview" },
   { key: "home", label: "Household & Chores" },
   { key: "ritual", label: "Ritual & Tradition" },
-]
-
-const PRIORITIES: { key: "urgent" | "normal" | "low"; label: string; color: string; val: number }[] = [
-  { key: "urgent", label: "Urgent (Escalating)", color: "#EF4444", val: 5 },
-  { key: "normal", label: "Normal Priority", color: "#3B82F6", val: 3 },
-  { key: "low", label: "Low & Flexible", color: "#10B981", val: 1 },
 ]
 
 const DURATIONS = [
@@ -64,6 +58,12 @@ export default function AddTaskModal() {
   const [assignedTo, setAssignedTo] = useState(members[0]?.name || "Me")
   const [selectedDepTaskId, setSelectedDepTaskId] = useState<string | null>(null)
 
+  const priorities = [
+    { key: "urgent" as const, label: "Urgent", color: colors.error, val: 5 },
+    { key: "normal" as const, label: "Normal", color: colors.primary, val: 3 },
+    { key: "low" as const, label: "Low & Flexible", color: colors.success, val: 1 },
+  ]
+
   // Candidate prerequisite tasks in the same space
   const uncompletedTasksInSpace = allTasks.filter(
     (t) => t.space === selectedSpace && !t.isCompleted,
@@ -86,7 +86,6 @@ export default function AddTaskModal() {
       return
     }
 
-    // Check for cycle if dependency was chosen
     if (selectedDepTaskId) {
       const tempTasks: ConstraintTask[] = [
         ...allTasks.map((t) => ({
@@ -115,7 +114,7 @@ export default function AddTaskModal() {
       }
     }
 
-    const prioVal = PRIORITIES.find((p) => p.key === priority)?.val || 3
+    const prioVal = priorities.find((p) => p.key === priority)?.val || 3
     const calculatedScore = deterministicEngine.calculatePriorityScore(
       {
         id: "new",
@@ -144,21 +143,24 @@ export default function AddTaskModal() {
     })
 
     showToast({
-      message: `Task added to ${selectedSpace.toUpperCase()} space! Priority score: ${calculatedScore} (0 Tokens)`,
+      message: `Task added to ${selectedSpace.toUpperCase()} space! Priority score: ${calculatedScore}`,
       type: "success",
     })
     router.back()
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Add Space Plan & Task"
-        subtitle="Deterministic Planning & Workload Balancer"
-        showBack
-      />
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          title="Add Space Plan & Task"
+          subtitle="Deterministic Planning & Workload Balancer"
+          showBack
+        />
+      }
+    >
         {/* Space Selection */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
@@ -174,7 +176,6 @@ export default function AddTaskModal() {
                     styles.spacePill,
                     {
                       backgroundColor: active ? colors.primaryAlpha : colors.surface,
-                      borderColor: active ? colors.primary : colors.border,
                     },
                   ]}
                   onPress={() => {
@@ -183,98 +184,41 @@ export default function AddTaskModal() {
                   }}
                 >
                   <Ionicons
-                    name={sp.icon as any}
+                    name={sp.icon}
                     size={18}
                     color={active ? colors.primary : colors.text.secondary}
                     style={{ marginRight: 10 }}
                   />
                   <View style={{ flex: 1 }}>
                     <AppText
-                      variant="bodyMedium"
-                      style={{ color: active ? colors.primary : colors.text.primary, fontWeight: "700" }}
+                      variant="body"
+                      style={{
+                        fontWeight: "700",
+                        color: active ? colors.primary : colors.text.primary,
+                      }}
+                      numberOfLines={1}
                     >
                       {sp.label}
                     </AppText>
-                    <AppText variant="caption" style={{ color: colors.text.muted }}>
+                    <AppText variant="caption" style={{ color: colors.text.secondary }}>
                       {sp.desc}
                     </AppText>
                   </View>
-                  {active && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
                 </PressableScale>
               )
             })}
           </View>
         </View>
 
-        {/* Cluster Scope Target */}
-        <View style={styles.sectionMargin}>
-          <AppText variant="caption" style={styles.label}>
-            FAMILY CLUSTER SCOPE (SECTION 47)
-          </AppText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clusterPillsScroll}>
-            <PressableScale
-              style={[
-                styles.clusterPill,
-                selectedClusterType === "all"
-                  ? [styles.clusterPillActive, { backgroundColor: colors.primary }]
-                  : [styles.clusterPillInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
-              ]}
-              onPress={() => setSelectedClusterType("all")}
-            >
-              <AppText
-                variant="caption"
-                style={{
-                  fontWeight: "600",
-                  color: selectedClusterType === "all" ? "#FFFFFF" : colors.text.secondary,
-                }}
-              >
-                All Space Members
-              </AppText>
-            </PressableScale>
-
-            {clusters.map((c) => {
-              const isSelected = selectedClusterType === c.type
-              return (
-                <PressableScale
-                  key={c.id}
-                  style={[
-                    styles.clusterPill,
-                    isSelected
-                      ? [styles.clusterPillActive, { backgroundColor: c.color }]
-                      : [styles.clusterPillInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
-                  ]}
-                  onPress={() => setSelectedClusterType(c.type)}
-                >
-                  <Ionicons
-                    name={c.icon as any}
-                    size={13}
-                    color={isSelected ? "#FFFFFF" : c.color}
-                    style={{ marginRight: 5 }}
-                  />
-                  <AppText
-                    variant="caption"
-                    style={{
-                      fontWeight: "600",
-                      color: isSelected ? "#FFFFFF" : colors.text.primary,
-                    }}
-                  >
-                    {c.name}
-                  </AppText>
-                </PressableScale>
-              )
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Task Title */}
+        {/* Task Title Input */}
         <TextField
           label="Task or Milestone Title"
-          placeholder="e.g. Schedule pediatrician vaccine, Order puja ghee"
+          placeholder="e.g. Schedule Pediatrician Booster, Submit Project Brief"
           value={title}
           onChangeText={setTitle}
         />
 
-        {/* Category Selection */}
+        {/* Category Chips */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
             CATEGORY
@@ -288,8 +232,7 @@ export default function AddTaskModal() {
                   style={[
                     styles.catChip,
                     {
-                      backgroundColor: active ? colors.primary : colors.surface,
-                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primary : colors.surface2,
                     },
                   ]}
                   onPress={() => {
@@ -299,7 +242,10 @@ export default function AddTaskModal() {
                 >
                   <AppText
                     variant="caption"
-                    style={{ color: active ? "#FFFFFF" : colors.text.secondary, fontWeight: "600" }}
+                    style={{
+                      color: active ? "#FFFFFF" : colors.text.secondary,
+                      fontWeight: "600",
+                    }}
                   >
                     {cat.label}
                   </AppText>
@@ -309,13 +255,13 @@ export default function AddTaskModal() {
           </View>
         </View>
 
-        {/* Priority Selection */}
+        {/* Priority Selector */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
-            PRIORITY & ESCALATION
+            PRIORITY & ESCALATING NUDGE
           </AppText>
           <View style={styles.priorityRow}>
-            {PRIORITIES.map((p) => {
+            {priorities.map((p) => {
               const active = priority === p.key
               return (
                 <PressableScale
@@ -323,8 +269,7 @@ export default function AddTaskModal() {
                   style={[
                     styles.priorityChip,
                     {
-                      backgroundColor: active ? p.color : colors.surface,
-                      borderColor: active ? p.color : colors.border,
+                      backgroundColor: active ? p.color : colors.surface2,
                     },
                   ]}
                   onPress={() => {
@@ -334,7 +279,11 @@ export default function AddTaskModal() {
                 >
                   <AppText
                     variant="caption"
-                    style={{ color: active ? "#FFFFFF" : colors.text.primary, fontWeight: "600" }}
+                    style={{
+                      color: active ? "#FFFFFF" : colors.text.primary,
+                      fontWeight: "700",
+                    }}
+                    numberOfLines={1}
                   >
                     {p.label}
                   </AppText>
@@ -344,22 +293,21 @@ export default function AddTaskModal() {
           </View>
         </View>
 
-        {/* Estimated Duration (Deterministic Planning Section 8.1) */}
+        {/* Estimated Duration */}
         <View style={styles.sectionMargin}>
           <AppText variant="caption" style={styles.label}>
-            ESTIMATED DURATION (EFFORT BUDGET)
+            ESTIMATED DURATION
           </AppText>
           <View style={styles.durationRow}>
             {DURATIONS.map((d) => {
-              const isSelected = durationMinutes === d.value
+              const active = durationMinutes === d.value
               return (
                 <PressableScale
                   key={d.value}
                   style={[
                     styles.durationChip,
                     {
-                      backgroundColor: isSelected ? colors.primary : colors.surface,
-                      borderColor: isSelected ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primary : colors.surface2,
                     },
                   ]}
                   onPress={() => {
@@ -370,8 +318,8 @@ export default function AddTaskModal() {
                   <AppText
                     variant="caption"
                     style={{
-                      fontWeight: isSelected ? "700" : "500",
-                      color: isSelected ? "#FFFFFF" : colors.text.secondary,
+                      color: active ? "#FFFFFF" : colors.text.secondary,
+                      fontWeight: "600",
                     }}
                   >
                     {d.label}
@@ -382,133 +330,50 @@ export default function AddTaskModal() {
           </View>
         </View>
 
-        {/* Assignee & Due Date */}
-        <View style={styles.rowInputs}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <TextField
-              label="Assigned Caregiver / Member"
-              placeholder="e.g. Papa, Maa, Dadu"
-              value={assignedTo}
-              onChangeText={setAssignedTo}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <TextField
-              label="Due Date"
-              placeholder="e.g. Tomorrow"
-              value={dueDate}
-              onChangeText={setDueDate}
-            />
-          </View>
-        </View>
-
-        {/* Caregiver Workload Health Alert (Section 8.2 & 8.4) */}
+        {/* Workload Telemetry Alert */}
         {isOverloaded && (
-          <View style={[styles.workloadAlert, { backgroundColor: "#FEF3C7", borderColor: "#F59E0B" }]}>
-            <Ionicons name="warning-outline" size={18} color="#D97706" style={{ marginRight: 8 }} />
+          <View style={[styles.workloadAlert, { backgroundColor: colors.warningSurface }]}>
+            <Ionicons name="warning-outline" size={18} color={colors.warning} style={{ marginRight: 8 }} />
             <View style={{ flex: 1 }}>
-              <AppText variant="caption" style={{ fontWeight: "700", color: "#92400E" }}>
-                Caregiver Workload Limit Reached
+              <AppText variant="caption" style={{ fontWeight: "700", color: colors.warning }}>
+                High Daily Load: {assignedTo}
               </AppText>
-              <AppText variant="caption" style={{ color: "#B45309", fontSize: 11, marginTop: 2 }}>
-                {assignedTo} already has {existingAssigneeMinutes}m scheduled today. Adding {durationMinutes}m exceeds 6 hours. Deterministic load balancer suggests re-assigning.
+              <AppText variant="caption" style={{ color: colors.text.secondary, fontSize: 11, marginTop: 2 }}>
+                Current commitment: ~{Math.round(totalProjectedMinutes / 60)} hrs. Consider delegating.
               </AppText>
             </View>
           </View>
         )}
 
-        {/* Task Dependency Selector (Acyclic DAG Section 7.4) */}
-        {uncompletedTasksInSpace.length > 0 && (
-          <View style={styles.sectionMargin}>
-            <AppText variant="caption" style={styles.label}>
-              PREREQUISITE TASK (DEPENDS ON)
-            </AppText>
-            <AppText variant="caption" style={{ color: colors.text.muted, marginBottom: 8 }}>
-              This task will be blocked until the prerequisite task completes:
-            </AppText>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.depScroll}>
-              <PressableScale
-                style={[
-                  styles.depChip,
-                  selectedDepTaskId === null
-                    ? [styles.depChipActive, { backgroundColor: colors.primary }]
-                    : [styles.depChipInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
-                ]}
-                onPress={() => setSelectedDepTaskId(null)}
-              >
-                <AppText
-                  variant="caption"
-                  style={{
-                    color: selectedDepTaskId === null ? "#FFFFFF" : colors.text.secondary,
-                    fontWeight: "600",
-                  }}
-                >
-                  No Prerequisite (Ready Now)
-                </AppText>
-              </PressableScale>
-
-              {uncompletedTasksInSpace.map((t) => {
-                const isSelected = selectedDepTaskId === t.id
-                return (
-                  <PressableScale
-                    key={t.id}
-                    style={[
-                      styles.depChip,
-                      isSelected
-                        ? [styles.depChipActive, { backgroundColor: colors.primary }]
-                        : [styles.depChipInactive, { backgroundColor: colors.surface, borderColor: colors.border }],
-                    ]}
-                    onPress={() => {
-                      void Haptics.selectionAsync()
-                      setSelectedDepTaskId(t.id)
-                    }}
-                  >
-                    <Ionicons
-                      name="git-commit-outline"
-                      size={14}
-                      color={isSelected ? "#FFFFFF" : colors.text.muted}
-                      style={{ marginRight: 4 }}
-                    />
-                    <AppText
-                      variant="caption"
-                      style={{
-                        color: isSelected ? "#FFFFFF" : colors.text.primary,
-                        fontWeight: isSelected ? "700" : "500",
-                      }}
-                      numberOfLines={1}
-                    >
-                      {t.title}
-                    </AppText>
-                  </PressableScale>
-                )
-              })}
-            </ScrollView>
+        <View style={styles.rowInputs}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <TextField label="Due Date" placeholder="e.g. 2026-10-25" value={dueDate} onChangeText={setDueDate} />
           </View>
-        )}
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <TextField label="Assigned Member" placeholder="e.g. Pooja" value={assignedTo} onChangeText={setAssignedTo} />
+          </View>
+        </View>
 
-        {/* Submit */}
         <View style={styles.btnWrap}>
           <AppButton
-            title="Create Space Task"
-            onPress={handleSave}
+            title="Save Space Task"
             variant="primary"
-            size="large"
+            onPress={handleSave}
+            disabled={!title.trim()}
           />
         </View>
-      </ScrollView>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 48,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
   sectionMargin: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   label: {
     fontWeight: "700",
@@ -523,24 +388,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 14,
-    borderWidth: 1,
   },
-  clusterPillsScroll: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  clusterPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  clusterPillActive: {},
-  clusterPillInactive: {},
   catGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -550,7 +400,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 12,
-    borderWidth: 1,
   },
   priorityRow: {
     flexDirection: "row",
@@ -560,7 +409,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -573,7 +421,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    borderWidth: 1,
   },
   rowInputs: {
     flexDirection: "row",
@@ -584,26 +431,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     borderRadius: 12,
-    borderWidth: 1,
     marginBottom: 16,
   },
-  depScroll: {
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 4,
-  },
-  depChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    maxWidth: 220,
-  },
-  depChipActive: {},
-  depChipInactive: {},
   btnWrap: {
-    marginTop: 20,
+    marginTop: 10,
+    marginBottom: 20,
   },
 })

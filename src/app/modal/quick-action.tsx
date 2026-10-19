@@ -25,51 +25,51 @@ interface QuickActionItem {
   accentColor: string
 }
 
-const QUICK_ACTIONS: QuickActionItem[] = [
-  {
-    id: "action-event",
-    title: "Schedule Function & Ritual",
-    subtitle: "Plan weddings, pujas, birthdays, dinners, or picnics with task delegations",
-    badge: "Calendar & Google Sync",
-    tone: "primary",
-    icon: "calendar",
-    route: "/modal/add-event",
-    accentColor: "#DA7756",
-  },
-  {
-    id: "action-task",
-    title: "Add Space Task & Milestone",
-    subtitle: "Child school, doctor visits, career switch plans & escalating reminders",
-    badge: "Personal · Nuclear · Family",
-    tone: "info",
-    icon: "checkbox",
-    route: "/modal/add-task",
-    accentColor: "#3B82F6",
-  },
-  {
-    id: "action-knowledge",
-    title: "Preserve Heirloom Wisdom",
-    subtitle: "Record ancestral recipes, elder life lessons & emergency contacts in vault",
-    badge: "Permanent Family Vault",
-    tone: "warning",
-    icon: "book",
-    route: "/modal/add-knowledge",
-    accentColor: "#D97706",
-  },
-  {
-    id: "action-member",
-    title: "Welcome Family Member or Pet",
-    subtitle: "Register grandparents, parents, youth, or pets with their unique superpowers",
-    badge: "Multigenerational Sanctuary",
-    tone: "success",
-    icon: "people",
-    route: "/modal/add-member",
-    accentColor: "#10B981",
-  },
-]
-
 export default function QuickActionModal() {
   const colors = useColors()
+
+  const quickActions: QuickActionItem[] = [
+    {
+      id: "action-event",
+      title: "Schedule Function & Ritual",
+      subtitle: "Plan weddings, pujas, birthdays, dinners, or picnics with task delegations",
+      badge: "Calendar & Google Sync",
+      tone: "primary",
+      icon: "calendar-outline",
+      route: "/modal/add-event",
+      accentColor: colors.primary,
+    },
+    {
+      id: "action-task",
+      title: "Add Space Task & Milestone",
+      subtitle: "Child school, doctor visits, career switch plans & escalating reminders",
+      badge: "Personal · Nuclear · Family",
+      tone: "success",
+      icon: "checkbox-outline",
+      route: "/modal/add-task",
+      accentColor: colors.primary,
+    },
+    {
+      id: "action-knowledge",
+      title: "Preserve Heirloom Wisdom",
+      subtitle: "Record ancestral recipes, elder life lessons & emergency contacts in vault",
+      badge: "Permanent Family Vault",
+      tone: "warning",
+      icon: "book-outline",
+      route: "/modal/add-knowledge",
+      accentColor: colors.warning,
+    },
+    {
+      id: "action-member",
+      title: "Welcome Family Member or Pet",
+      subtitle: "Register grandparents, parents, youth, or pets with their unique superpowers",
+      badge: "Multigenerational Sanctuary",
+      tone: "info",
+      icon: "people-outline",
+      route: "/modal/add-member",
+      accentColor: colors.accentText,
+    },
+  ]
 
   const handleSelectAction = (route: QuickActionItem["route"]) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -77,16 +77,19 @@ export default function QuickActionModal() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Quick Family Actions"
-        subtitle="Sanctuary Hub for Time, Rituals & Memory"
-        showBack
-      />
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          title="Quick Family Actions"
+          subtitle="Sanctuary Hub for Time, Rituals & Memory"
+          showBack
+        />
+      }
+    >
         {/* Brand Banner */}
-        <Card style={[styles.brandBanner, { backgroundColor: colors.surface }]}>
+        <Card style={styles.brandBanner}>
           <View style={styles.bannerRow}>
             <NeevLogoIcon size={44} withBackground={false} />
             <View style={{ flex: 1, marginLeft: 14 }}>
@@ -102,17 +105,17 @@ export default function QuickActionModal() {
 
         {/* Action Cards */}
         <View style={styles.actionsList}>
-          {QUICK_ACTIONS.map((action) => (
+          {quickActions.map((action) => (
             <PressableScale
               key={action.id}
               style={styles.actionPressable}
               onPress={() => handleSelectAction(action.route)}
             >
-              <Card style={[styles.actionCard, { backgroundColor: colors.surface }]}>
+              <Card style={styles.actionCard}>
                 <View style={styles.actionTop}>
                   <SquircleSurface
                     radius={14}
-                    fill={colors.primaryAlpha}
+                    fill={colors.surface2}
                     style={styles.iconSurface}
                   >
                     <Ionicons name={action.icon} size={22} color={action.accentColor} />
@@ -140,28 +143,27 @@ export default function QuickActionModal() {
             </PressableScale>
           ))}
         </View>
-      </ScrollView>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 40,
   },
   brandBanner: {
     padding: 16,
     borderRadius: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   bannerRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   actionsList: {
-    gap: 14,
+    gap: 12,
   },
   actionPressable: {
     width: "100%",
@@ -184,14 +186,13 @@ const styles = StyleSheet.create({
   },
   badgeWrap: {
     alignItems: "flex-end",
+    flexShrink: 0,
   },
   actionTitle: {
-    fontSize: 17,
     fontWeight: "700",
     marginBottom: 4,
   },
   actionSubtitle: {
-    fontSize: 13,
     lineHeight: 18,
     marginBottom: 12,
   },

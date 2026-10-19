@@ -7,11 +7,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { openAppDrawer } from "@/components/navigation/AppDrawer"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
-import { HeaderIconButton } from "@/components/ui/AppHeader"
+import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
 import { PressableScale } from "@/components/ui/PressableScale"
+import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
+import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
+import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SectionHeader } from "@/components/ui/SectionHeader"
 import { neevAiOrchestrator, type LifeDomain } from "@/services/ai/neevAiOrchestrator"
 import { neevHeuristicEngine } from "@/services/ai/neevHeuristicEngine"
@@ -93,13 +96,28 @@ export default function DashboardScreen() {
     })),
   )
 
-  const activeSpaceConfig = SPACES.find((s) => s.key === currentSpace) || SPACES[1]
-  const currentSpaceTasks = spaceTasks.filter((t) => t.space === currentSpace)
-  const currentSpaceMeetings = meetings.filter((m) => m.space === currentSpace)
-  const currentSpaceBriefing = aiBriefings.find((b) => b.space === currentSpace) || aiBriefings[0]
+  const activeSpaceConfig = React.useMemo(
+    () => SPACES.find((s) => s.key === currentSpace) || SPACES[1],
+    [currentSpace],
+  )
+  const currentSpaceTasks = React.useMemo(
+    () => spaceTasks.filter((t) => t.space === currentSpace),
+    [spaceTasks, currentSpace],
+  )
+  const currentSpaceMeetings = React.useMemo(
+    () => meetings.filter((m) => m.space === currentSpace),
+    [meetings, currentSpace],
+  )
+  const currentSpaceBriefing = React.useMemo(
+    () => aiBriefings.find((b) => b.space === currentSpace) || aiBriefings[0],
+    [aiBriefings, currentSpace],
+  )
 
   const nextFunction = functions[0]
-  const completedRoutines = routines.filter((r) => r.isCompleted).length
+  const completedRoutines = React.useMemo(
+    () => routines.filter((r) => r.isCompleted).length,
+    [routines],
+  )
 
   const handleSyncToGoogle = async () => {
     if (!nextFunction) return
@@ -128,7 +146,10 @@ export default function DashboardScreen() {
     showToast({ message: "Escalating reminder dispatched to device tray!", type: "success" })
   }
 
-  const familyLoad = neevHeuristicEngine.computeFamilyLoadBalance(spaceTasks, members)
+  const familyLoad = React.useMemo(
+    () => neevHeuristicEngine.computeFamilyLoadBalance(spaceTasks, members),
+    [spaceTasks, members],
+  )
 
   const openMeetingLink = (url?: string) => {
     if (!url) return
@@ -137,33 +158,21 @@ export default function DashboardScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* ── Fixed Clean Top Bar ── */}
-      <View style={[styles.topBar, { backgroundColor: colors.background, paddingTop: insets.top + 4 }]}>
-        <View style={styles.topBarLeft}>
-          <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", letterSpacing: 0.6, fontSize: 10 }}>
-            FAMILY SANCTUARY
-          </AppText>
-          <AppText variant="subheading" style={styles.topBarTitle} numberOfLines={1}>
-            {household.name}
-          </AppText>
-        </View>
-        <HeaderIconButton icon="menu-outline" label="Sanctuary Spaces" onPress={openAppDrawer} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 20 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Sanctuary Welcome Motto ── */}
-        <View style={styles.mottoSection}>
-          <AppText variant="h2" style={styles.heroTitle} numberOfLines={1}>
-            {household.name}
-          </AppText>
-          <AppText variant="body" style={[styles.heroSubtitle, { color: colors.text.secondary }]}>
-            {household.motto}
-          </AppText>
-        </View>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          sticky
+          eyebrow="FAMILY SANCTUARY"
+          title={household.name || "Neev"}
+          subtitle={household.motto}
+          rightAction={
+            <HeaderIconButton icon="menu-outline" label="Sanctuary Spaces" onPress={openAppDrawer} />
+          }
+        />
+      }
+    >
 
         {/* ── Real-Time Cloud Sync Bar (Zero Borders) ── */}
         <PressableScale
@@ -241,6 +250,12 @@ export default function DashboardScreen() {
             {activeSpaceConfig.description}
           </AppText>
         </View>
+
+        {/* ── Live Free Family Sanctuary Map & Telemetry ── */}
+        <FamilySanctuaryMap />
+
+        {/* ── Real Weekly Multigenerational Family Games ── */}
+        <FamilyWeeklyGamesCard />
 
         {/* ── Family Intelligence & Routines Card (Zero Borders) ── */}
         <Card style={styles.aiCard}>
@@ -857,8 +872,7 @@ export default function DashboardScreen() {
             </AppText>
           </Card>
         )}
-      </ScrollView>
-    </View>
+      </ScreenContainer>
   )
 }
 

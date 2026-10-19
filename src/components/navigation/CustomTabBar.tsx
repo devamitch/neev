@@ -7,12 +7,12 @@
  * - Labels under every item, perfectly aligned on the same horizontal baseline
  */
 
-import { memo, useCallback, useEffect, useMemo, type ComponentProps } from "react"
-import { StyleSheet, useWindowDimensions, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import type { Tabs } from "expo-router"
 import { router } from "expo-router"
+import { memo, useCallback, useEffect, useMemo, type ComponentProps } from "react"
+import { StyleSheet, useWindowDimensions, View } from "react-native"
 import Animated, {
   Easing,
   interpolateColor,
@@ -22,12 +22,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import Svg, {
-  ClipPath,
-  Defs,
-  Path,
-} from "react-native-svg"
+import Svg, { ClipPath, Defs, Path } from "react-native-svg"
 
+import { AnimatedNeevLogoIcon } from "@/components/brand/AnimatedNeevLogoIcon"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useLayout } from "@/theme/layout"
 
@@ -59,7 +56,7 @@ const ORB_ROUTE = "quick-action"
 
 /* ── BlinkQuest Canonical Dock Constants (Pista Edition) ───────── */
 const DOCK_COLOR = "#192216"
-const ACCENT_COLOR = "#709758"
+const ACCENT_COLOR = "#7D8C7D"
 const MUTED_COLOR = "#8F9F8B"
 
 const CENTER_SIZE = 60
@@ -336,10 +333,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         </Svg>
 
         {/* Tab buttons row */}
-        <View
-          style={[styles.row, { paddingHorizontal: bleed }]}
-          accessibilityRole="tablist"
-        >
+        <View style={[styles.row, { paddingHorizontal: bleed }]} accessibilityRole="tablist">
           <View style={styles.side}>{left.map((route, i) => renderTab(route, i))}</View>
           <View style={styles.centerSlot} />
           <View style={styles.side}>
@@ -365,11 +359,11 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             style={styles.orbButton}
           >
             <View style={styles.centerOrb}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
+              <AnimatedNeevLogoIcon size={46} withBackground={true} />
             </View>
 
             <Animated.Text style={styles.scanLabel} numberOfLines={1}>
-              Action
+              Neev
             </Animated.Text>
           </PressableScale>
         </Animated.View>
@@ -382,17 +376,17 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 const styles = StyleSheet.create({
   centerOrb: {
     alignItems: "center",
-    backgroundColor: ACCENT_COLOR,
+    // backgroundColor: ACCENT_COLOR,
     borderRadius: CENTER_SIZE / 2,
     height: CENTER_SIZE,
     justifyContent: "center",
     paddingTop: 0,
     width: CENTER_SIZE,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    // shadowColor: "#000",
+    // shadowOffset: { width: 0, height: 3 },
+    // shadowOpacity: 0.25,
+    // shadowRadius: 6,
+    // elevation: 4,
   },
   centerSlot: {
     width: CENTER_SLOT,

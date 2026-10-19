@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
 import { TextField } from "@/components/ui/TextField"
 import { PressableScale } from "@/components/ui/PressableScale"
+import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
@@ -370,31 +371,32 @@ export default function FamilyScreen() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Family Sanctuary"
-        subtitle={`${activeRealm.name} · ${members.length} Members`}
-        showBack={false}
-        rightAction={
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <HeaderIconButton
-              icon="key-outline"
-              label="Claim Code"
-              onPress={() => setClaimModalVisible(true)}
-            />
-            <HeaderIconButton
-              icon="person-add"
-              label="Welcome Member"
-              onPress={() => router.push("/modal/add-member")}
-            />
-          </View>
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          sticky
+          title="Family Sanctuary"
+          subtitle={`${activeRealm.name} · ${members.length} Members`}
+          showBack={false}
+          rightAction={
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <HeaderIconButton
+                icon="key-outline"
+                label="Claim Code"
+                onPress={() => setClaimModalVisible(true)}
+              />
+              <HeaderIconButton
+                icon="person-add"
+                label="Welcome Member"
+                onPress={() => router.push("/modal/add-member")}
+              />
+            </View>
+          }
+        />
+      }
+    >
         {/* Active Realm Enclave Header (Interactive Switcher) */}
         <PressableScale onPress={() => setRealmModalVisible(true)}>
           <Card style={[styles.householdCard, { backgroundColor: colors.surface }]}>
@@ -424,6 +426,9 @@ export default function FamilyScreen() {
             </AppText>
           </Card>
         </PressableScale>
+
+        {/* ── Live Free Family Sanctuary Map & Telemetry ── */}
+        <FamilySanctuaryMap />
 
         {/* ── Kinship Clusters Bar (Overlapping Circles) ── */}
         <View style={styles.clusterSelectorContainer}>
@@ -610,7 +615,6 @@ export default function FamilyScreen() {
             </View>
           </Card>
         ))}
-      </ScrollView>
 
       {/* ── Modal: Multi-Realm Switcher ── */}
       <Modal visible={realmModalVisible} animationType="slide" transparent>

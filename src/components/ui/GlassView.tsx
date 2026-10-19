@@ -34,7 +34,7 @@ export function GlassView({
         style={StyleSheet.absoluteFill}
         intensity={intensity}
         tint={tint}
-        blurMethod={blurTarget ? "dimezisBlurViewSdk31Plus" : "none"}
+        blurMethod={blurTarget && blurTarget.current ? "dimezisBlurViewSdk31Plus" : "none"}
         blurTarget={blurTarget}
       />
       <View style={[StyleSheet.absoluteFill, { backgroundColor: overlay }]} pointerEvents="none" />

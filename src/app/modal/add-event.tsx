@@ -51,14 +51,17 @@ export default function AddEventModal() {
   }
 
   return (
-    <ScreenContainer scrollable={false} style={{ backgroundColor: colors.background }}>
-      <AppHeader
-        title="Schedule Function"
-        subtitle="New Multigenerational Event"
-        showBack
-      />
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer
+      safeArea
+      scrollable
+      header={
+        <AppHeader
+          title="Schedule Function"
+          subtitle="New Multigenerational Event"
+          showBack
+        />
+      }
+    >
         <TextField
           label="Function or Ritual Title"
           placeholder="e.g. Dadu's Golden Anniversary, Diwali Puja"
@@ -79,8 +82,7 @@ export default function AddEventModal() {
                   style={[
                     styles.catChip,
                     {
-                      backgroundColor: active ? colors.primary : colors.surface,
-                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primary : colors.surface2,
                     },
                   ]}
                   onPress={() => {
@@ -131,14 +133,13 @@ export default function AddEventModal() {
           disabled={!title.trim()}
           style={{ marginTop: 24, marginBottom: 40 }}
         />
-      </ScrollView>
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     gap: 14,
   },
@@ -158,10 +159,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   catChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 16,
-    borderWidth: 1,
   },
   rowInputs: {
     flexDirection: "row",

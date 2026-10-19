@@ -2,7 +2,7 @@ import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useTheme } from "@/theme/useTheme"
 import { BlurView } from "expo-blur"
 import React from "react"
-import { Modal, StyleSheet, View } from "react-native"
+import { Modal, Platform, StyleSheet, View } from "react-native"
 import { AppButton } from "./AppButton"
 import { AppText } from "./AppText"
 import { PressableScale } from "./PressableScale"
@@ -36,8 +36,7 @@ export function CustomAlert() {
           intensity={30}
           tint={isDark ? "dark" : "light"}
           style={StyleSheet.absoluteFill}
-          blurMethod={"dimezisBlurView"}
-          blurReductionFactor={30}
+          blurMethod={Platform.OS === "android" ? "none" : undefined}
         />
         <PressableScale style={StyleSheet.absoluteFill} scaleTo={1} onPress={handleCancel} />
 

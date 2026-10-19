@@ -15,7 +15,12 @@
       "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
       "backgroundColor": "#FAF9F5"
     },
-    "allowBackup": false,
+    "permissions": [
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.VIBRATE",
+      "android.permission.POST_NOTIFICATIONS"
+    ],
     "blockedPermissions": [
       "com.google.android.gms.permission.AD_ID",
       "android.permission.READ_EXTERNAL_STORAGE",

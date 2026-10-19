@@ -1,63 +1,96 @@
 import React, { memo } from "react"
-import Svg, { Rect, Path, G } from "react-native-svg"
+import { StyleSheet, View } from "react-native"
+import Svg, { Circle, G, Path } from "react-native-svg"
 
 export interface NeevLogoIconProps {
   size?: number
   withBackground?: boolean
+  style?: object
 }
 
 /**
- * Official Neev (नींव) Brand Mark:
- * Minimalist terracotta foundation arch (#D2A584) with a sprouting sage green leaf (#9AB596)
- * and delicate white veins on warm porcelain (#FAF9F5).
+ * Official Neev (नींव) Vector Brand Emblem:
+ * Terracotta Arch (#C98A60) + Sage Leaf Sprout (#8DAE88) forming the "N" mark
+ * on porcelain medallion (#FAF9F5).
  */
 export const NeevLogoIcon = memo(function NeevLogoIcon({
   size = 48,
   withBackground = true,
+  style,
 }: NeevLogoIconProps) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120">
-      {withBackground && (
-        <Rect width="120" height="120" rx="30" fill="#FAF9F5" />
-      )}
+    <View style={[styles.container, { width: size, height: size }, style]}>
+      <Svg width={size} height={size} viewBox="0 0 200 200">
+        {withBackground && <Circle cx="100" cy="100" r="92" fill="#FAF9F5" />}
 
-      {/* Terracotta Foundation Arch (नींव) */}
-      <Path
-        d="M 38 88 A 22 22 0 0 1 82 88 L 72 88 A 12 12 0 0 0 48 88 Z"
-        fill="#D2A584"
-      />
+        {/* ── Terracotta Foundation Arch ── */}
+        <Path
+          d="M 50 144 L 50 82 C 50 60 70 48 94 48 C 108 48 114 58 114 74 C 104 86 94 104 88 126 L 80 144 C 80 147 77 150 74 150 L 56 150 C 52.6 150 50 147.4 50 144 Z"
+          fill="#C98A60"
+        />
 
-      {/* Living Sprout / Leaf rising from foundation */}
-      <G>
+        {/* ── Right Green Column of the 'N' ── */}
         <Path
-          d="M 59 66 C 58 52 50 42 62 26 C 74 38 82 48 68 64 C 65 67 61 68 59 66 Z"
-          fill="#9AB596"
+          d="M 124 116 L 124 144 C 124 147.3 126.7 150 130 150 L 148 150 C 151.3 150 154 147.3 154 144 L 154 84 C 154 84 146 94 136 104 L 124 116 Z"
+          fill="#8DAE88"
         />
-        {/* Leaf Vein */}
-        <Path
-          d="M 60 64 Q 63 46 67 31"
-          stroke="#FFFFFF"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <Path
-          d="M 62 50 Q 67 47 72 48"
-          stroke="#FFFFFF"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <Path
-          d="M 64 41 Q 68 38 72 40"
-          stroke="#FFFFFF"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          fill="none"
-        />
-      </G>
-    </Svg>
+
+        {/* ── Living Sprout Leaf (Diagonal of 'N' with delicate white veins) ── */}
+        <G>
+          <Path
+            d="M 80 150 C 80 140 85 118 96 96 C 108 72 126 55 154 48 C 154 68 150 94 136 116 C 122 138 100 150 80 150 Z"
+            fill="#8DAE88"
+          />
+
+          {/* Central Spine Vein */}
+          <Path
+            d="M 86 142 Q 106 106 146 58"
+            stroke="#FFFFFF"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            fill="none"
+          />
+
+          {/* Branching Leaf Veins */}
+          <Path
+            d="M 124 84 Q 138 78 146 68"
+            stroke="#FFFFFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path
+            d="M 116 98 Q 132 94 142 88"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path
+            d="M 104 116 Q 96 110 92 104"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path
+            d="M 112 102 Q 106 94 102 88"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </G>
+      </Svg>
+    </View>
   )
+})
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
 })
 
 export default NeevLogoIcon
