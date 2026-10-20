@@ -11,3 +11,9 @@ project_id = "kwrdugillyakxgvgbrsu"
     verify_jwt = false
   [functions.generate-plan]
     verify_jwt = false
+  [functions.ai-request]
+    verify_jwt = false
+  [functions.delete-user-data]
+    verify_jwt = false
+  [functions.manage-provider-credential]
+    verify_jwt = false

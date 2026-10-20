@@ -36,9 +36,9 @@ import Animated, {
 import { AppText } from "@/components/ui/AppText"
 import { setuColors } from "@/theme/setuColors"
 
-const HOLD_MS = 1900
+const HOLD_MS = 2000
 const HOLD_REDUCED_MS = 900
-const EXIT_MS = 280
+const EXIT_MS = 380
 const READY_FALLBACK_MS = 600
 
 /** Same artwork as the native splash, so the hand-off has no visual jump. */
@@ -52,7 +52,10 @@ const TERRACOTTA = "#DA7756"
 /** The splash artwork's own background (also the native splash colour in app.json). */
 const SPLASH_CANVAS = "#F7F6F0"
 const WORD = "Neev".split("")
-const LETTER_STAGGER = 70
+const LETTER_STAGGER = 60
+const LETTER_MS = 560
+/** Soft ease-out (easeOutQuint-like): fast start, long gentle landing, no overshoot. */
+const SOFT = Easing.bezier(0.22, 1, 0.36, 1)
 
 interface AnimatedSplashScreenProps {
   /** Fires once when the logo is on screen. Use it to hide the native splash. */
@@ -106,7 +109,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
     rootOpacity.value = withTiming(0, {
       duration: EXIT_MS,
-      easing: Easing.in(Easing.quad),
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
     })
 
     exitTimerRef.current = setTimeout(() => {
@@ -121,20 +124,19 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
     onReadyRef.current?.()
 
-    const ease = Easing.out(Easing.cubic)
     if (reducedMotion) {
       markProgress.value = 1
       lineProgress.value = 1
       wordProgress.value = withTiming(1, { duration: 200 })
       taglineProgress.value = withTiming(1, { duration: 200 })
     } else {
-      markProgress.value = withDelay(80, withTiming(1, { duration: 620, easing: Easing.inOut(Easing.cubic) }))
-      lineProgress.value = withDelay(420, withTiming(1, { duration: 520, easing: ease }))
+      markProgress.value = withDelay(60, withTiming(1, { duration: 820, easing: SOFT }))
+      lineProgress.value = withDelay(360, withTiming(1, { duration: 700, easing: SOFT }))
       wordProgress.value = withDelay(
-        520,
-        withTiming(1, { duration: 420 + LETTER_STAGGER * (WORD.length - 1), easing: Easing.linear }),
+        460,
+        withTiming(1, { duration: LETTER_MS + LETTER_STAGGER * (WORD.length - 1), easing: Easing.linear }),
       )
-      taglineProgress.value = withDelay(1050, withTiming(1, { duration: 420, easing: ease }))
+      taglineProgress.value = withDelay(960, withTiming(1, { duration: 600, easing: SOFT }))
     }
 
     holdTimerRef.current = setTimeout(finish, reducedMotion ? HOLD_REDUCED_MS : HOLD_MS)
@@ -158,7 +160,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
   const rootStyle = useAnimatedStyle(() => ({
     opacity: rootOpacity.value,
-    transform: [{ scale: interpolate(rootOpacity.value, [0, 1], [1.03, 1]) }],
+    transform: [{ scale: interpolate(rootOpacity.value, [0, 1], [1.02, 1]) }],
   }))
 
   // On exit the mark and words leave first, then the canvas, so the artwork's own
@@ -183,7 +185,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
   const taglineStyle = useAnimatedStyle(() => ({
     opacity: taglineProgress.value,
-    transform: [{ translateY: interpolate(taglineProgress.value, [0, 1], [6, 0]) }],
+    transform: [{ translateY: interpolate(taglineProgress.value, [0, 1], [4, 0]) }],
   }))
 
   if (isDone) return null
@@ -241,15 +243,15 @@ function Letter({
   index: number
   progress: SharedValue<number>
 }) {
-  const total = 420 + LETTER_STAGGER * (WORD.length - 1)
+  const total = LETTER_MS + LETTER_STAGGER * (WORD.length - 1)
   const start = (index * LETTER_STAGGER) / total
-  const end = (index * LETTER_STAGGER + 420) / total
+  const end = (index * LETTER_STAGGER + LETTER_MS) / total
   const style = useAnimatedStyle(() => {
     const t = interpolate(progress.value, [start, end], [0, 1], Extrapolation.CLAMP)
-    const eased = 1 - Math.pow(1 - t, 3)
+    const eased = 1 - Math.pow(1 - t, 4)
     return {
-      opacity: eased,
-      transform: [{ translateY: (1 - eased) * 14 }],
+      opacity: Math.min(1, t * 1.6),
+      transform: [{ translateY: (1 - eased) * 10 }],
     }
   })
   return (

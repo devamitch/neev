@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons"
-import React, { useCallback, useEffect } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleProp,
   StyleSheet,
   useWindowDimensions,
@@ -72,6 +73,12 @@ export function AppBottomSheetModal({
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
 
+  // When the body is taller than the sheet it scrolls (so bottom buttons stay
+  // reachable) and dismissal moves to the handle/header only.
+  const [bodyViewportH, setBodyViewportH] = useState(0)
+  const [bodyContentH, setBodyContentH] = useState(0)
+  const bodyScrolls = bodyViewportH > 0 && bodyContentH > bodyViewportH + 1
+
   const translateY = useSharedValue(screenHeight)
   const backdropOpacity = useSharedValue(0)
 
@@ -101,9 +108,12 @@ export function AppBottomSheetModal({
     }
   }, [visible, backdropOpacity, translateY, screenHeight])
 
+  // Activates only on a deliberate downward drag (>= 14px), so taps on buttons and
+  // the close control inside the sheet are never swallowed by the gesture.
   const panGesture = Gesture.Pan()
-    .failOffsetY([-15, 0])
-    .activeOffsetY([5, 1000])
+    .activeOffsetY(14)
+    .failOffsetX([-24, 24])
+    .enabled(!bodyScrolls)
     .shouldCancelWhenOutside(false)
     .onUpdate((e) => {
       if (e.translationY > 0) {
@@ -118,7 +128,10 @@ export function AppBottomSheetModal({
       }
     })
 
+  // Handle + header always drag the sheet; small offset keeps the close button tappable.
   const headerPanGesture = Gesture.Pan()
+    .activeOffsetY(6)
+    .failOffsetX([-24, 24])
     .shouldCancelWhenOutside(false)
     .onUpdate((e) => {
       if (e.translationY > 0) {
@@ -243,7 +256,20 @@ export function AppBottomSheetModal({
             </GestureDetector>
 
             {/* Sheet body */}
-            <View style={[styles.body, contentContainerStyle]}>{children}</View>
+            <ScrollView
+              style={styles.body}
+              contentContainerStyle={contentContainerStyle}
+              scrollEnabled={bodyScrolls}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={bodyScrolls}
+              overScrollMode="never"
+              bounces={false}
+              onLayout={(e) => setBodyViewportH(Math.round(e.nativeEvent.layout.height))}
+              onContentSizeChange={(_w, h) => setBodyContentH(Math.round(h))}
+            >
+              {children}
+            </ScrollView>
           </Animated.View>
         </GestureDetector>
       </KeyboardAvoidingView>

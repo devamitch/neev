@@ -113,7 +113,7 @@ export async function getGoogleAccessToken(scopes: GoogleFeatureScope[]): Promis
     const missing = scopes.filter((scope) => !user.scopes.includes(scope))
     if (missing.length > 0) {
       const granted = await GoogleSignin.addScopes({ scopes: missing })
-      if (!granted || missing.some((scope) => !granted.data.scopes.includes(scope))) {
+      if (!granted || !granted.data || missing.some((scope) => !granted.data.scopes.includes(scope))) {
         return { status: "declined" }
       }
     }
