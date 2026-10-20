@@ -9,7 +9,9 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_KEY ??
   process.env.SUPABASE_PUBLISHABLE_KEY ??
-  "sb_publishable_orKU--DQThDikBhAZUx4cg_8g_I5zBe"
+  // Legacy JWT anon key — confirmed working. The new-format sb_publishable_
+  // key may cause issues with @supabase/supabase-js auth operations.
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cmR1Z2lsbHlha3hndmdicnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzOTc1MzQsImV4cCI6MjEwNzk3MzUzNH0.DGIdmQ1HUVNW8L83v1y6kg8q68TRwAcIC6q3nHq48hM"
 
 const memoryMap = new Map<string, string>()
 

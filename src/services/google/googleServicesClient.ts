@@ -16,6 +16,24 @@ import {
 import type { HealthTelemetry } from "@/services/firebase/firebaseClient"
 import type { FamilyFunction } from "@/stores/useScheduleStore"
 
+/**
+ * Try the stored access token first (obtained at sign-in with all scopes).
+ * Only fall back to incremental getGoogleAccessToken() if not available.
+ */
+async function resolveAccessToken(requiredScopes: string[]): Promise<{ token: string } | { reason: string }> {
+  // 1. Try stored token from sign-in
+  try {
+    const { useRootStore } = require("@/stores/useRootStore")
+    const stored = useRootStore.getState()?.user?.googleAccessToken
+    if (stored) return { token: stored }
+  } catch { /* store not available */ }
+
+  // 2. Fall back to incremental auth
+  const access = await getGoogleAccessToken(requiredScopes as any)
+  if (access.status === "granted") return { token: access.accessToken }
+  return { reason: access.status }
+}
+
 export interface GoogleServiceConnectionStatus {
   calendarConnected: boolean
   tasksConnected: boolean
@@ -75,11 +93,11 @@ export const googleServicesClient = {
   async exportFunctionToCalendar(
     fn: FamilyFunction,
   ): Promise<{ success: boolean; eventId?: string; htmlLink?: string; reason?: GoogleSyncFailure }> {
-    const access = await getGoogleAccessToken([GOOGLE_FEATURE_SCOPES.calendarEvents])
-    if (access.status !== "granted") return { success: false, reason: access.status }
+    const resolved = await resolveAccessToken([GOOGLE_FEATURE_SCOPES.calendar])
+    if ("reason" in resolved) return { success: false, reason: resolved.reason as GoogleSyncFailure }
     try {
       const res = await googleFetch(
-        access.accessToken,
+        resolved.token,
         "https://www.googleapis.com/calendar/v3/calendars/primary/events",
         {
           summary: fn.title,
@@ -98,10 +116,10 @@ export const googleServicesClient = {
 
   /** Adds a task to the user's default Google Tasks list. */
   async exportTaskToGoogleTasks(taskTitle: string, assigneeName: string, dueDate: string): Promise<boolean> {
-    const access = await getGoogleAccessToken([GOOGLE_FEATURE_SCOPES.tasks])
-    if (access.status !== "granted") return false
+    const resolved = await resolveAccessToken([GOOGLE_FEATURE_SCOPES.tasks])
+    if ("reason" in resolved) return false
     try {
-      const res = await googleFetch(access.accessToken, "https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
+      const res = await googleFetch(resolved.token, "https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
         title: assigneeName ? `${taskTitle} (${assigneeName})` : taskTitle,
         // Google Tasks stores only the date part of `due`.
         due: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? `${dueDate}T00:00:00.000Z` : undefined,
@@ -120,13 +138,13 @@ export const googleServicesClient = {
     meetingTitle: string,
     scheduledTime: string,
   ): Promise<{ url: string; conferenceId: string; reason?: GoogleSyncFailure }> {
-    const access = await getGoogleAccessToken([GOOGLE_FEATURE_SCOPES.calendarEvents])
-    if (access.status !== "granted") return { url: "", conferenceId: "", reason: access.status }
+    const resolved = await resolveAccessToken([GOOGLE_FEATURE_SCOPES.calendar])
+    if ("reason" in resolved) return { url: "", conferenceId: "", reason: resolved.reason as GoogleSyncFailure }
     try {
       const start = Number.isNaN(Date.parse(scheduledTime)) ? new Date() : new Date(scheduledTime)
       const end = new Date(start.getTime() + 60 * 60_000)
       const res = await googleFetch(
-        access.accessToken,
+        resolved.token,
         "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
         {
           summary: meetingTitle,

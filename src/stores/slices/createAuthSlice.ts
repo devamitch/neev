@@ -26,6 +26,8 @@ export interface AuthUser {
   photoUrl?: string
   provider: AuthProvider
   token?: string
+  /** Google API access token — carries Calendar, Tasks, Drive scopes. */
+  googleAccessToken?: string
   avatar?: string
   signedInAt: number
 }
@@ -54,6 +56,8 @@ export interface AuthSlice {
   openSetuDownload: () => Promise<void>
   signOut: () => Promise<void>
   clearAuthError: () => void
+  /** Returns the stored Google API access token, or null if unavailable/expired. */
+  getGoogleAccessToken: () => string | null
 }
 
 export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
@@ -67,6 +71,10 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     set((state) => {
       state.authError = null
     }),
+
+  getGoogleAccessToken: () => {
+    return get().user?.googleAccessToken ?? null
+  },
 
   signInWithGoogle: async () => {
     set((state) => {
@@ -158,12 +166,19 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
         avatar: user.photo ?? undefined,
         provider: "google",
         token: result.idToken,
+        googleAccessToken: result.accessToken || undefined,
         signedInAt: Date.now(),
       }
       state.displayName = name
       state.isAuthenticated = true
       state.isAuthLoading = false
     })
+
+    // Mark Google as connected in the cloud sync store
+    try {
+      const { useCloudSyncStore } = require("@/services/sync/cloudSyncEngine")
+      useCloudSyncStore.setState({ isGoogleConnected: !!result.accessToken })
+    } catch { /* cloud sync store may not be available yet */ }
 
     // Populate sanctuary fixtures so calendar, tasks, routines & prompts are ready
     if (get().tasks.length === 0) get().loadDemoSpaces()

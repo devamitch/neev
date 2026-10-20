@@ -24,16 +24,42 @@ let configured = false
 
 export const isGoogleConfigured = () => WEB_CLIENT_ID.length > 0
 
+/**
+ * All Google API scopes requested at sign-in so the consent screen shows
+ * permission checkboxes (matching what neev-v2 web does via Firebase addScope).
+ * This is what makes calendar, tasks, drive, contacts etc. actually work.
+ */
+const GOOGLE_SIGN_IN_SCOPES = [
+  "profile",
+  "email",
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/tasks",
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/contacts.readonly",
+]
+
 function ensureConfigured() {
   if (configured) return
-  GoogleSignin.configure({ webClientId: WEB_CLIENT_ID, scopes: ["profile", "email"] })
+  GoogleSignin.configure({
+    webClientId: WEB_CLIENT_ID,
+    scopes: GOOGLE_SIGN_IN_SCOPES,
+    offlineAccess: true,
+    forceCodeForRefreshToken: true,
+  })
   configured = true
+}
+
+/** Force reconfigure (e.g. after scope changes or sign-out). */
+export function reconfigureGoogle() {
+  configured = false
+  ensureConfigured()
 }
 
 export type GoogleSignInResult =
   | {
       status: "success"
       idToken: string
+      accessToken: string
       user: { id: string; email: string; name: string | null; photo: string | null }
     }
   | { status: "cancelled"; message?: string }
@@ -59,9 +85,20 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
     if (!idToken) {
       return { status: "error", message: "Google didn't return an ID token for this account." }
     }
+
+    // Get the access token that carries all the granted scopes.
+    // This is what's needed to call Google Calendar, Tasks, Drive etc. APIs.
+    const tokens = await GoogleSignin.getTokens()
+    const accessToken = tokens.accessToken
+
+    if (!accessToken) {
+      console.warn("[GoogleSignIn] signIn succeeded but getTokens() returned no accessToken")
+    }
+
     return {
       status: "success",
       idToken,
+      accessToken: accessToken || "",
       user: { id: user.id, email: user.email, name: user.name, photo: user.photo },
     }
   } catch (err: unknown) {
@@ -118,15 +155,24 @@ export async function signOutOfGoogle(): Promise<void> {
 }
 
 /**
- * Extra Google permissions, asked for one feature at a time (incremental
- * authorization) — never bundled into sign-in. Google shows its own consent screen
- * naming exactly what each one allows. Gmail is never requested (product policy).
+ * Google API scopes used by Neev features. All of these are now also requested
+ * during initial sign-in (see GOOGLE_SIGN_IN_SCOPES above), so the user
+ * sees the consent screen with all permissions at once.
+ *
+ * getGoogleAccessToken() still supports incremental authorization as a
+ * fallback if a scope wasn't granted during the initial sign-in.
  */
 export const GOOGLE_FEATURE_SCOPES = {
+  /** Full Google Calendar access — read events, create family events, Meet links. */
+  calendar: "https://www.googleapis.com/auth/calendar",
   /** Add family events to the user's Google Calendar (and create Meet links on them). */
   calendarEvents: "https://www.googleapis.com/auth/calendar.events",
   /** Add chores/prep tasks to the user's Google Tasks. */
   tasks: "https://www.googleapis.com/auth/tasks",
+  /** Read-only access to Google Drive. */
+  driveReadonly: "https://www.googleapis.com/auth/drive.readonly",
+  /** Read-only access to Google Contacts. */
+  contactsReadonly: "https://www.googleapis.com/auth/contacts.readonly",
 } as const
 
 export type GoogleFeatureScope = (typeof GOOGLE_FEATURE_SCOPES)[keyof typeof GOOGLE_FEATURE_SCOPES]
