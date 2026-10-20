@@ -142,7 +142,7 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
 
     for (const m of members.filter((mem) => mem.role !== "pet")) {
       const data = await googleServicesClient.fetchHealthTelemetry(m.id, m.name)
-      telemetryList.push(data)
+      if (data) telemetryList.push(data)
     }
 
     set({ healthMetrics: telemetryList })

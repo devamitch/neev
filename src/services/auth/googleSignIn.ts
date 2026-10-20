@@ -75,3 +75,53 @@ export async function signOutOfGoogle(): Promise<void> {
   ensureConfigured()
   await GoogleSignin.signOut().catch(() => undefined)
 }
+
+/**
+ * Extra Google permissions, asked for one feature at a time (incremental
+ * authorization) — never bundled into sign-in. Google shows its own consent screen
+ * naming exactly what each one allows. Gmail is never requested (product policy).
+ */
+export const GOOGLE_FEATURE_SCOPES = {
+  /** Add family events to the user's Google Calendar (and create Meet links on them). */
+  calendarEvents: "https://www.googleapis.com/auth/calendar.events",
+  /** Add chores/prep tasks to the user's Google Tasks. */
+  tasks: "https://www.googleapis.com/auth/tasks",
+} as const
+
+export type GoogleFeatureScope = (typeof GOOGLE_FEATURE_SCOPES)[keyof typeof GOOGLE_FEATURE_SCOPES]
+
+export type GoogleAccessResult =
+  | { status: "granted"; accessToken: string }
+  | { status: "not_signed_in" | "declined" | "not_configured" }
+  | { status: "error"; message: string }
+
+/**
+ * An access token that carries `scopes`. Prompts the user only for scopes they
+ * haven't granted yet; returns "declined" if they say no.
+ */
+export async function getGoogleAccessToken(scopes: GoogleFeatureScope[]): Promise<GoogleAccessResult> {
+  if (!isGoogleConfigured()) return { status: "not_configured" }
+  ensureConfigured()
+  try {
+    let user = GoogleSignin.getCurrentUser()
+    if (!user && GoogleSignin.hasPreviousSignIn()) {
+      const silent = await GoogleSignin.signInSilently()
+      user = silent.type === "success" ? silent.data : null
+    }
+    if (!user) return { status: "not_signed_in" }
+
+    const missing = scopes.filter((scope) => !user.scopes.includes(scope))
+    if (missing.length > 0) {
+      const granted = await GoogleSignin.addScopes({ scopes: missing })
+      if (!granted || missing.some((scope) => !granted.data.scopes.includes(scope))) {
+        return { status: "declined" }
+      }
+    }
+    const { accessToken } = await GoogleSignin.getTokens()
+    return { status: "granted", accessToken }
+  } catch (err) {
+    if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) return { status: "declined" }
+    return { status: "error", message: err instanceof Error ? err.message : "Google access failed" }
+  }
+}
+
