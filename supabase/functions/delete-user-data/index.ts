@@ -1,87 +1,71 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+/**
+ * Edge Function: delete-user-data
+ *
+ * scope "personal_space_only": deletes the caller's personal spaces (and, by cascade,
+ *   their goals/tasks/approvals) and private memories.
+ * scope "all": deletes realms the caller owns, then the auth user itself — profiles,
+ *   memberships, AI keys and other user-owned rows cascade from auth.users.
+ * Requires the literal confirmation string so it can't be triggered by accident.
+ */
 import { corsHeaders } from "../_shared/cors.ts";
 import { replyError, replyJson } from "../_shared/response.ts";
 import { requireAuthUser } from "../_shared/auth.ts";
 import { getAdminClient } from "../_shared/supabaseClient.ts";
 
-interface DeleteUserDataPayload {
-  confirmation: "PERMANENTLY_DELETE_MY_DATA";
-  scope?: "all" | "personal_space_only";
-}
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return replyError("Use POST", 405);
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  let user;
+  try {
+    user = await requireAuthUser(req);
+  } catch {
+    return replyError("Sign in to delete your data", 401);
   }
 
-  if (req.method !== "POST") {
-    return replyError("Method not allowed. Use POST.", 405);
+  const body = await req.json().catch(() => null);
+  if (body?.confirmation !== "PERMANENTLY_DELETE_MY_DATA") {
+    return replyError('Send confirmation "PERMANENTLY_DELETE_MY_DATA" to continue', 400);
   }
+  const scope = body?.scope === "personal_space_only" ? "personal_space_only" : "all";
+  const admin = getAdminClient();
 
   try {
-    const authResult = await requireAuthUser(req);
-    if ("error" in authResult) {
-      return authResult.error;
-    }
-    const user = authResult.user;
-    const admin = getAdminClient();
-
-    let body: DeleteUserDataPayload;
-    try {
-      body = await req.json();
-    } catch {
-      return replyError("Invalid JSON body", 400);
-    }
-
-    if (body.confirmation !== "PERMANENTLY_DELETE_MY_DATA") {
-      return replyError(
-        'Explicit confirmation string "PERMANENTLY_DELETE_MY_DATA" is required to prevent accidental data loss.',
-        400
-      );
-    }
-
-    const scope = body.scope || "all";
-    const auditLog: Record<string, unknown> = {
-      action: "delete_user_data",
-      userId: user.id,
-      scope,
-      timestamp: new Date().toISOString(),
-    };
-
     if (scope === "personal_space_only") {
-      // Purge personal tasks, journals, and private knowledge
-      await admin.from("space_tasks").delete().eq("user_id", user.id).eq("space_type", "personal");
-      await admin.from("knowledge_items").delete().eq("user_id", user.id).eq("is_private", true);
-      auditLog.purged = "personal_space_items";
-    } else {
-      // Purge credentials
-      await admin.from("encrypted_provider_credentials").delete().eq("user_id", user.id);
-      // Clean up claim invitations created by user
-      await admin.from("claim_invitations").delete().eq("inviter_user_id", user.id);
-      // Revoke any bridges where user is primary contact
-      await admin
-        .from("bilateral_bridges")
-        .update({ status: "revoked", updated_at: new Date().toISOString() })
-        .eq("created_by", user.id);
+      const spaces = await admin
+        .from("spaces")
+        .delete()
+        .eq("owner_user_id", user.id)
+        .eq("space_type", "personal");
+      if (spaces.error) throw spaces.error;
+      const memories = await admin
+        .from("memory_records")
+        .delete()
+        .eq("owner_user_id", user.id)
+        .eq("visibility", "private");
+      if (memories.error) throw memories.error;
 
-      auditLog.purged = "full_account_records";
+      await admin.from("audit_events").insert({
+        actor_user_id: user.id,
+        event_type: "data.deleted",
+        resource_type: "user",
+        resource_id: user.id,
+        payload: { scope },
+      });
+      return replyJson({ deleted: scope });
     }
 
-    // Record audit event safely
-    await admin.from("audit_logs").insert({
-      user_id: user.id,
-      action: "data_deletion_requested",
-      details: auditLog,
-      created_at: new Date().toISOString(),
-    });
+    // Families this person created are removed with them; families they only joined
+    // just lose this member (membership rows cascade with the auth user).
+    const realms = await admin.from("family_realms").delete().eq("owner_id", user.id);
+    if (realms.error) throw realms.error;
 
-    return replyJson({
-      status: "success",
-      message: "Data deletion staged and executed in accordance with sanctuary privacy policies.",
-      audit: auditLog,
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return replyError(message, 500);
+    const { error } = await admin.auth.admin.deleteUser(user.id);
+    if (error) throw error;
+
+    return replyJson({ deleted: scope });
+  } catch (err) {
+    console.error("[delete-user-data]", err instanceof Error ? err.message : err);
+    return replyError("Couldn't delete your data. Nothing was reported as deleted.", 500);
   }
 });

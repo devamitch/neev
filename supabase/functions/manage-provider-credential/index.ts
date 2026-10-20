@@ -1,131 +1,135 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+/**
+ * Edge Function: manage-provider-credential (BYOK vault)
+ *
+ * Keys are sealed with AES-256-GCM (see _shared/crypto.ts) and stored in
+ * provider_credentials, which has no client grants: only this function and
+ * ai-request (service role) can read it, and only for the caller's own user id.
+ * Raw keys are never returned; responses carry a short preview only.
+ *
+ * Body: { action: "list" | "save" | "test" | "delete", provider?, apiKey?, label?, defaultModel? }
+ */
 import { corsHeaders } from "../_shared/cors.ts";
 import { replyError, replyJson } from "../_shared/response.ts";
 import { requireAuthUser } from "../_shared/auth.ts";
 import { getAdminClient } from "../_shared/supabaseClient.ts";
+import { openSecret, previewKey, sealSecret } from "../_shared/crypto.ts";
+import { isProvider, testProviderKey } from "../_shared/providers.ts";
 
-interface CredentialPayload {
-  action: "save" | "test" | "list" | "delete";
-  provider?: "google_gemini" | "openai" | "anthropic" | "custom";
-  apiKey?: string;
-  modelPreferences?: Record<string, unknown>;
-}
+const PUBLIC_COLUMNS = "provider_id, label, key_preview, status, default_model, last_tested_at, safe_error_code, updated_at";
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  let user;
+  try {
+    user = await requireAuthUser(req);
+  } catch {
+    return replyError("Sign in to manage AI keys", 401);
   }
 
   try {
-    const authResult = await requireAuthUser(req);
-    if ("error" in authResult) {
-      return authResult.error;
-    }
-    const user = authResult.user;
     const admin = getAdminClient();
+    const body = req.method === "GET" ? { action: "list" } : await req.json().catch(() => null);
+    if (!body || typeof body !== "object") return replyError("Invalid JSON body", 400);
+    const { action, provider, apiKey, label, defaultModel } = body as Record<string, unknown>;
 
-    let body: CredentialPayload = { action: "list" };
-    if (req.method === "POST" || req.method === "PUT") {
-      try {
-        body = await req.json();
-      } catch {
-        return replyError("Invalid JSON body", 400);
-      }
-    }
-
-    const { action, provider, apiKey, modelPreferences } = body;
-
-    // 1. List configured credentials (Metadata only - NEVER return raw secrets)
-    if (action === "list" || req.method === "GET") {
+    if (action === "list") {
       const { data, error } = await admin
-        .from("encrypted_provider_credentials")
-        .select("id, provider, updated_at, is_active, metadata")
-        .eq("user_id", user.id);
-
-      if (error) {
-        return replyError("Failed to fetch provider credentials", 500, error.message);
-      }
-
-      return replyJson({
-        credentials: data || [],
-        user_id: user.id,
-      });
+        .from("provider_credentials")
+        .select(PUBLIC_COLUMNS)
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (error) return replyError("Couldn't load your keys", 500);
+      return replyJson({ credentials: data ?? [] });
     }
 
-    // 2. Save / Update Credential (Bound strictly to auth.uid())
+    if (!isProvider(provider)) return replyError("Unknown provider", 400);
+
     if (action === "save") {
-      if (!provider || !apiKey) {
-        return replyError("Provider and apiKey are required for saving credentials", 400);
+      if (typeof apiKey !== "string" || apiKey.trim().length < 16 || apiKey.trim().length > 400) {
+        return replyError("That doesn't look like an API key", 400);
       }
-
-      // Hash preview for verification (e.g. ...last4)
-      const keyPreview = apiKey.slice(-4).padStart(apiKey.length, "*");
+      const key = apiKey.trim();
+      // Check the key before keeping it, so a typo never silently "saves".
+      const problem = await testProviderKey(provider, key);
+      if (problem === "invalid_key") return replyError("The provider rejected this key", 422);
 
       const { data, error } = await admin
-        .from("encrypted_provider_credentials")
+        .from("provider_credentials")
         .upsert(
           {
             user_id: user.id,
-            provider,
-            encrypted_key: apiKey, // In production, sealed with AES-256-GCM server secret
-            key_preview: keyPreview,
-            metadata: modelPreferences || {},
-            is_active: true,
+            provider_id: provider,
+            label: typeof label === "string" && label.trim() ? label.trim().slice(0, 60) : "API key",
+            encrypted_key: await sealSecret(key, user.id, provider),
+            key_preview: previewKey(key),
+            key_version: 1,
+            status: problem ? (problem === "rate_limited" ? "rate_limited" : "invalid") : "active",
+            default_model: typeof defaultModel === "string" ? defaultModel.slice(0, 80) : null,
+            last_tested_at: new Date().toISOString(),
+            safe_error_code: problem,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id,provider" }
+          { onConflict: "user_id,provider_id" },
         )
-        .select("id, provider, updated_at, is_active, metadata");
+        .select(PUBLIC_COLUMNS)
+        .single();
+      if (error) return replyError("Couldn't save the key", 500);
 
-      if (error) {
-        return replyError("Failed to store encrypted credential", 500, error.message);
-      }
-
-      return replyJson({
-        status: "saved",
-        credential: data?.[0],
+      await admin.from("audit_events").insert({
+        actor_user_id: user.id,
+        event_type: "byok.saved",
+        resource_type: "provider_credential",
+        resource_id: provider,
+        payload: { status: data.status },
       });
+      return replyJson({ credential: data });
     }
 
-    // 3. Test Connectivity
     if (action === "test") {
-      if (!provider) {
-        return replyError("Provider is required for connectivity test", 400);
-      }
+      const { data: row, error } = await admin
+        .from("provider_credentials")
+        .select("encrypted_key")
+        .eq("user_id", user.id)
+        .eq("provider_id", provider)
+        .maybeSingle();
+      if (error) return replyError("Couldn't load the key", 500);
+      if (!row) return replyError("No key saved for this provider", 404);
 
-      // Mock connectivity check or validation
-      return replyJson({
-        status: "verified",
-        provider,
-        timestamp: new Date().toISOString(),
-      });
+      const problem = await testProviderKey(provider, await openSecret(row.encrypted_key, user.id, provider));
+      const { data } = await admin
+        .from("provider_credentials")
+        .update({
+          status: problem ? (problem === "rate_limited" ? "rate_limited" : "invalid") : "active",
+          safe_error_code: problem,
+          last_tested_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id)
+        .eq("provider_id", provider)
+        .select(PUBLIC_COLUMNS)
+        .single();
+      return replyJson({ ok: problem === null, reason: problem, credential: data });
     }
 
-    // 4. Delete Credential
     if (action === "delete") {
-      if (!provider) {
-        return replyError("Provider is required for deletion", 400);
-      }
-
       const { error } = await admin
-        .from("encrypted_provider_credentials")
+        .from("provider_credentials")
         .delete()
         .eq("user_id", user.id)
-        .eq("provider", provider);
-
-      if (error) {
-        return replyError("Failed to delete credential", 500, error.message);
-      }
-
-      return replyJson({
-        status: "deleted",
-        provider,
+        .eq("provider_id", provider);
+      if (error) return replyError("Couldn't remove the key", 500);
+      await admin.from("audit_events").insert({
+        actor_user_id: user.id,
+        event_type: "byok.deleted",
+        resource_type: "provider_credential",
+        resource_id: provider,
       });
+      return replyJson({ deleted: provider });
     }
 
-    return replyError(`Unknown action: ${action}`, 400);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return replyError(message, 500);
+    return replyError("Unknown action", 400);
+  } catch (err) {
+    console.error("[manage-provider-credential]", err instanceof Error ? err.message : err);
+    return replyError("Something went wrong", 500);
   }
 });

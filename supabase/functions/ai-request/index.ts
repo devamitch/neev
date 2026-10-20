@@ -1,101 +1,117 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+/**
+ * Edge Function: ai-request (BYOK only)
+ *
+ * Runs a prompt with the caller's own provider key from the vault. Neev pays for no
+ * model calls: with no saved key the function answers 409 `no_provider_key` and the
+ * app keeps using its on-device logic. Prompts and outputs are not stored; only a
+ * metadata audit row (provider, model, sizes) is kept for the hourly limit.
+ *
+ * Body: { prompt: string, system?: string, provider?: ProviderId, realmId?: string, maxTokens?: number }
+ */
 import { corsHeaders } from "../_shared/cors.ts";
 import { replyError, replyJson } from "../_shared/response.ts";
 import { requireAuthUser } from "../_shared/auth.ts";
 import { getAdminClient } from "../_shared/supabaseClient.ts";
+import { openSecret } from "../_shared/crypto.ts";
+import { DEFAULT_MODELS, generateText, isProvider, ProviderError } from "../_shared/providers.ts";
 
-interface AiRequestPayload {
-  prompt: string;
-  contextType?: "family_plan" | "ritual" | "task" | "knowledge" | "general";
-  spaceId?: string;
-  realmId?: string;
-  metadata?: Record<string, unknown>;
-}
+const MAX_PROMPT_CHARS = 8000;
+const HOURLY_LIMIT = 40;
+const DEFAULT_SYSTEM =
+  "You help a family organise their home life: schedules, chores, events and notes. " +
+  "Be brief, practical and kind. Never invent facts about the family; say when you don't know.";
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return replyError("Use POST", 405);
 
-  if (req.method !== "POST") {
-    return replyError("Method not allowed. Use POST.", 405);
+  let user;
+  try {
+    user = await requireAuthUser(req);
+  } catch {
+    return replyError("Sign in to use AI features", 401);
   }
 
   try {
-    const authResult = await requireAuthUser(req);
-    if ("error" in authResult) {
-      return authResult.error;
-    }
-    const user = authResult.user;
+    const body = await req.json().catch(() => null);
+    const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+    if (!prompt) return replyError("prompt is required", 400);
+    if (prompt.length > MAX_PROMPT_CHARS) return replyError("prompt is too long", 413);
 
-    let body: AiRequestPayload;
-    try {
-      body = await req.json();
-    } catch {
-      return replyError("Invalid JSON body", 400);
+    // Policy: Neev never reads or sends email.
+    if (/\bgmail\b|read (my )?mail|fetch email|send email/i.test(prompt)) {
+      return replyJson({ status: "blocked_by_policy", code: "GMAIL_ACCESS_BLOCKED" }, 403);
     }
 
-    const { prompt, contextType = "general", spaceId, realmId } = body;
+    const admin = getAdminClient();
 
-    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
-      return replyError("prompt is required and must not be empty", 400);
-    }
-
-    // PRIVACY POLICY CHECK: Block Gmail read/write requests at the AI layer
-    const lowerPrompt = prompt.toLowerCase();
-    if (
-      lowerPrompt.includes("gmail") ||
-      lowerPrompt.includes("read mail") ||
-      lowerPrompt.includes("fetch email") ||
-      lowerPrompt.includes("send email via google")
-    ) {
-      return replyJson({
-        status: "blocked_by_policy",
-        policyCode: "GMAIL_ACCESS_BLOCKED",
-        message:
-          "Sanctuary Privacy Policy: Gmail read/write access is blocked by policy. Neev prioritizes family privacy and does not ingest or scan personal email communications.",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Verify Space / Realm boundary if supplied
-    if (realmId) {
-      const admin = getAdminClient();
-      const { data: realmMember } = await admin
-        .from("realm_members")
-        .select("id, role")
-        .eq("realm_id", realmId)
+    if (typeof body?.realmId === "string") {
+      const { data: member } = await admin
+        .from("realm_memberships")
+        .select("role")
+        .eq("realm_id", body.realmId)
         .eq("user_id", user.id)
+        .eq("status", "active")
         .maybeSingle();
-
-      if (!realmMember) {
-        return replyError("Access denied: You are not a member of this realm", 403);
-      }
+      if (!member) return replyError("You're not a member of this family", 403);
     }
 
-    // High quality deterministic / structured response envelope
-    const responsePayload = {
-      requestId: crypto.randomUUID(),
-      userId: user.id,
-      contextType,
-      spaceId: spaceId || null,
-      realmId: realmId || null,
-      analysis: {
-        clarityScore: 0.95,
-        privacyCompliant: true,
-        sanctuaryProtected: true,
-      },
-      content: `Neev AI response for [${contextType}]: Request processed within sanctuary boundaries.`,
-      suggestions: [
-        "Review dependencies in family tree view",
-        "Confirm bilateral bridge permissions before sharing across clusters",
-      ],
-      createdAt: new Date().toISOString(),
-    };
+    const since = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await admin
+      .from("audit_events")
+      .select("id", { count: "exact", head: true })
+      .eq("actor_user_id", user.id)
+      .eq("event_type", "ai.request")
+      .gte("created_at", since);
+    if ((count ?? 0) >= HOURLY_LIMIT) return replyError("Hourly AI limit reached", 429);
 
-    return replyJson(responsePayload, 200);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return replyError(message, 500);
+    let query = admin
+      .from("provider_credentials")
+      .select("provider_id, encrypted_key, default_model")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (isProvider(body?.provider)) query = query.eq("provider_id", body.provider);
+    const { data: creds, error } = await query;
+    if (error) return replyError("Couldn't load your AI key", 500);
+    const cred = creds?.[0];
+    if (!cred || !isProvider(cred.provider_id)) {
+      return replyJson({ code: "no_provider_key" }, 409);
+    }
+
+    const model = cred.default_model || DEFAULT_MODELS[cred.provider_id];
+    const key = await openSecret(cred.encrypted_key, user.id, cred.provider_id);
+    const maxTokens = Math.min(Math.max(Number(body?.maxTokens) || 800, 64), 2000);
+    const system = typeof body?.system === "string" ? body.system.slice(0, 2000) : DEFAULT_SYSTEM;
+
+    let text: string;
+    try {
+      text = await generateText(cred.provider_id, key, model, prompt, system, maxTokens);
+    } catch (e) {
+      if (e instanceof ProviderError && (e.status === 401 || e.status === 403)) {
+        await admin
+          .from("provider_credentials")
+          .update({ status: "invalid", safe_error_code: "invalid_key" })
+          .eq("user_id", user.id)
+          .eq("provider_id", cred.provider_id);
+        return replyError("Your AI key was rejected by the provider", 422);
+      }
+      if (e instanceof ProviderError && e.status === 429) return replyError("Provider rate limit reached", 429);
+      throw e;
+    }
+
+    await admin.from("audit_events").insert({
+      actor_user_id: user.id,
+      event_type: "ai.request",
+      resource_type: "provider",
+      resource_id: cred.provider_id,
+      payload: { model, prompt_chars: prompt.length, output_chars: text.length },
+    });
+
+    return replyJson({ text, provider: cred.provider_id, model });
+  } catch (err) {
+    console.error("[ai-request]", err instanceof Error ? err.message : err);
+    return replyError("AI request failed", 502);
   }
 });

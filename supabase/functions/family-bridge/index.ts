@@ -108,16 +108,11 @@ Deno.serve(async (req: Request) => {
 
       // Audit event
       await admin.from("audit_events").insert({
-        realm_id: fromRealmId,
-        actor_id: user.id,
-        action: "bridge.established",
+        actor_user_id: user.id,
+        event_type: "bridge.established",
         resource_type: "family_bridge",
         resource_id: bridgeId,
-        metadata: {
-          target_realm_name: targetRealmName,
-          shared_categories: safeCategories,
-        },
-        created_at: new Date().toISOString(),
+        payload: { realm_id: fromRealmId, shared_categories: safeCategories },
       });
 
       return replyJson({

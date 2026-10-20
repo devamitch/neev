@@ -81,26 +81,26 @@ Deno.serve(async (req: Request) => {
     });
 
     if (memErr) {
-      console.warn("[claim-invitation] Membership creation warning:", memErr.message);
+      // Don't leave an "accepted" invitation without the membership it grants.
+      await admin
+        .from("invitations")
+        .update({ status: "pending", claimed_by_user_id: null, claimed_at: null })
+        .eq("id", invitation.id);
+      return replyError("Couldn't join the family. Please try the code again.", 500);
     }
 
     // 4. Record audit event
     await admin.from("audit_events").insert({
-      realm_id: invitation.realm_id,
-      actor_id: user.id,
-      action: "invitation.claimed",
+      actor_user_id: user.id,
+      event_type: "invitation.claimed",
       resource_type: "invitation",
       resource_id: invitation.id,
-      metadata: {
-        target_member_name: invitation.target_member_name,
-        cluster_name: invitation.cluster_name,
-      },
-      created_at: now,
+      payload: { realm_id: invitation.realm_id },
     });
 
     return replyJson({
       success: true,
-      message: `Sanctuary profile claimed successfully for ${invitation.target_member_name}!`,
+      message: `You joined as ${invitation.target_member_name}.`,
       realmId: invitation.realm_id,
       targetMemberName: invitation.target_member_name,
       clusterName: invitation.cluster_name,

@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const realms = memberships?.map((m) => ({
-        ...(m.family_realms as Record<string, unknown>),
+        ...(m.family_realms as unknown as Record<string, unknown>),
         userRole: m.role,
       })) ?? [];
 
@@ -60,11 +60,11 @@ Deno.serve(async (req: Request) => {
         .insert({
           id: realmId,
           name: name.trim(),
-          city: city?.trim() || "Ancestral City",
+          city: typeof city === "string" ? city.trim() : "",
           established_year: establishedYear || new Date().getFullYear(),
-          motto: motto?.trim() || "Love, honor, and mutual shelter",
+          motto: typeof motto === "string" ? motto.trim() : "",
           owner_id: user.id,
-          is_primary: false,
+          is_primary: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -76,13 +76,17 @@ Deno.serve(async (req: Request) => {
       }
 
       // 2. Insert Owner Membership
-      await admin.from("realm_memberships").insert({
+      const { error: ownerErr } = await admin.from("realm_memberships").insert({
         realm_id: realmId,
         user_id: user.id,
         role: "realm_owner",
         status: "active",
         joined_at: new Date().toISOString(),
       });
+      if (ownerErr) {
+        await admin.from("family_realms").delete().eq("id", realmId);
+        return replyError("Failed to create realm", 500);
+      }
 
       // 3. Insert Starter Default Clusters (Nuclear, Care Circle, Traditions)
       await admin.from("clusters").insert([
