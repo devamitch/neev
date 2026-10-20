@@ -1,13 +1,12 @@
 /**
  * First-run intro slider.
  *
- * - Flat colour only: the page background, pagination and CTA all interpolate
- *   between per-slide colours while scrolling. No gradients, shadows or borders.
- * - Backgrounds are sampled from the artwork, so each illustration sits on the
- *   page with no visible box around it.
+ * - One calm palette: a single canvas colour for every slide, one pista button
+ *   colour, and terracotta only as a small accent (eyebrow + active dot). Nothing
+ *   changes colour while swiping.
+ * - Artwork sits in a rounded squircle card so each scene reads as intentional.
  * - Edge-to-edge: the root paints behind the status bar and the Android
- *   navigation bar, so both always match the current slide. Content is inset
- *   with safe-area values. Icon colour is pinned to dark (every slide is light).
+ *   navigation bar. Content is inset with safe-area values.
  * - No Reanimated worklet callbacks into JS (no runOnJS / scheduleOnRN): the
  *   exit fade is a timing animation plus a JS timer, so it cannot break across
  *   Reanimated / Worklets version changes.
@@ -17,7 +16,7 @@
 
 import { PressableScale } from "@/components/ui/PressableScale"
 import { Image } from "expo-image"
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import {
   BackHandler,
   ScrollView,
@@ -52,49 +51,41 @@ import { setuColors } from "@/theme/setuColors"
 
 interface IntroSlide {
   id: string
+  eyebrow: string
   title: string
   description: string
   image: ImageSourcePropType
-  /** Flat page colour, sampled from the artwork's own background. */
-  background: string
-  /** Pagination + CTA colour. All pass 4.5:1 against white button text. */
-  accent: string
 }
 
 const SLIDES: readonly IntroSlide[] = [
   {
-    id: "sanctuary",
-    title: "The Sanctuary for Every Family",
+    id: "home",
+    eyebrow: "Your family, together",
+    title: "One home for the whole family",
     description:
-      "One app. Every role. Every stage. Coordinated with the calm, structured wisdom of a trusted elder.",
+      "Schedules, chores and plans for parents, grandparents and kids — shared only with the people you invite.",
     image: AssetIllustrations.sanctuaryHome,
-    background: "#F4F7F4",
-    accent: "#5A7A64",
   },
   {
-    id: "functions",
-    title: "Shared Events & Traditions",
+    id: "plan",
+    eyebrow: "Plan together",
+    title: "Functions without the chaos",
     description:
-      "Plan weddings, family traditions, milestone birthdays, and school events with shared task delegations for everyone.",
+      "Plan birthdays, weddings and school events, and split the tasks so everyone knows who's doing what.",
     image: AssetIllustrations.functionsRituals,
-    background: "#FAF6F0",
-    accent: "#C27835",
   },
   {
-    id: "knowledge",
-    title: "Heirloom Wisdom & Lifeline Vault",
+    id: "remember",
+    eyebrow: "Keep what matters",
+    title: "Recipes, stories and contacts",
     description:
-      "Preserve ancestral recipes, elder life lessons, and emergency contacts safely stored on your device.",
+      "Save family recipes, stories and important numbers in one private place the whole family can rely on.",
     image: AssetIllustrations.heirloomVault,
-    background: "#F0F4F6",
-    accent: "#4E7A7A",
   },
 ]
 
 const SLIDE_COUNT = SLIDES.length
 const LAST = SLIDE_COUNT - 1
-const BACKGROUNDS = SLIDES.map((s) => s.background)
-const ACCENTS = SLIDES.map((s) => s.accent)
 
 // ─── Tokens ─────────────────────────────────────────────────────────────────
 
@@ -103,8 +94,12 @@ const SIDE_PADDING = 28
 const DOT_SIZE = 8
 const DOT_ACTIVE = 24
 const CTA_HEIGHT = 56
-const INACTIVE_DOT = "rgba(26, 24, 21, 0.16)"
+const INACTIVE_DOT = "rgba(26, 24, 21, 0.14)"
 const ON_ACCENT = "#FFFFFF"
+/** Pista button colour (4.6:1 against white text). */
+const CTA_COLOR = "#5A7A64"
+/** Terracotta — used sparingly as the one accent. */
+const ACCENT = setuColors.accentText
 
 const clampIndex = (i: number) => Math.max(0, Math.min(LAST, i))
 
@@ -136,7 +131,6 @@ export function IntroSlider({ onFinishIntro }: IntroSliderProps) {
   const isLast = activeIndex === LAST
   const compact = height < 700
   const side = Math.max(SIDE_PADDING, insets.left, insets.right)
-  const stops = useMemo(() => SLIDES.map((_, i) => i * width), [width])
 
   // Always call the latest callback without re-running effects.
   useEffect(() => {
@@ -220,12 +214,10 @@ export function IntroSlider({ onFinishIntro }: IntroSliderProps) {
   )
 
   const rootStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(scrollX.value, stops, BACKGROUNDS),
     opacity: rootOpacity.value,
   }))
 
   const ctaStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(scrollX.value, stops, ACCENTS),
     transform: [{ scale: ctaScale.value }],
   }))
 
@@ -321,7 +313,6 @@ export function IntroSlider({ onFinishIntro }: IntroSliderProps) {
                   index={index}
                   width={width}
                   scrollX={scrollX}
-                  accent={slide.accent}
                   active={index === activeIndex}
                   onPress={goTo}
                 />
@@ -419,16 +410,22 @@ const SlidePage = memo(function SlidePage({
   return (
     <View style={[styles.page, { width, height: height || undefined, paddingHorizontal: side }]}>
       <Animated.View style={[styles.art, artStyle]}>
-        <Image
-          source={slide.image}
-          style={styles.artImage}
-          contentFit="contain"
-          priority="high"
-          accessible={false}
-        />
+        <View style={styles.artCard}>
+          <Image
+            source={slide.image}
+            style={styles.artImage}
+            contentFit="cover"
+            priority="high"
+            transition={0}
+            accessible={false}
+          />
+        </View>
       </Animated.View>
 
       <Animated.View style={[styles.copy, copyStyle]}>
+        <AppText variant="overline" maxFontSizeMultiplier={1.2} style={styles.eyebrow}>
+          {slide.eyebrow}
+        </AppText>
         <AppText
           variant="h1"
           accessibilityRole="header"
@@ -451,12 +448,11 @@ interface PaginationDotProps {
   index: number
   width: number
   scrollX: SharedValue<number>
-  accent: string
   active: boolean
   onPress: (index: number) => void
 }
 
-function PaginationDot({ index, width, scrollX, accent, active, onPress }: PaginationDotProps) {
+function PaginationDot({ index, width, scrollX, active, onPress }: PaginationDotProps) {
   const dotStyle = useAnimatedStyle(() => {
     const f = interpolate(
       scrollX.value,
@@ -466,7 +462,7 @@ function PaginationDot({ index, width, scrollX, accent, active, onPress }: Pagin
     )
     return {
       width: DOT_SIZE + (DOT_ACTIVE - DOT_SIZE) * f,
-      backgroundColor: interpolateColor(f, [0, 1], [INACTIVE_DOT, accent]),
+      backgroundColor: interpolateColor(f, [0, 1], [INACTIVE_DOT, ACCENT]),
     }
   })
 
@@ -493,6 +489,7 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
+    backgroundColor: setuColors.canvas,
   },
 
   header: {
@@ -523,10 +520,26 @@ const styles = StyleSheet.create({
     minHeight: 120,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 8,
+  },
+  artCard: {
+    aspectRatio: 1,
+    borderCurve: "continuous",
+    borderRadius: 36,
+    height: "100%",
+    maxWidth: "100%",
+    overflow: "hidden",
+    backgroundColor: setuColors.surface2,
   },
   artImage: {
     width: "100%",
     height: "100%",
+  },
+  eyebrow: {
+    color: ACCENT,
+    letterSpacing: 1,
+    marginBottom: 8,
+    textTransform: "uppercase",
   },
   copy: {
     paddingTop: 16,
@@ -582,7 +595,9 @@ const styles = StyleSheet.create({
   cta: {
     height: CTA_HEIGHT,
     borderRadius: 18,
+    borderCurve: "continuous",
     overflow: "hidden",
+    backgroundColor: CTA_COLOR,
   },
   ctaLabel: {
     ...StyleSheet.absoluteFill,
