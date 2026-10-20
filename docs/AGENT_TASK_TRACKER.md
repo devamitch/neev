@@ -20,7 +20,7 @@ Owner instruction: do not touch headers, lists or other UI; only intro slider, s
 | BYOK vault: AES-256-GCM sealed keys bound to user+provider, real key tests | DEPLOYED, needs secret + migration | round-trip/tamper test passed; functions return 401 without session | 59c4971 |
 | ai-request calls user's own provider (no canned text), hourly cap | DEPLOYED, needs secret + migration | deno check OK | 59c4971 |
 | Fixed `authResult.user` crash, audit columns, delete-user-data | DEPLOYED | deno check OK on 8/8 functions | 59c4971 |
-| Animated splash: foundation story from native mark | DONE (final frame verified) | dev build screenshot | c0e9e4f |
+| Animated splash: foundation story from native mark | DONE | release build on Moto G71: native→animated hand-off, letter stagger, clean exit | c0e9e4f + exit fix |
 | Google Calendar / Tasks / Meet real via incremental scopes; no invented health data | IMPLEMENTED_NOT_VERIFIED | needs a Google-signed-in device test | a517ea7 |
 
 Owner actions required (token lacks permission):

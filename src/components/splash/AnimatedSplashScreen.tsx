@@ -161,7 +161,14 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
     transform: [{ scale: interpolate(rootOpacity.value, [0, 1], [1.03, 1]) }],
   }))
 
+  // On exit the mark and words leave first, then the canvas, so the artwork's own
+  // background never shows as a box over the next screen.
+  const contentExitStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(rootOpacity.value, [0.45, 1], [0, 1], Extrapolation.CLAMP),
+  }))
+
   const markStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(rootOpacity.value, [0.45, 1], [0, 1], Extrapolation.CLAMP),
     transform: [
       { translateY: interpolate(markProgress.value, [0, 1], [0, MARK_RISE]) },
       { scale: interpolate(markProgress.value, [0, 1], [MARK_START_SCALE, MARK_END_SCALE]) },
@@ -206,7 +213,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
           />
         </Animated.View>
 
-        <View style={styles.copy} pointerEvents="none">
+        <Animated.View style={[styles.copy, contentExitStyle]} pointerEvents="none">
           <Animated.View style={[styles.line, lineStyle]} />
           <View style={styles.word} accessible accessibilityLabel="Neev">
             {WORD.map((letter, i) => (
@@ -218,7 +225,7 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
               The foundation of your family
             </AppText>
           </Animated.View>
-        </View>
+        </Animated.View>
       </PressableScale>
     </Animated.View>
   )
