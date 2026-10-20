@@ -86,3 +86,45 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   isSuccessResponse: jest.fn(() => true),
 }))
 
+jest.mock("firebase/app", () => ({
+  initializeApp: jest.fn(() => ({})),
+  getApps: jest.fn(() => [{}]),
+  getApp: jest.fn(() => ({})),
+}))
+
+jest.mock("firebase/auth", () => ({
+  getAuth: jest.fn(() => ({ currentUser: null })),
+  GoogleAuthProvider: {
+    credential: jest.fn(() => ({})),
+  },
+  signInWithCredential: jest.fn().mockResolvedValue({
+    user: { uid: "fb-user-1", email: "amit@example.com", displayName: "Amit" },
+  }),
+  signInAnonymously: jest.fn().mockResolvedValue({
+    user: { uid: "fb-anon-1", isAnonymous: true },
+  }),
+  signOut: jest.fn().mockResolvedValue(undefined),
+  updateProfile: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock("firebase/firestore", () => ({
+  getFirestore: jest.fn(() => ({})),
+  collection: jest.fn(() => ({})),
+  doc: jest.fn(() => ({})),
+  setDoc: jest.fn().mockResolvedValue(undefined),
+  getDoc: jest.fn().mockResolvedValue({ exists: () => false, data: () => ({}) }),
+  getDocs: jest.fn().mockResolvedValue([]),
+  onSnapshot: jest.fn(() => jest.fn()),
+  query: jest.fn(() => ({})),
+  where: jest.fn(() => ({})),
+  orderBy: jest.fn(() => ({})),
+  serverTimestamp: jest.fn(() => new Date().toISOString()),
+}))
+
+jest.mock("firebase/storage", () => ({
+  getStorage: jest.fn(() => ({})),
+  ref: jest.fn(() => ({})),
+  uploadBytesResumable: jest.fn(),
+  getDownloadURL: jest.fn().mockResolvedValue("https://storage.googleapis.com/test"),
+}))
+

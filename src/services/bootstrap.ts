@@ -4,6 +4,7 @@
  */
 import { create } from "zustand"
 import { initDatabase } from "./db/database"
+import { useRootStore } from "@/stores/useRootStore"
 
 export const useBootstrapStore = create<{
   ready: boolean
@@ -22,6 +23,14 @@ export function bootstrapLocalData(): Promise<void> {
   started = (async () => {
     try {
       await initDatabase()
+      const root = useRootStore.getState()
+      if (root.isAuthenticated) {
+        if (root.tasks.length === 0) root.loadDemoSpaces?.()
+        if (root.functions.length === 0) root.loadDemoSchedule?.()
+        if (root.routines.length === 0) root.loadDemoRoutine?.()
+        if (root.entries.length === 0) root.loadDemoKnowledge?.()
+        if (root.members.length === 0) root.loadDemoFamily?.()
+      }
       useBootstrapStore.setState({ ready: true })
       bumpDataVersion()
     } catch (error) {

@@ -17,6 +17,9 @@ import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
 import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SectionHeader } from "@/components/ui/SectionHeader"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
+
+export { ErrorBoundary } from "@/components/ErrorBoundary"
 import { neevAiOrchestrator, type LifeDomain } from "@/services/ai/neevAiOrchestrator"
 import { neevHeuristicEngine } from "@/services/ai/neevHeuristicEngine"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
@@ -77,6 +80,15 @@ export default function DashboardScreen() {
   const showToast = useRootStore((s) => s.showToast)
   const easyMode = useRootStore((s) => s.easyMode)
   const toggleEasyMode = useRootStore((s) => s.toggleEasyMode)
+
+  React.useEffect(() => {
+    const root = useRootStore.getState()
+    if (root.tasks.length === 0) root.loadDemoSpaces?.()
+    if (root.functions.length === 0) root.loadDemoSchedule?.()
+    if (root.routines.length === 0) root.loadDemoRoutine?.()
+    if (root.entries.length === 0) root.loadDemoKnowledge?.()
+    if (root.members.length === 0) root.loadDemoFamily?.()
+  }, [])
 
   // TanStack React Query for offline-first caching & synchronization
   const { data: scheduleData } = useScheduleQuery()
@@ -178,7 +190,8 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScreenContainer
+    <ErrorBoundary>
+      <ScreenContainer
       safeArea
       scrollable
       header={
@@ -1059,6 +1072,7 @@ export default function DashboardScreen() {
           onSelectRelative={(rel) => setSelectedDetailMember(rel)}
         />
       </ScreenContainer>
+    </ErrorBoundary>
   )
 }
 

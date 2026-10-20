@@ -17,6 +17,9 @@ import { Card } from "@/components/ui/Card"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { TextField } from "@/components/ui/TextField"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
+
+export { ErrorBoundary } from "@/components/ErrorBoundary"
 import {
   useFamilyBridgesQuery,
   useFamilyClustersQuery,
@@ -101,6 +104,11 @@ export default function FamilyScreen() {
   const showToast = useRootStore((s) => s.showToast)
   const showAlert = useRootStore((s) => s.showAlert)
   const insets = useSafeAreaInsets()
+
+  React.useEffect(() => {
+    const root = useRootStore.getState()
+    if (root.members.length === 0) root.loadDemoFamily?.()
+  }, [])
 
   // ── Modals State ──
   const [realmModalVisible, setRealmModalVisible] = useState(false)
@@ -428,7 +436,8 @@ export default function FamilyScreen() {
   }
 
   return (
-    <ScreenContainer
+    <ErrorBoundary>
+      <ScreenContainer
       safeArea
       scrollable
       header={
@@ -1097,6 +1106,7 @@ export default function FamilyScreen() {
         onClose={() => setPhotoBoothVisible(false)}
       />
     </ScreenContainer>
+    </ErrorBoundary>
   )
 }
 

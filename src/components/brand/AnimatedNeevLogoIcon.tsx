@@ -1,23 +1,31 @@
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useRootStore } from "@/stores/useRootStore"
+import {
+  BlurMask,
+  Canvas,
+  Circle,
+  Group,
+  LinearGradient,
+  Oval,
+  Path,
+  Skia,
+  vec,
+} from "@shopify/react-native-skia"
 import * as Haptics from "expo-haptics"
 import React, {
   forwardRef,
   memo,
   useCallback,
   useEffect,
-  useId,
   useImperativeHandle,
   useMemo,
   useRef,
 } from "react"
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native"
-import Animated, {
+import { StyleProp, ViewStyle } from "react-native"
+import {
   Easing,
   SharedValue,
   cancelAnimation,
-  useAnimatedProps,
-  useAnimatedStyle,
   useDerivedValue,
   useReducedMotion,
   useSharedValue,
@@ -26,20 +34,22 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated"
-import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Stop } from "react-native-svg"
 
 /* ────────────────────────────────────────────────────────────────────────────
- * NeevLogoIcon — living "N" companion
+ * NeevLogoIcon — the exact Neev mark, drawn and animated entirely in
+ * React Native Skia.
  *
- * Shape: terracotta arch pillar (left, carries the face) + pista pillar with a rounded foot (right),
- * joined by a veined leaf diagonal. Hands are leaves, hair is a sprout.
+ * Terracotta arch (carries the face) + green leaf diagonal + green pillar.
+ * The leaf is the character's expressive "hand/hair": it waves, perks,
+ * droops, and can even hide the face when Neev is shy.
  *
  * Usage
- *   <NeevLogoIcon size={64} />                         // idle personality (random blinks, looks, waves…)
- *   <NeevLogoIcon animation="laugh" />                 // play once on mount / when it changes
- *   <NeevLogoIcon animation="wave" animationKey={n} /> // bump animationKey to replay the same one
+ *   <NeevLogoIcon size={64} />                         // idle personality
+ *   <NeevLogoIcon animation="laugh" />                 // play once on mount / change
+ *   <NeevLogoIcon animation="wave" animationKey={n} /> // bump key to replay
  *   const ref = useRef<NeevLogoHandle>(null); ref.current?.play("flip")
- *   <NeevLogoIcon personality={false} />               // no random behaviour, only breathing + your calls
+ *   <NeevLogoIcon personality={false} />               // only breathing + your calls
+ *   <NeevLogoIcon playful={false} />                   // flat static emblem
  * ──────────────────────────────────────────────────────────────────────────── */
 
 export const NEEV_ANIMATIONS = [
@@ -52,22 +62,21 @@ export const NEEV_ANIMATIONS = [
   // moods
   "smile",
   "laugh",
-  "angry",
-  "sad",
-  "shy",
   "surprised",
-  // leaves & hair
-  "wave", // right leaf waves hello
-  "waveBoth", // both leaf-hands wave
-  "sprout", // hair wiggle
-  "perk", // hair pops up, eyes look up
+  "shy", // leaf swings over the face — peek-a-boo
+  "sad",
+  "angry",
+  "sleepy",
+  "love",
+  // leaf
+  "wave",
+  "perk",
+  "shine", // light sweeps across the leaf
   // body
-  "nudge",
-  "jump",
-  "flip", // front flip
-  "turn", // coin turn (around vertical axis)
-  "spin", // rotate in place
-  "roll", // roll sideways and back
+  "wiggle",
+  "hop",
+  "flip", // somersault
+  "turn", // coin turn
   "tilt", // curious head tilt
   "dance",
 ] as const
@@ -82,10 +91,10 @@ export interface NeevLogoHandle {
 export interface NeevLogoIconProps {
   size?: number
   withBackground?: boolean
-  /** Face, leaf hands, hair and all animation. false = flat static emblem. */
+  /** Face, leaf motion and all animation. false = flat static emblem. */
   playful?: boolean
   interactive?: boolean
-  /** Random idle behaviour (blink, look around, wink, wave, jump…). */
+  /** Random idle behaviour (blink, look around, wink, wave, hop…). */
   personality?: boolean
   /** Plays when this changes (and on mount). */
   animation?: NeevAnimation
@@ -117,60 +126,100 @@ const IDLE_POOL: NeevAnimation[] = [
   "smile",
   "smile",
   "wink",
-  "sprout",
-  "sprout",
   "tilt",
   "perk",
-  "nudge",
   "wave",
+  "shine",
+  "shine",
   "shy",
+  "wiggle",
   "laugh",
-  "jump",
-  "spin",
-  "roll",
+  "hop",
+  "love",
+  "surprised",
+  "sleepy",
   "flip",
   "dance",
-  "surprised",
 ]
 
 const PRESS_POOL: NeevAnimation[] = [
-  "jump",
+  "hop",
   "wave",
-  "waveBoth",
   "laugh",
   "wink",
   "flip",
-  "roll",
-  "spin",
   "turn",
-  "sprout",
   "perk",
   "dance",
-  "nudge",
+  "love",
+  "wiggle",
   "surprised",
+  "shine",
 ]
 
-/* ── Geometry (200×200 viewBox) ───────────────────────────────────────────── */
+/* ── Palette (sampled from the logo PNG) ──────────────────────────────────── */
 
-const STEM_L = "M40 144 L40 78 A20 20 0 0 1 80 78 L80 144 Q80 152 72 152 L48 152 Q40 152 40 144 Z"
-const STEM_R = "M128 66 Q128 58 136 58 L152 58 Q160 58 160 66 L160 136 A16 16 0 0 1 128 136 Z"
-const LEAF = "M62 70 C95 75 137 112 146 144 C113 139 71 102 62 70 Z"
+const C = {
+  medallion: "#F5F5EF",
+  vein: "#F7F6F0",
+  terracotta: "#D09D78",
+  leaf: "#9AB394",
+  ink: "#33231D",
+  mouth: "#5A241C",
+  blush: "#F0B49F",
+  flush: "#D6402B",
+  heart: "#E8745A",
+}
 
-// face sits on the arch pillar
-const EYE_LX = 51.5
-const EYE_RX = 68.5
-const EYE_Y = 85
-const BROW_Y = 72.5
-const MOUTH_X = 60
-const MOUTH_Y = 101
-const CHEEK_Y = 96
+/* ── Geometry (1024 × 1024, traced from the PNG) ──────────────────────────── */
 
-const INK = "#231B18"
+const ARCH =
+  "M255 752 L255 395 A140 140 0 0 1 528 362 C476 410 434 495 416 595 C408 650 402 710 398 768 L271 768 C262 768 255 761 255 752 Z"
+const PILLAR =
+  "M768 441 L768 746 C768 758 758 768 746 768 L646 768 C634 768 626 760 625 748 C622 700 618 650 610 603 C675 568 733 515 768 441 Z"
+const LEAF =
+  "M765 255 C771 330 771 395 768 441 C735 505 650 552 572 584 C520 604 478 620 450 640 C428 658 418 705 418 768 L398 768 C400 715 412 672 432 632 C434 540 470 438 532 378 C595 318 680 275 765 255 Z"
+
+// [path, strokeWidth]
+const VEINS: [string, number][] = [
+  ["M460 587 C520 545 650 425 736 310", 9],
+  ["M512 553 C550 548 596 548 628 534", 6.5],
+  ["M583 487 C630 474 682 464 709 437", 6.5],
+  ["M520 534 C516 490 528 448 549 418", 6.5],
+  ["M628 440 C622 405 635 372 651 347", 6.5],
+]
+
+const HEART = "M0 20 C-34 -4 -26 -36 0 -18 C26 -36 34 -4 0 20 Z"
+
+// medallion + stage
+const CX = 512
+const CY = 512
+const FEET_X = 512
+const FEET_Y = 768
+const LEAF_BASE_X = 408
+const LEAF_BASE_Y = 770
+const H = 80 // hop height, in logo units
+
+// face sits on the arch
+const EYE_LX = 318
+const EYE_RX = 402
+const EYE_Y = 432
+const EYE_W = 28
+const EYE_H = 40
+const BROW_Y = 380
+const MOUTH_X = 360
+const MOUTH_Y = 486
+const CHEEK_Y = 470
+
+// visible window into the 1024 canvas
+const VIEW_BG = { x: 140, y: 140, s: 744 }
+const VIEW_FLAT = { x: 187, y: 150, s: 650 } // headroom for hops
+const VIEW_TIGHT = { x: 230, y: 230, s: 564 } // static emblem
 
 /* ── Shared values ────────────────────────────────────────────────────────── */
 
-const BASE_SMILE = 0.35
-const BASE_BLUSH = 0.3
+const BASE_SMILE = 0.45
+const BASE_BLUSH = 0.35
 
 const REST = {
   eyeL: 1, // 0 closed … 1 open … 1.25 wide
@@ -186,13 +235,13 @@ const REST = {
   jumpY: 0,
   squash: 1,
   shiftX: 0,
-  rot: 0,
-  flipX: 0,
-  flipY: 0,
-  sprout: 0, // hair rotation (deg)
-  sproutK: 1, // hair scale
-  handL: 0, // + = leaf raised
-  handR: 0, // - = leaf raised
+  tilt: 0, // lean around the feet (deg)
+  spin: 0, // rotate around the centre (deg)
+  turn: 0, // coin turn around the vertical axis (deg)
+  leafRot: 0, // leaf swing around its base (deg, negative = up and left)
+  leafK: 1, // leaf scale from its base
+  shine: -1, // light sweep position along the leaf
+  heart: 0, // floating heart 0…1
 }
 
 type RestKey = keyof typeof REST
@@ -213,13 +262,13 @@ function useNeevValues(): NeevValues {
     jumpY: useSharedValue(REST.jumpY),
     squash: useSharedValue(REST.squash),
     shiftX: useSharedValue(REST.shiftX),
-    rot: useSharedValue(REST.rot),
-    flipX: useSharedValue(REST.flipX),
-    flipY: useSharedValue(REST.flipY),
-    sprout: useSharedValue(REST.sprout),
-    sproutK: useSharedValue(REST.sproutK),
-    handL: useSharedValue(REST.handL),
-    handR: useSharedValue(REST.handR),
+    tilt: useSharedValue(REST.tilt),
+    spin: useSharedValue(REST.spin),
+    turn: useSharedValue(REST.turn),
+    leafRot: useSharedValue(REST.leafRot),
+    leafK: useSharedValue(REST.leafK),
+    shine: useSharedValue(REST.shine),
+    heart: useSharedValue(REST.heart),
     breathe: useSharedValue(1),
     sway: useSharedValue(0),
   }
@@ -235,114 +284,67 @@ const seq = withSequence
 // go to `value`, stay, come back to `rest`
 const hold = (value: number, up: number, stay: number, down: number, rest: number) =>
   withSequence(to(value, up), to(value, stay), to(rest, down))
+// ping-pong between a and b, n times
+const wob = (a: number, b: number, ms: number, n: number) =>
+  withRepeat(withSequence(to(a, ms), to(b, ms)), n, false)
 
 // every animation returns its length in ms
-function makeAnimations(v: NeevValues, size: number): Record<NeevAnimation, () => number> {
-  const H = size * 0.2
+function makeAnimations(v: NeevValues): Record<NeevAnimation, () => number> {
   const out = Easing.out(Easing.quad)
   const inn = Easing.in(Easing.quad)
   const cubic = Easing.inOut(Easing.cubic)
+  const N = 38 // wiggle distance
+  const J = 14 // angry shake distance
 
   const glance = (dir: number) => () => {
-    v.lookX.value = hold(dir, 220, 900, 280, 0)
-    v.rot.value = hold(dir * 3, 220, 900, 280, 0)
-    return 1400
+    v.lookX.value = hold(dir, 200, 800, 260, 0)
+    v.tilt.value = hold(dir * 3, 200, 800, 260, 0)
+    return 1260
   }
 
   return {
     blink: () => {
-      v.eyeL.value = seq(to(0, 80), to(1, 110))
-      v.eyeR.value = seq(to(0, 80), to(1, 110))
-      return 190
+      v.eyeL.value = seq(to(0, 70), to(1, 110))
+      v.eyeR.value = seq(to(0, 70), to(1, 110))
+      return 180
     },
 
     wink: () => {
-      v.eyeR.value = hold(0, 110, 520, 140, 1)
-      v.smile.value = hold(1, 150, 520, 250, BASE_SMILE)
-      v.blush.value = hold(0.9, 150, 520, 250, BASE_BLUSH)
-      v.lift.value = hold(0.5, 150, 520, 250, 0)
-      v.rot.value = hold(-5, 150, 520, 250, 0)
-      return 920
+      v.eyeR.value = hold(0, 100, 460, 140, 1)
+      v.smile.value = hold(1, 140, 460, 240, BASE_SMILE)
+      v.blush.value = hold(1, 140, 460, 240, BASE_BLUSH)
+      v.lift.value = hold(0.4, 140, 460, 240, 0)
+      v.tilt.value = hold(-4, 140, 460, 240, 0)
+      return 840
     },
 
     lookLeft: glance(-1),
     lookRight: glance(1),
 
     lookAround: () => {
-      v.lookX.value = seq(to(-1, 250), to(-1, 500), to(1, 380), to(1, 500), to(0, 300))
-      v.lookY.value = seq(to(-0.3, 250), to(-0.3, 500), to(0.25, 380), to(0.25, 500), to(0, 300))
-      return 1930
+      v.lookX.value = seq(to(-1, 240), to(-1, 480), to(1, 380), to(1, 480), to(0, 280))
+      v.lookY.value = seq(to(-0.3, 240), to(-0.3, 480), to(0.25, 380), to(0.25, 480), to(0, 280))
+      v.tilt.value = seq(to(-2, 240), to(-2, 480), to(2, 380), to(2, 480), to(0, 280))
+      return 1860
     },
 
     smile: () => {
-      v.smile.value = hold(1, 220, 1100, 350, BASE_SMILE)
-      v.squint.value = hold(0.3, 220, 1100, 350, 0)
-      v.blush.value = hold(1, 220, 1100, 350, BASE_BLUSH)
-      return 1670
+      v.smile.value = hold(1, 220, 1100, 340, BASE_SMILE)
+      v.squint.value = hold(0.35, 220, 1100, 340, 0)
+      v.blush.value = hold(1, 220, 1100, 340, BASE_BLUSH)
+      return 1660
     },
 
     laugh: () => {
       v.smile.value = hold(1, 150, 1300, 300, BASE_SMILE)
       v.squint.value = hold(1, 150, 1300, 300, 0)
       v.blush.value = hold(1, 150, 1300, 300, BASE_BLUSH)
-      v.open.value = seq(
-        to(0.6, 150),
-        withRepeat(seq(to(1, 130), to(0.45, 130)), 5, false),
-        to(0, 300),
-      )
-      v.squash.value = seq(withRepeat(seq(to(0.95, 130), to(1.04, 130)), 6, false), to(1, 120))
-      v.handR.value = seq(withRepeat(seq(to(-18, 130), to(-4, 130)), 6, false), to(0, 150))
-      v.handL.value = seq(withRepeat(seq(to(18, 130), to(4, 130)), 6, false), to(0, 150))
-      v.sprout.value = seq(withRepeat(seq(to(7, 130), to(-7, 130)), 6, false), to(0, 150))
+      v.open.value = seq(to(0.6, 150), wob(1, 0.45, 130, 5), to(0, 300))
+      v.squash.value = seq(wob(0.96, 1.03, 130, 6), to(1, 100))
+      v.jumpY.value = withRepeat(seq(to(-H * 0.1, 130, out), to(0, 130, inn)), 6, false)
+      v.leafRot.value = seq(wob(-9, -2, 130, 6), to(0, 200))
+      v.tilt.value = seq(wob(-3, 3, 130, 6), to(0, 150))
       return 1750
-    },
-
-    angry: () => {
-      const J = size * 0.04
-      v.angry.value = hold(1, 180, 1500, 450, 0)
-      v.smile.value = hold(-0.9, 180, 1500, 450, BASE_SMILE)
-      v.open.value = hold(0.3, 180, 1500, 450, 0)
-      v.blush.value = hold(0, 180, 1500, 450, BASE_BLUSH)
-      v.shiftX.value = seq(to(0, 180), withRepeat(seq(to(-J, 45), to(J, 45)), 16, false), to(0, 60))
-      v.handR.value = seq(
-        to(-20, 180),
-        withRepeat(seq(to(-30, 70), to(-14, 70)), 10, false),
-        to(0, 300),
-      )
-      v.handL.value = seq(
-        to(20, 180),
-        withRepeat(seq(to(30, 70), to(14, 70)), 10, false),
-        to(0, 300),
-      )
-      v.sprout.value = seq(
-        to(-12, 180),
-        withRepeat(seq(to(-16, 60), to(-8, 60)), 12, false),
-        to(0, 300),
-      )
-      return 2130
-    },
-
-    sad: () => {
-      v.angry.value = hold(-1, 300, 1500, 450, 0)
-      v.smile.value = hold(-0.7, 300, 1500, 450, BASE_SMILE)
-      v.lookY.value = hold(0.7, 300, 1500, 450, 0)
-      v.eyeL.value = hold(0.8, 300, 1500, 450, 1)
-      v.eyeR.value = hold(0.8, 300, 1500, 450, 1)
-      v.sprout.value = hold(18, 300, 1500, 450, 0)
-      v.handR.value = hold(24, 300, 1500, 450, 0)
-      v.handL.value = hold(-24, 300, 1500, 450, 0)
-      v.rot.value = hold(-3, 300, 1500, 450, 0)
-      return 2250
-    },
-
-    shy: () => {
-      v.lookX.value = hold(-0.8, 250, 1300, 350, 0)
-      v.lookY.value = hold(0.8, 250, 1300, 350, 0)
-      v.blush.value = hold(1, 250, 1300, 350, BASE_BLUSH)
-      v.smile.value = hold(0.6, 250, 1300, 350, BASE_SMILE)
-      v.rot.value = hold(-6, 250, 1300, 350, 0)
-      v.sprout.value = hold(10, 250, 1300, 350, 0)
-      return 1900
     },
 
     surprised: () => {
@@ -351,141 +353,156 @@ function makeAnimations(v: NeevValues, size: number): Record<NeevAnimation, () =
       v.open.value = hold(0.9, 110, 1000, 300, 0)
       v.smile.value = hold(0, 110, 1000, 300, BASE_SMILE)
       v.lift.value = hold(1, 110, 1000, 300, 0)
-      v.sproutK.value = hold(1.3, 110, 1000, 300, 1)
-      v.sprout.value = seq(to(-8, 110), to(6, 120), to(0, 200))
-      v.handR.value = hold(-18, 110, 1000, 300, 0)
-      v.handL.value = hold(18, 110, 1000, 300, 0)
-      v.jumpY.value = seq(to(-H * 0.35, 110, out), to(0, 160, inn))
-      v.squash.value = seq(to(1.1, 110), to(1, 250))
-      return 1420
+      v.leafK.value = hold(1.1, 110, 1000, 300, 1)
+      v.leafRot.value = hold(-5, 110, 1000, 300, 0)
+      v.jumpY.value = seq(to(-H * 0.4, 110, out), to(0, 170, inn))
+      v.squash.value = seq(to(1.1, 110), to(1, 260))
+      return 1410
+    },
+
+    // the leaf swings across the face like a hand — only one eye peeks out
+    shy: () => {
+      v.leafRot.value = hold(-20, 300, 1100, 400, 0)
+      v.lookX.value = hold(-0.7, 250, 1300, 350, 0)
+      v.lookY.value = hold(0.7, 250, 1300, 350, 0)
+      v.blush.value = hold(1, 250, 1300, 350, BASE_BLUSH)
+      v.smile.value = hold(0.7, 250, 1300, 350, BASE_SMILE)
+      v.tilt.value = hold(-6, 250, 1300, 350, 0)
+      return 1900
+    },
+
+    sad: () => {
+      v.angry.value = hold(-1, 300, 1500, 450, 0)
+      v.smile.value = hold(-0.75, 300, 1500, 450, BASE_SMILE)
+      v.lookY.value = hold(0.6, 300, 1500, 450, 0)
+      v.eyeL.value = hold(0.8, 300, 1500, 450, 1)
+      v.eyeR.value = hold(0.8, 300, 1500, 450, 1)
+      v.tilt.value = hold(-3, 300, 1500, 450, 0)
+      v.squash.value = hold(0.97, 300, 1500, 450, 1)
+      v.leafRot.value = hold(5, 300, 1500, 450, 0) // leaf droops
+      return 2250
+    },
+
+    angry: () => {
+      v.angry.value = hold(1, 180, 1500, 450, 0)
+      v.smile.value = hold(-0.85, 180, 1500, 450, BASE_SMILE)
+      v.open.value = hold(0.25, 180, 1500, 450, 0)
+      v.blush.value = hold(0, 180, 1500, 450, BASE_BLUSH)
+      v.squash.value = hold(0.97, 180, 1500, 450, 1)
+      v.shiftX.value = seq(to(0, 180), withRepeat(seq(to(-J, 45), to(J, 45)), 16, false), to(0, 60))
+      v.leafRot.value = seq(
+        to(-6, 180),
+        withRepeat(seq(to(-9, 60), to(-3, 60)), 12, false),
+        to(0, 300),
+      )
+      return 2130
+    },
+
+    sleepy: () => {
+      v.eyeL.value = seq(to(0.5, 500), to(0.12, 500), to(0.12, 1400), to(1, 350))
+      v.eyeR.value = seq(to(0.5, 500), to(0.12, 500), to(0.12, 1400), to(1, 350))
+      v.open.value = seq(to(0, 900), to(0.9, 450), to(0.9, 500), to(0, 350))
+      v.lookY.value = hold(0.4, 500, 1800, 400, 0)
+      v.smile.value = hold(0.1, 500, 1800, 400, BASE_SMILE)
+      v.tilt.value = seq(to(3, 700), to(-2, 600), to(4, 700), to(0, 500))
+      v.leafRot.value = hold(3, 700, 1400, 500, 0)
+      return 2750
+    },
+
+    love: () => {
+      v.heart.value = seq(to(0, 0), to(1, 1500, out), to(0, 0))
+      v.smile.value = hold(1, 200, 1500, 300, BASE_SMILE)
+      v.squint.value = hold(1, 200, 1500, 300, 0)
+      v.blush.value = hold(1, 200, 1500, 300, BASE_BLUSH)
+      v.squash.value = seq(wob(1.05, 0.99, 170, 4), to(1, 150))
+      v.leafRot.value = seq(wob(-7, 0, 200, 4), to(0, 150))
+      v.tilt.value = hold(-4, 250, 1300, 350, 0)
+      return 2000
     },
 
     wave: () => {
-      v.handR.value = seq(
-        to(-32, 220),
-        withRepeat(seq(to(-6, 170), to(-34, 170)), 5, false),
-        to(0, 260),
-      )
+      v.leafRot.value = seq(to(-8, 220), wob(-17, -6, 170, 5), to(0, 260))
       v.smile.value = hold(0.9, 220, 1700, 260, BASE_SMILE)
-      v.lookX.value = hold(0.7, 220, 1700, 260, 0)
-      v.rot.value = hold(-4, 220, 1700, 260, 0)
+      v.lookX.value = hold(0.6, 220, 1700, 260, 0)
+      v.tilt.value = hold(-3, 220, 1700, 260, 0)
       return 2180
-    },
-
-    waveBoth: () => {
-      v.handR.value = seq(
-        to(-32, 220),
-        withRepeat(seq(to(-6, 170), to(-34, 170)), 5, false),
-        to(0, 260),
-      )
-      v.handL.value = seq(
-        to(32, 220),
-        withRepeat(seq(to(34, 170), to(6, 170)), 5, false),
-        to(0, 260),
-      )
-      v.smile.value = hold(1, 220, 1700, 260, BASE_SMILE)
-      v.squint.value = hold(0.4, 220, 1700, 260, 0)
-      return 2180
-    },
-
-    sprout: () => {
-      v.sprout.value = seq(
-        to(-16, 90),
-        to(14, 110),
-        to(-10, 100),
-        to(8, 100),
-        to(-4, 90),
-        to(0, 100),
-      )
-      v.sproutK.value = hold(1.15, 120, 100, 280, 1)
-      return 600
     },
 
     perk: () => {
-      v.sproutK.value = seq(to(1.35, 160, Easing.out(Easing.back(2))), to(1.35, 700), to(1, 300))
-      v.sprout.value = seq(to(-6, 160), to(6, 200), to(-3, 200), to(0, 600))
-      v.lift.value = hold(1, 160, 700, 300, 0)
-      v.eyeL.value = hold(1.2, 160, 700, 300, 1)
-      v.eyeR.value = hold(1.2, 160, 700, 300, 1)
-      v.lookY.value = hold(-1, 200, 660, 300, 0)
-      v.squash.value = seq(to(1.06, 160), to(1, 300))
-      return 1160
+      v.leafK.value = seq(to(1.1, 170, Easing.out(Easing.back(2))), to(1.1, 700), to(1, 300))
+      v.leafRot.value = seq(to(-4, 170), to(-1, 200), to(-3, 200), to(0, 600))
+      v.lift.value = hold(1, 170, 700, 300, 0)
+      v.eyeL.value = hold(1.15, 170, 700, 300, 1)
+      v.eyeR.value = hold(1.15, 170, 700, 300, 1)
+      v.lookY.value = hold(-0.8, 200, 670, 300, 0)
+      v.squash.value = seq(to(1.05, 170), to(1, 300))
+      return 1170
     },
 
-    nudge: () => {
-      const N = size * 0.07
-      v.shiftX.value = seq(to(-N, 110), to(N * 0.7, 120), to(-N * 0.35, 110), to(0, 120))
-      v.rot.value = seq(to(-9, 110), to(6, 120), to(-3, 110), to(0, 120))
-      v.sprout.value = seq(to(10, 110), to(-8, 120), to(4, 110), to(0, 120))
-      v.lookX.value = hold(1, 110, 350, 250, 0)
-      v.open.value = hold(0.35, 110, 250, 200, 0)
-      v.lift.value = hold(0.6, 110, 250, 200, 0)
-      return 700
+    shine: () => {
+      v.shine.value = seq(to(-0.3, 0), to(1.3, 1100, cubic), to(-1, 0))
+      v.smile.value = hold(0.8, 200, 800, 200, BASE_SMILE)
+      return 1200
     },
 
-    jump: () => {
+    wiggle: () => {
+      v.shiftX.value = seq(to(-N, 100), to(N * 0.7, 110), to(-N * 0.35, 100), to(0, 110))
+      v.tilt.value = seq(to(-6, 100), to(4, 110), to(-2, 100), to(0, 110))
+      v.leafRot.value = seq(to(-6, 100), to(2, 110), to(-3, 100), to(0, 110))
+      v.lookX.value = hold(1, 100, 300, 200, 0)
+      v.open.value = hold(0.3, 100, 200, 120, 0)
+      v.lift.value = hold(0.6, 100, 200, 120, 0)
+      return 600
+    },
+
+    hop: () => {
       v.jumpY.value = seq(to(0, 130), to(-H, 280, out), to(0, 260, inn))
       v.squash.value = seq(
         to(0.84, 130),
-        to(1.1, 140),
+        to(1.12, 140),
         to(1, 140),
-        to(1.05, 190),
-        to(0.84, 70),
+        to(1.04, 190),
+        to(0.86, 70),
         withSpring(1, { damping: 6, stiffness: 260 }),
       )
-      v.handR.value = seq(to(8, 130), to(-35, 200), to(-35, 150), to(0, 300))
-      v.handL.value = seq(to(-8, 130), to(35, 200), to(35, 150), to(0, 300))
-      v.sprout.value = seq(to(12, 130), to(-14, 280), to(8, 200), to(0, 250))
-      v.smile.value = hold(1, 150, 560, 300, BASE_SMILE)
-      v.open.value = hold(0.5, 150, 500, 250, 0)
-      return 900
+      // the leaf lags behind the body, then whips over on landing
+      v.leafRot.value = seq(to(6, 130), to(-10, 280), to(4, 200), to(0, 250))
+      v.tilt.value = seq(to(2, 130), to(-3, 280), to(0, 260))
+      v.smile.value = hold(1, 150, 520, 300, BASE_SMILE)
+      v.open.value = hold(0.5, 150, 420, 250, 0)
+      return 950
     },
 
     flip: () => {
-      v.jumpY.value = seq(to(-H * 0.9, 330, out), to(0, 330, inn))
-      v.flipX.value = seq(to(360, 660, cubic), to(0, 0))
-      v.squash.value = seq(to(1, 660), to(0.88, 60), withSpring(1, { damping: 7, stiffness: 260 }))
-      v.sprout.value = seq(to(-12, 200), to(12, 260), to(0, 300))
+      v.jumpY.value = seq(to(-H * 1.1, 330, out), to(0, 330, inn))
+      v.spin.value = seq(to(360, 660, cubic), to(0, 0))
+      v.squash.value = seq(to(1, 660), to(0.86, 60), withSpring(1, { damping: 7, stiffness: 260 }))
+      v.leafRot.value = seq(to(-10, 250), to(8, 300), to(0, 300))
       v.smile.value = hold(1, 150, 520, 300, BASE_SMILE)
       return 1000
     },
 
     turn: () => {
-      v.flipY.value = seq(to(360, 800, cubic), to(0, 0))
-      v.smile.value = hold(1, 200, 400, 250, BASE_SMILE)
-      return 850
-    },
-
-    spin: () => {
-      v.rot.value = seq(to(360, 750, cubic), to(0, 0))
-      v.handR.value = hold(-25, 200, 350, 200, 0)
-      v.handL.value = hold(25, 200, 350, 200, 0)
-      v.smile.value = hold(1, 200, 350, 200, BASE_SMILE)
+      v.turn.value = seq(to(360, 850, cubic), to(0, 0))
+      v.jumpY.value = seq(to(-H * 0.25, 400, out), to(0, 450, inn))
+      v.smile.value = hold(1, 200, 450, 250, BASE_SMILE)
       return 900
     },
 
-    roll: () => {
-      v.rot.value = seq(to(360, 520, cubic), to(0, 520, cubic))
-      v.shiftX.value = seq(to(size * 0.22, 520, cubic), to(0, 520, cubic))
-      v.open.value = hold(0.5, 200, 640, 200, 0)
-      v.smile.value = hold(1, 200, 640, 200, BASE_SMILE)
-      v.squint.value = hold(0.7, 200, 640, 200, 0)
-      return 1040
-    },
-
     tilt: () => {
-      v.rot.value = seq(to(9, 280), to(9, 650), to(-4, 260), to(-4, 350), to(0, 260))
-      v.lookY.value = hold(-0.3, 280, 1260, 260, 0)
-      v.lift.value = hold(0.6, 280, 1260, 260, 0)
-      return 1800
+      v.tilt.value = seq(to(8, 280), to(8, 650), to(-3, 260), to(-3, 330), to(0, 260))
+      v.leafRot.value = seq(to(-6, 280), to(-6, 650), to(2, 260), to(2, 330), to(0, 260))
+      v.lookY.value = hold(-0.3, 280, 1240, 260, 0)
+      v.lift.value = hold(0.6, 280, 1240, 260, 0)
+      return 1780
     },
 
     dance: () => {
-      v.rot.value = seq(withRepeat(seq(to(-9, 220), to(9, 220)), 6, false), to(0, 200))
-      v.jumpY.value = withRepeat(seq(to(-H * 0.28, 110, out), to(0, 110, inn)), 12, false)
-      v.handR.value = seq(withRepeat(seq(to(-30, 220), to(0, 220)), 6, false), to(0, 200))
-      v.handL.value = seq(withRepeat(seq(to(0, 220), to(30, 220)), 6, false), to(0, 200))
-      v.sprout.value = seq(withRepeat(seq(to(12, 220), to(-12, 220)), 6, false), to(0, 200))
+      v.tilt.value = seq(wob(-8, 8, 220, 6), to(0, 200))
+      v.shiftX.value = seq(wob(-N * 0.5, N * 0.5, 220, 6), to(0, 200))
+      v.jumpY.value = withRepeat(seq(to(-H * 0.22, 110, out), to(0, 110, inn)), 12, false)
+      v.squash.value = seq(wob(0.97, 1.03, 110, 12), to(1, 100))
+      v.leafRot.value = seq(wob(-12, 3, 220, 6), to(0, 200))
       v.smile.value = hold(1, 200, 2400, 240, BASE_SMILE)
       v.open.value = hold(0.5, 200, 2400, 240, 0)
       v.squint.value = hold(0.5, 200, 2400, 240, 0)
@@ -497,174 +514,82 @@ function makeAnimations(v: NeevValues, size: number): Record<NeevAnimation, () =
 
 /* ── Worklet helpers ──────────────────────────────────────────────────────── */
 
-// rotate/scale a full-size layer around a point given in viewBox units
-function pivotTransform(px: number, py: number, k: number, deg: number, scale: number) {
+type Tf =
+  | { translateX: number }
+  | { translateY: number }
+  | { rotate: number }
+  | { scale: number }
+  | { scaleX: number }
+  | { scaleY: number }
+
+const rad = (deg: number) => {
   "worklet"
-  const x = (px - 100) * k
-  const y = (py - 100) * k
-  return [
-    { translateX: x },
-    { translateY: y },
-    { rotateZ: `${deg}deg` },
-    { scale },
-    { translateX: -x },
-    { translateY: -y },
-  ] as NonNullable<ViewStyle["transform"]>
+  return (deg * Math.PI) / 180
+}
+
+const clamp01 = (n: number) => {
+  "worklet"
+  return Math.min(1, Math.max(0, n))
 }
 
 function mouthPath(s: number, o: number) {
   "worklet"
-  const w = 6 + 3 * Math.max(s, 0) + 1.6 * o
-  const c = 9 * s
-  const d = 9 * o
-  return `M ${MOUTH_X - w} ${MOUTH_Y} Q ${MOUTH_X} ${MOUTH_Y + c} ${MOUTH_X + w} ${MOUTH_Y} Q ${MOUTH_X} ${
-    MOUTH_Y + c + 2 * d
-  } ${MOUTH_X - w} ${MOUTH_Y} Z`
+  const w = 24 + 12 * Math.max(s, 0) + 7 * o
+  const c = 34 * s
+  const d = 28 * o
+  const p = Skia.Path.Make()
+  p.moveTo(MOUTH_X - w, MOUTH_Y)
+  p.quadTo(MOUTH_X, MOUTH_Y + c, MOUTH_X + w, MOUTH_Y)
+  p.quadTo(MOUTH_X, MOUTH_Y + c + 2 * d, MOUTH_X - w, MOUTH_Y)
+  p.close()
+  return p
 }
 
 function browPath(cx: number, side: number, a: number, lift: number) {
   "worklet"
-  const by = BROW_Y - lift * 4
-  const outerY = by - a * 2.2
-  const innerY = by + a * 5.5
-  const ctrlY = (outerY + innerY) / 2 - 2.4 * (1 - Math.abs(a))
-  return `M ${cx + side * 6} ${outerY} Q ${cx} ${ctrlY} ${cx - side * 5} ${innerY}`
-}
-
-function lidPath(cx: number, squint: number) {
-  "worklet"
-  const y0 = EYE_Y + 2 * squint
-  const c = EYE_Y + 4 - 10 * squint
-  return `M ${cx - 5.6} ${y0} Q ${cx} ${c} ${cx + 5.6} ${y0}`
+  const by = BROW_Y - lift * 12
+  const outerY = by - a * 10
+  const innerY = by + a * 26
+  const ctrlY = (outerY + innerY) / 2 - 7 * (1 - Math.abs(a))
+  const p = Skia.Path.Make()
+  p.moveTo(cx + side * 17, outerY)
+  p.quadTo(cx, ctrlY, cx - side * 14, innerY)
+  return p
 }
 
 /* ── Static artwork ───────────────────────────────────────────────────────── */
 
-const AnimatedPath = Animated.createAnimatedComponent(Path)
-const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse)
-const AnimatedCircle = Animated.createAnimatedComponent(Circle)
-
-const Medallion = () => (
-  <>
-    <Circle cx={100} cy={104} r={89} fill="rgba(70, 50, 40, 0.07)" />
-    <Circle
-      cx={100}
-      cy={100}
-      r={90}
-      fill="#FAFBF9"
-      stroke="rgba(125, 140, 125, 0.25)"
-      strokeWidth={3}
-    />
-  </>
-)
-
-const Hand = ({ side }: { side: "left" | "right" }) =>
-  side === "left" ? (
+const LeafArt = memo(function LeafArt() {
+  return (
     <>
-      <Path d="M42 106 C41 92 32 84 18 86 C19 100 28 108 42 106 Z" fill="#8DAE88" />
-      <Path
-        d="M40 104 Q30 96 21 87"
-        stroke="#FFFFFF"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        fill="none"
-        opacity={0.8}
-      />
-    </>
-  ) : (
-    <>
-      <Path d="M158 106 C159 92 168 84 182 86 C181 100 172 108 158 106 Z" fill="#8DAE88" />
-      <Path
-        d="M160 104 Q170 96 179 87"
-        stroke="#FFFFFF"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        fill="none"
-        opacity={0.8}
-      />
+      <Path path={LEAF} color={C.leaf} />
+      {VEINS.map(([d, w]) => (
+        <Path key={d} path={d} style="stroke" strokeWidth={w} strokeCap="round" color={C.vein} />
+      ))}
     </>
   )
+})
 
-const Sprout = () => (
-  <>
-    <Path
-      d="M60 64 Q58 48 64 36"
-      stroke="#7D8C7D"
-      strokeWidth={3.6}
-      strokeLinecap="round"
-      fill="none"
-    />
-    <Path d="M61 52 C53 51 47 45 45 37 C54 36 60 42 61 52 Z" fill="#8DAE88" />
-    <Path
-      d="M60 50 Q54 45 48 39"
-      stroke="#FFFFFF"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      fill="none"
-      opacity={0.8}
-    />
-    <Path d="M64 38 C61 26 71 16 86 15 C88 28 78 38 64 38 Z" fill="#8DAE88" />
-    <Path
-      d="M65 37 Q74 28 84 18"
-      stroke="#FFFFFF"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      fill="none"
-      opacity={0.8}
-    />
-  </>
-)
-
-const Flush = ({ angry }: { angry: SharedValue<number> }) => {
-  const props = useAnimatedProps(() => ({ opacity: Math.max(0, angry.value) * 0.4 }))
-  return <AnimatedPath d={STEM_L} fill="#D6402B" opacity={0} animatedProps={props} />
-}
-
-const Body = ({ uid, flush }: { uid: string; flush?: SharedValue<number> }) => (
-  <>
-    <Defs>
-      <LinearGradient id={`${uid}t`} x1="0" y1="0" x2="1" y2="1">
-        <Stop offset="0" stopColor="#E8896A" />
-        <Stop offset="1" stopColor="#CB6845" />
-      </LinearGradient>
-      <LinearGradient id={`${uid}p`} x1="0" y1="0" x2="1" y2="1">
-        <Stop offset="0" stopColor="#8B9A8B" />
-        <Stop offset="1" stopColor="#6F806F" />
-      </LinearGradient>
-      <LinearGradient id={`${uid}l`} x1="0" y1="0" x2="1" y2="1">
-        <Stop offset="0" stopColor="#9CBF96" />
-        <Stop offset="1" stopColor="#7FA37A" />
-      </LinearGradient>
-    </Defs>
-    <Path d={LEAF} fill={`url(#${uid}l)`} />
-    <G stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" opacity={0.65}>
-      <Path d="M72 80 L136 136" />
-      <Path d="M88 94 L98 90" />
-      <Path d="M103 107 L113 103" />
-      <Path d="M118 121 L127 117" />
-      <Path d="M86 96 L84 106" />
-      <Path d="M101 109 L99 119" />
-      <Path d="M116 123 L114 132" />
-    </G>
-    <Path d={STEM_L} fill={`url(#${uid}t)`} />
-    {flush ? <Flush angry={flush} /> : null}
-    <Path d={STEM_R} fill={`url(#${uid}p)`} />
-    <Path
-      d="M47 122 L47 142"
-      stroke="rgba(255,255,255,0.3)"
-      strokeWidth={3}
-      strokeLinecap="round"
-      fill="none"
-    />
-    <Path
-      d="M153 68 L153 130 Q153 136 150 140"
-      stroke="rgba(255,255,255,0.22)"
-      strokeWidth={3}
-      strokeLinecap="round"
-      fill="none"
-    />
-  </>
-)
+// soft light that sweeps diagonally across the leaf
+const LeafShine = memo(function LeafShine({ shine }: { shine: SharedValue<number> }) {
+  const start = useDerivedValue(() => {
+    const s = shine.value - 0.2
+    return vec(420 + 350 * s, 720 - 465 * s)
+  })
+  const end = useDerivedValue(() => {
+    const s = shine.value + 0.2
+    return vec(420 + 350 * s, 720 - 465 * s)
+  })
+  return (
+    <Path path={LEAF}>
+      <LinearGradient
+        start={start}
+        end={end}
+        colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.55)", "rgba(255,255,255,0)"]}
+      />
+    </Path>
+  )
+})
 
 /* ── Animated face ────────────────────────────────────────────────────────── */
 
@@ -683,34 +608,26 @@ const Eye = memo(function Eye({
   lookY: SV
   squint: SV
 }) {
-  const sclera = useAnimatedProps(() => ({ ry: Math.max(0.01, 7 * open.value) }))
-  const iris = useAnimatedProps(() => ({
-    cx: cx + lookX.value * 2.2,
-    cy: EYE_Y + lookY.value * 1.9,
-    ry: Math.max(0.01, 4.4 * Math.min(open.value, 1.1)),
-  }))
-  const glint = useAnimatedProps(() => ({
-    cx: cx + lookX.value * 2.2 + 1.5,
-    cy: EYE_Y + lookY.value * 1.9 - 1.7,
-    opacity: open.value > 0.5 ? 1 : 0,
-  }))
-  const lid = useAnimatedProps(() => ({
-    d: lidPath(cx, squint.value),
-    opacity: Math.min(1, Math.max(0, 1 - open.value / 0.35)),
-  }))
+  const h = useDerivedValue(() => Math.max(4, EYE_H * open.value))
+  const x = useDerivedValue(() => cx - EYE_W / 2 + lookX.value * 9)
+  const y = useDerivedValue(() => EYE_Y + lookY.value * 7 - h.value / 2)
+  const gx = useDerivedValue(() => cx + lookX.value * 9 + 5.5)
+  const gy = useDerivedValue(() => y.value + Math.min(h.value, EYE_H) * 0.3)
+  const inkO = useDerivedValue(() => clamp01(1 - squint.value * 2.2))
+  const glintO = useDerivedValue(() => (open.value > 0.4 ? inkO.value : 0))
+  const arcO = useDerivedValue(() => clamp01((squint.value - 0.2) * 2.5))
+  const arc = `M ${cx - 15} ${EYE_Y + 8} Q ${cx} ${EYE_Y - 16} ${cx + 15} ${EYE_Y + 8}`
   return (
     <>
-      <AnimatedEllipse cx={cx} cy={EYE_Y} rx={6.4} ry={7} fill="#FFFFFF" animatedProps={sclera} />
-      <AnimatedEllipse cx={cx} cy={EYE_Y} rx={4} ry={4.4} fill={INK} animatedProps={iris} />
-      <AnimatedCircle cx={cx + 1.5} cy={EYE_Y - 1.7} r={1.5} fill="#FFFFFF" animatedProps={glint} />
-      <AnimatedPath
-        d={lidPath(cx, 0)}
-        opacity={0}
-        stroke={INK}
-        strokeWidth={2.6}
-        strokeLinecap="round"
-        fill="none"
-        animatedProps={lid}
+      <Oval x={x} y={y} width={EYE_W} height={h} color={C.ink} opacity={inkO} />
+      <Circle cx={gx} cy={gy} r={5.5} color="#FFFFFF" opacity={glintO} />
+      <Path
+        path={arc}
+        style="stroke"
+        strokeWidth={8}
+        strokeCap="round"
+        color={C.ink}
+        opacity={arcO}
       />
     </>
   )
@@ -727,50 +644,37 @@ const Brow = memo(function Brow({
   angry: SV
   lift: SV
 }) {
-  const props = useAnimatedProps(() => ({ d: browPath(cx, side, angry.value, lift.value) }))
+  const path = useDerivedValue(() => browPath(cx, side, angry.value, lift.value))
+  const o = useDerivedValue(() => clamp01(Math.max(Math.abs(angry.value) * 1.6, lift.value * 1.3)))
   return (
-    <AnimatedPath
-      d={browPath(cx, side, 0, 0)}
-      stroke="#2B211D"
-      strokeWidth={2.6}
-      strokeLinecap="round"
-      fill="none"
-      animatedProps={props}
-    />
+    <Path path={path} style="stroke" strokeWidth={7} strokeCap="round" color={C.ink} opacity={o} />
   )
 })
 
 const Cheek = memo(function Cheek({ cx, blush }: { cx: number; blush: SV }) {
-  const props = useAnimatedProps(() => ({ opacity: 0.25 + 0.6 * blush.value }))
+  const o = useDerivedValue(() => 0.25 + 0.6 * blush.value)
   return (
-    <AnimatedEllipse
-      cx={cx}
-      cy={CHEEK_Y}
-      rx={4.2}
-      ry={2.8}
-      fill="#FFC2B0"
-      opacity={0.4}
-      animatedProps={props}
-    />
+    <Oval x={cx - 20} y={CHEEK_Y - 12} width={40} height={24} color={C.blush} opacity={o}>
+      <BlurMask blur={7} style="normal" />
+    </Oval>
   )
 })
 
 const Mouth = memo(function Mouth({ smile, open }: { smile: SV; open: SV }) {
-  const props = useAnimatedProps(() => ({
-    d: mouthPath(smile.value, open.value),
-    fillOpacity: Math.min(1, open.value * 6),
-  }))
+  const path = useDerivedValue(() => mouthPath(smile.value, open.value))
+  const fillO = useDerivedValue(() => clamp01(open.value * 6))
   return (
-    <AnimatedPath
-      d={mouthPath(BASE_SMILE, 0)}
-      stroke="#3A2A24"
-      strokeWidth={2.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="#5A1E19"
-      fillOpacity={0}
-      animatedProps={props}
-    />
+    <>
+      <Path path={path} color={C.mouth} opacity={fillO} />
+      <Path
+        path={path}
+        style="stroke"
+        strokeWidth={7}
+        strokeCap="round"
+        strokeJoin="round"
+        color={C.ink}
+      />
+    </>
   )
 })
 
@@ -783,21 +687,46 @@ const Face = memo(function Face({ v }: { v: NeevValues }) {
     Math.max(0, eyeR.value * (1 - 0.38 * Math.max(0, angry.value)) * (1 - squint.value)),
   )
   return (
-    <G>
-      <Cheek cx={46.5} blush={blush} />
-      <Cheek cx={73.5} blush={blush} />
+    <Group>
+      <Cheek cx={296} blush={blush} />
+      <Cheek cx={424} blush={blush} />
       <Eye cx={EYE_LX} open={openL} lookX={lookX} lookY={lookY} squint={squint} />
       <Eye cx={EYE_RX} open={openR} lookX={lookX} lookY={lookY} squint={squint} />
       <Brow cx={EYE_LX} side={-1} angry={angry} lift={lift} />
       <Brow cx={EYE_RX} side={1} angry={angry} lift={lift} />
       <Mouth smile={smile} open={open} />
-    </G>
+    </Group>
+  )
+})
+
+const Heart = memo(function Heart({ heart }: { heart: SV }) {
+  const t = useDerivedValue<Tf[]>(() => [
+    { translateX: 520 },
+    { translateY: 235 - 80 * heart.value },
+    { scale: 0.45 + 0.65 * heart.value },
+  ])
+  const o = useDerivedValue(() => Math.sin(Math.PI * clamp01(heart.value)))
+  return (
+    <Group transform={t} opacity={o}>
+      <Path path={HEART} color={C.heart} />
+    </Group>
+  )
+})
+
+const Shadow = memo(function Shadow({ jumpY, shiftX }: { jumpY: SV; shiftX: SV }) {
+  const w = useDerivedValue(() => 440 * (1 + jumpY.value / (H * 4)))
+  const x = useDerivedValue(() => 512 + shiftX.value - w.value / 2)
+  const o = useDerivedValue(() => 0.1 * (1 + jumpY.value / (H * 2.2)))
+  return (
+    <Oval x={x} y={766} width={w} height={32} color="#46322A" opacity={o}>
+      <BlurMask blur={10} style="normal" />
+    </Oval>
   )
 })
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 
-export const AnimatedNeevLogoIcon = memo(
+export const NeevLogoIcon = memo(
   forwardRef<NeevLogoHandle, NeevLogoIconProps>(function NeevLogoIcon(
     {
       size = 48,
@@ -814,9 +743,8 @@ export const AnimatedNeevLogoIcon = memo(
     ref,
   ) {
     const v = useNeevValues()
-    const uid = useId().replace(/[^a-zA-Z0-9]/g, "")
     const reduceMotion = useReducedMotion()
-    const animations = useMemo(() => makeAnimations(v, size), [v, size])
+    const animations = useMemo(() => makeAnimations(v), [v])
 
     const busyUntil = useRef(0)
     const lastPress = useRef<NeevAnimation | null>(null)
@@ -853,7 +781,7 @@ export const AnimatedNeevLogoIcon = memo(
       if (!playful || reduceMotion) return
       v.breathe.value = withRepeat(
         withSequence(
-          withTiming(1.025, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1.022, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
           withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
@@ -925,95 +853,76 @@ export const AnimatedNeevLogoIcon = memo(
       }
     }, [onPress, play, playful])
 
-    const k = size / 200
-    const {
-      squash,
-      shiftX,
-      jumpY,
-      flipX,
-      flipY,
-      rot,
-      breathe,
-      sway,
-      sprout,
-      sproutK,
-      handL,
-      handR,
-    } = v
+    const { squash, shiftX, jumpY, tilt, spin, turn, breathe, sway, leafRot, leafK, angry } = v
 
-    const rootStyle = useAnimatedStyle(() => {
+    // whole character: hop/shift on the outside, squash + lean around the feet,
+    // spin/coin-turn around the centre on the inside
+    const rootT = useDerivedValue<Tf[]>(() => {
       const sq = squash.value
-      return {
-        transform: [
-          { perspective: 800 },
-          { translateX: shiftX.value },
-          { translateY: jumpY.value + (1 - sq) * size * 0.5 }, // keep feet planted while squashing
-          { rotateX: `${flipX.value}deg` },
-          { rotateY: `${flipY.value}deg` },
-          { rotateZ: `${rot.value}deg` },
-          { scaleX: breathe.value * (1 + (1 - sq) * 0.6) },
-          { scaleY: breathe.value * sq },
-        ],
-      }
+      const c = Math.cos(rad(turn.value))
+      const turnX = Math.abs(c) < 0.03 ? 0.03 : c
+      return [
+        { translateX: shiftX.value },
+        { translateY: jumpY.value },
+        { translateX: FEET_X },
+        { translateY: FEET_Y },
+        { rotate: rad(tilt.value) },
+        { scaleX: breathe.value * (1 + (1 - sq) * 0.6) },
+        { scaleY: breathe.value * sq },
+        { translateX: -FEET_X },
+        { translateY: -FEET_Y },
+        { translateX: CX },
+        { translateY: CY },
+        { rotate: rad(spin.value) },
+        { scaleX: turnX },
+        { translateX: -CX },
+        { translateY: -CY },
+      ]
     })
-    const handLStyle = useAnimatedStyle(() => ({
-      transform: pivotTransform(42, 106, k, handL.value + sway.value * 3, 1),
-    }))
-    const handRStyle = useAnimatedStyle(() => ({
-      transform: pivotTransform(158, 106, k, handR.value + sway.value * 3, 1),
-    }))
-    const sproutStyle = useAnimatedStyle(() => ({
-      transform: pivotTransform(60, 62, k, sprout.value + sway.value * 4, sproutK.value),
-    }))
 
-    const svg = { width: size, height: size, viewBox: "0 0 200 200" }
-    const box = { width: size, height: size }
+    // leaf pivots on the base of its stem
+    const leafT = useDerivedValue<Tf[]>(() => [
+      { translateX: LEAF_BASE_X },
+      { translateY: LEAF_BASE_Y },
+      { rotate: rad(leafRot.value + sway.value * 1.4) },
+      { scale: leafK.value },
+      { translateX: -LEAF_BASE_X },
+      { translateY: -LEAF_BASE_Y },
+    ])
 
-    const content = playful ? (
-      <Animated.View style={[box, rootStyle, style]}>
-        {withBackground ? (
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Svg {...svg}>
-              <Medallion />
-            </Svg>
-          </View>
-        ) : null}
-        <Animated.View style={[StyleSheet.absoluteFill, handLStyle]} pointerEvents="none">
-          <Svg {...svg}>
-            <Hand side="left" />
-          </Svg>
-        </Animated.View>
-        <Animated.View style={[StyleSheet.absoluteFill, handRStyle]} pointerEvents="none">
-          <Svg {...svg}>
-            <Hand side="right" />
-          </Svg>
-        </Animated.View>
-        <Animated.View style={[StyleSheet.absoluteFill, sproutStyle]} pointerEvents="none">
-          <Svg {...svg}>
-            <Sprout />
-          </Svg>
-        </Animated.View>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg {...svg}>
-            <Body uid={uid} flush={v.angry} />
-          </Svg>
-        </View>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg {...svg}>
-            <Face v={v} />
-          </Svg>
-        </View>
-      </Animated.View>
-    ) : (
-      <View style={[box, style]}>
-        <Svg {...svg}>
-          {withBackground ? <Medallion /> : null}
-          <Hand side="left" />
-          <Hand side="right" />
-          <Sprout />
-          <Body uid={uid} />
-        </Svg>
-      </View>
+    const flushO = useDerivedValue(() => Math.max(0, angry.value) * 0.38)
+
+    const view = withBackground ? VIEW_BG : playful ? VIEW_FLAT : VIEW_TIGHT
+    const viewT = [{ scale: size / view.s }, { translateX: -view.x }, { translateY: -view.y }]
+
+    const content = (
+      <Canvas style={[{ width: size, height: size }, style]}>
+        <Group transform={viewT}>
+          {withBackground ? <Circle cx={512} cy={512} r={365} color={C.medallion} /> : null}
+          {playful ? (
+            <>
+              <Shadow jumpY={jumpY} shiftX={shiftX} />
+              <Group transform={rootT}>
+                <Path path={ARCH} color={C.terracotta} />
+                <Path path={ARCH} color={C.flush} opacity={flushO} />
+                <Path path={PILLAR} color={C.leaf} />
+                <Face v={v} />
+                <Group transform={leafT}>
+                  <LeafArt />
+                  <LeafShine shine={v.shine} />
+                </Group>
+              </Group>
+              <Heart heart={v.heart} />
+            </>
+          ) : (
+            <>
+              <Path path={ARCH} color={C.terracotta} />
+              <Path path={PILLAR} color={C.leaf} />
+              <LeafArt />
+            </>
+          )}
+        </Group>
+      </Canvas>
     )
 
     if (interactive) {
@@ -1034,4 +943,7 @@ export const AnimatedNeevLogoIcon = memo(
   }),
 )
 
-export default AnimatedNeevLogoIcon
+// drop-in for both previous file names
+export const AnimatedNeevLogoIcon = NeevLogoIcon
+
+export default NeevLogoIcon

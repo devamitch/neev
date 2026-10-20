@@ -3,6 +3,15 @@
  * Backs Google Sign-In, Setu SSO, and Guest mode
  */
 
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInAnonymously,
+  signOut as firebaseSignOut,
+  updateProfile,
+} from "firebase/auth"
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { auth as firebaseAuth, db as firestoreDb } from "@/services/firebase/firebaseClient"
 import { signInWithGoogleAccount, signOutOfGoogle } from "@/services/auth/googleSignIn"
 import { setuSsoService, type SsoCallbackData } from "@/services/auth/setuSsoService"
 import { supabase } from "@/services/supabase/supabaseClient"
@@ -81,9 +90,68 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     }
     const { user } = result
     const name = user.name || user.email.split("@")[0]
+    let resolvedUid = `google_${user.id}`
+
+    // 1. Firebase Auth + Firestore User Profile
+    if (result.idToken) {
+      try {
+        const credential = GoogleAuthProvider.credential(result.idToken)
+        const fbCred = await signInWithCredential(firebaseAuth, credential)
+        if (fbCred?.user) {
+          resolvedUid = fbCred.user.uid
+          console.log("[Auth] Firebase authenticated user:", fbCred.user.uid, fbCred.user.email)
+          const userDoc = doc(firestoreDb, "users", fbCred.user.uid)
+          await setDoc(
+            userDoc,
+            {
+              uid: fbCred.user.uid,
+              displayName: fbCred.user.displayName || name,
+              email: fbCred.user.email,
+              photoURL: fbCred.user.photoURL || user.photo || null,
+              provider: "google",
+              lastLoginAt: serverTimestamp(),
+              createdAt: serverTimestamp(),
+            },
+            { merge: true },
+          )
+        }
+      } catch (fbErr: unknown) {
+        console.warn("[Auth] Firebase Google auth notice:", fbErr)
+      }
+    }
+
+    // 2. Supabase Auth + Postgres Profiles Table
+    if (result.idToken) {
+      try {
+        const { data: supaData, error: supaErr } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: result.idToken,
+        })
+        if (supaErr) {
+          console.warn("[Auth] Supabase signInWithIdToken notice:", supaErr.message)
+        } else if (supaData?.user) {
+          resolvedUid = supaData.user.id
+          console.log("[Auth] Supabase session established:", supaData.user.id)
+          const { error: upsertErr } = await supabase.from("profiles").upsert({
+            id: supaData.user.id,
+            display_name: name,
+            locale: "en",
+            time_zone: "Asia/Kolkata",
+            onboarding_state: "complete",
+            updated_at: new Date().toISOString(),
+          })
+          if (upsertErr) {
+            console.warn("[Auth] Supabase profile upsert notice:", upsertErr.message)
+          }
+        }
+      } catch (sbErr: unknown) {
+        console.warn("[Auth] Supabase auth notice:", sbErr)
+      }
+    }
+
     set((state) => {
       state.user = {
-        uid: `google_${user.id}`,
+        uid: resolvedUid,
         displayName: name,
         email: user.email,
         photoUrl: user.photo ?? undefined,
@@ -96,6 +164,14 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
       state.isAuthenticated = true
       state.isAuthLoading = false
     })
+
+    // Populate sanctuary fixtures so calendar, tasks, routines & prompts are ready
+    if (get().tasks.length === 0) get().loadDemoSpaces()
+    if (get().functions.length === 0) get().loadDemoSchedule()
+    if (get().routines.length === 0) get().loadDemoRoutine()
+    if (get().entries.length === 0) get().loadDemoKnowledge()
+    if (get().members.length === 0) get().loadDemoFamily()
+
     return "success"
   },
 
@@ -201,18 +277,51 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
   },
 
   signInAsGuest: async () => {
-    const guestUid = `guest_${Date.now()}`
+    let guestUid = `guest_${Date.now()}`
     const displayName = "Guest Explorer"
 
+    // 1. Firebase Anonymous Auth + Firestore document
     try {
-      await supabase.from("profiles").upsert({
-        id: guestUid,
-        display_name: displayName,
-        role: "guest",
-        updated_at: new Date().toISOString(),
-      })
-    } catch (e) {
-      console.warn("[AuthSlice] Supabase guest sync note:", e)
+      const fbCred = await signInAnonymously(firebaseAuth)
+      if (fbCred?.user) {
+        guestUid = fbCred.user.uid
+        await updateProfile(fbCred.user, { displayName }).catch(() => {})
+        await setDoc(
+          doc(firestoreDb, "users", fbCred.user.uid),
+          {
+            uid: fbCred.user.uid,
+            displayName,
+            isAnonymous: true,
+            provider: "guest",
+            lastLoginAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          },
+          { merge: true },
+        )
+      }
+    } catch (fbErr) {
+      console.warn("[AuthSlice] Firebase anonymous sign-in note:", fbErr)
+    }
+
+    // 2. Supabase Anonymous Auth + Profiles Table
+    try {
+      const { data: supaData, error: supaErr } = await supabase.auth.signInAnonymously()
+      if (!supaErr && supaData?.user) {
+        guestUid = supaData.user.id
+        const { error: guestUpsertErr } = await supabase.from("profiles").upsert({
+          id: supaData.user.id,
+          display_name: displayName,
+          locale: "en",
+          time_zone: "Asia/Kolkata",
+          onboarding_state: "in_progress",
+          updated_at: new Date().toISOString(),
+        })
+        if (guestUpsertErr) {
+          console.warn("[AuthSlice] Supabase guest profile upsert notice:", guestUpsertErr.message)
+        }
+      }
+    } catch (sbErr) {
+      console.warn("[AuthSlice] Supabase anonymous auth note:", sbErr)
     }
 
     set((state) => {
@@ -226,23 +335,14 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
       state.isAuthenticated = true
       state.isAuthLoading = false
       state.authError = null
-
-      // Clean guest isolation: start with clean personal sanctuary, zero fake relatives
-      state.household = {
-        name: "My Family Sanctuary",
-        motto: "Roots in reverence, wings in harmony",
-        city: "",
-        establishedYear: new Date().getFullYear(),
-      }
-      state.members = []
-      state.activeMemberId = null
-      state.realms = []
-      state.activeRealmId = ""
-      state.clusters = []
-      state.kinshipEdges = []
-      state.bridges = []
-      state.invitations = []
     })
+
+    // Populate sanctuary fixtures so calendar, tasks, routines & prompts are ready for the tester
+    if (get().tasks.length === 0) get().loadDemoSpaces()
+    if (get().functions.length === 0) get().loadDemoSchedule()
+    if (get().routines.length === 0) get().loadDemoRoutine()
+    if (get().entries.length === 0) get().loadDemoKnowledge()
+    if (get().members.length === 0) get().loadDemoFamily()
   },
 
   signInAsDemoUser: async () => {
@@ -379,7 +479,9 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
   },
 
   signOut: async () => {
-    if (get().user?.provider === "google") await signOutOfGoogle()
+    await firebaseSignOut(firebaseAuth).catch(() => {})
+    await supabase.auth.signOut().catch(() => {})
+    if (get().user?.provider === "google") await signOutOfGoogle().catch(() => {})
     set((state) => {
       state.user = null
       state.displayName = ""

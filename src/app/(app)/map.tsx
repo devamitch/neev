@@ -26,6 +26,7 @@ import Svg, {
 
 import { FamilyMemberDetailSheet } from "@/components/family/FamilyMemberDetailSheet"
 import { SanctuaryNudgeSheet } from "@/components/family/SanctuaryNudgeSheet"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
@@ -37,6 +38,7 @@ import {
   calculateDistanceKm,
   familyLocationService,
   formatDistance,
+  DEMO_LOCATIONS_FIXTURE,
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
@@ -44,6 +46,8 @@ import { getTileUrl, latLonToTileXY, TILE_SERVERS } from "@/services/location/of
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
 import { useColors } from "@/theme/useTheme"
+
+export { ErrorBoundary } from "@/components/ErrorBoundary"
 
 const TILE_SIZE = 256
 
@@ -60,12 +64,14 @@ export default function FullscreenFamilyMapScreen() {
   const locations: FamilyLocationData[] = useMemo(() => {
     if (localLocations.length > 0) return localLocations
     if (queryLocations.length > 0) return queryLocations
-    return familyLocationService.getAllFamilyLocations()
+    const fromService = familyLocationService.getAllFamilyLocations()
+    if (fromService.length > 0) return fromService
+    return DEMO_LOCATIONS_FIXTURE.map(([, loc]) => loc)
   }, [localLocations, queryLocations])
 
   const [mapMode, setMapMode] = useState<"tile" | "schematic">("tile")
-  const [selectedMember, setSelectedMember] = useState<FamilyLocationData>(
-    locations[0] || ({} as FamilyLocationData),
+  const [selectedMember, setSelectedMember] = useState<FamilyLocationData | null>(
+    locations[0] || null,
   )
 
   useEffect(() => {
@@ -158,11 +164,14 @@ export default function FullscreenFamilyMapScreen() {
   }
 
   const activeFullMember = useMemo(() => {
+    if (!selectedMember?.memberId) return null
     return allMembers.find((m) => m.id === selectedMember.memberId) || null
   }, [allMembers, selectedMember])
 
   const selectedDistance = useMemo(() => {
-    if (!selectedMember) return "0 m"
+    if (!selectedMember || selectedMember.latitude == null || selectedMember.longitude == null) {
+      return "0 m"
+    }
     const km = calculateDistanceKm(
       centerLat,
       centerLon,
@@ -173,7 +182,8 @@ export default function FullscreenFamilyMapScreen() {
   }, [selectedMember, centerLat, centerLon])
 
   return (
-    <View style={styles.container}>
+    <ErrorBoundary>
+      <View style={styles.container}>
       {/* ── Background Map Canvas ── */}
       {mapMode === "tile" ? (
         <View style={StyleSheet.absoluteFill}>
@@ -211,7 +221,7 @@ export default function FullscreenFamilyMapScreen() {
             {/* Live Family Member Markers on Tile Canvas */}
             {locations.map((m) => {
               const pos = getScreenCoordinates(m.latitude, m.longitude)
-              const isSelected = selectedMember.memberId === m.memberId
+              const isSelected = selectedMember?.memberId === m.memberId
               return (
                 <View
                   key={m.memberId}
@@ -357,7 +367,7 @@ export default function FullscreenFamilyMapScreen() {
                 ? screenWidth * 0.35 + (idx % 2 === 0 ? -18 : 18)
                 : screenWidth * 0.72
               const cy = isHome ? screenHeight * 0.4 + (idx * 16 - 24) : screenHeight * 0.65
-              const isSelected = selectedMember.memberId === m.memberId
+              const isSelected = selectedMember?.memberId === m.memberId
 
               return (
                 <G key={m.memberId}>
@@ -598,7 +608,7 @@ export default function FullscreenFamilyMapScreen() {
               <View style={styles.cardActionsRow}>
                 <PressableScale
                   style={[styles.primaryActionBtn, { backgroundColor: "#DA7756" }]}
-                  onPress={() => handleOpenRadar(selectedMember)}
+                  onPress={() => selectedMember && handleOpenRadar(selectedMember)}
                 >
                   <Ionicons name="volume-high" size={13} color="#FFFFFF" />
                   <AppText style={styles.primaryActionBtnText}>Find Phone </AppText>
@@ -724,7 +734,7 @@ export default function FullscreenFamilyMapScreen() {
           visible={detailSheetVisible}
           member={activeFullMember}
           onClose={() => setDetailSheetVisible(false)}
-          onFindPhone={() => handleOpenRadar(selectedMember)}
+          onFindPhone={() => selectedMember && handleOpenRadar(selectedMember)}
         />
       )}
 
@@ -826,13 +836,13 @@ export default function FullscreenFamilyMapScreen() {
               <View style={styles.coordBox}>
                 <AppText style={styles.coordLabel}>Latitude</AppText>
                 <AppText style={styles.coordVal}>
-                  {selectedMember ? `${selectedMember.latitude.toFixed(6)}° N` : "--"}
+                  {selectedMember?.latitude != null ? `${selectedMember.latitude.toFixed(6)}° N` : "--"}
                 </AppText>
               </View>
               <View style={styles.coordBox}>
                 <AppText style={styles.coordLabel}>Longitude</AppText>
                 <AppText style={styles.coordVal}>
-                  {selectedMember ? `${selectedMember.longitude.toFixed(6)}° E` : "--"}
+                  {selectedMember?.longitude != null ? `${selectedMember.longitude.toFixed(6)}° E` : "--"}
                 </AppText>
               </View>
             </View>
@@ -873,7 +883,7 @@ export default function FullscreenFamilyMapScreen() {
                 style={[styles.coordActionBtn, { borderColor: colors.border }]}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  if (selectedMember) {
+                  if (selectedMember?.latitude != null && selectedMember?.longitude != null) {
                     showToast({
                       message: `Exact coordinates: ${selectedMember.latitude.toFixed(6)}, ${selectedMember.longitude.toFixed(6)}`,
                       type: "info",
@@ -893,7 +903,7 @@ export default function FullscreenFamilyMapScreen() {
                 style={[styles.coordActionBtn, { borderColor: colors.border }]}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  if (selectedMember) {
+                  if (selectedMember?.latitude != null && selectedMember?.longitude != null) {
                     void Linking.openURL(
                       `https://www.google.com/maps/search/?api=1&query=${selectedMember.latitude},${selectedMember.longitude}`,
                     )
@@ -977,9 +987,10 @@ export default function FullscreenFamilyMapScreen() {
         visible={nudgeSheetVisible}
         onClose={() => setNudgeSheetVisible(false)}
         member={activeFullMember}
-        locationData={selectedMember}
+        locationData={selectedMember || undefined}
       />
     </View>
+    </ErrorBoundary>
   )
 }
 

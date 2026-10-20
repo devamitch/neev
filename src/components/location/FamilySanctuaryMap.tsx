@@ -34,6 +34,7 @@ import Svg, {
 } from "react-native-svg"
 
 import { FamilyMemberDetailSheet } from "@/components/family/FamilyMemberDetailSheet"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppText } from "@/components/ui/AppText"
@@ -50,6 +51,7 @@ import {
   calculateDistanceKm,
   familyLocationService,
   formatDistance,
+  DEMO_LOCATIONS_FIXTURE,
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
@@ -165,9 +167,10 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const radarPulse = useSharedValue(1)
 
   const locations = useMemo(() => {
-    return queryLocations.length > 0
-      ? queryLocations
-      : familyLocationService.getAllFamilyLocations()
+    if (queryLocations.length > 0) return queryLocations
+    const fromService = familyLocationService.getAllFamilyLocations()
+    if (fromService.length > 0) return fromService
+    return DEMO_LOCATIONS_FIXTURE.map(([, loc]) => loc)
   }, [queryLocations])
 
   useEffect(() => {
@@ -653,7 +656,8 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const activeCanvasHeight = compact ? 150 : MAP_HEIGHT
 
   return (
-    <View style={styles.container}>
+    <ErrorBoundary>
+      <View style={styles.container}>
       {/* ── Top Bar Header ── */}
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
@@ -1223,7 +1227,8 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
           </View>
         )}
       </AppBottomSheetModal>
-    </View>
+      </View>
+    </ErrorBoundary>
   )
 })
 

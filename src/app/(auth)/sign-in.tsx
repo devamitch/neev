@@ -141,10 +141,8 @@ export default function SignInScreen() {
   const handleGuest = async () => {
     setPending("guest")
     try {
-      // Clear any prior cached data so the tester starts with a completely clean, isolated state
-      resetAllToCleanAccount()
       await signInAsGuest()
-      showToast("Entering Clean Guest Sandbox", "info")
+      showToast("Welcome to Family Sanctuary Sandbox", "info")
       router.replace("/(app)/(tabs)/dashboard")
     } finally {
       setPending(null)
@@ -243,6 +241,7 @@ export default function SignInScreen() {
         eyebrow="PRIVACY & PERMISSIONS"
         title="Google Account Transparency"
         subtitle="Review what Neev requests before connecting"
+        maxHeight={650}
       >
         <View style={[styles.disclosureContent, { paddingBottom: insets.bottom + 130 }]}>
           <View style={[styles.scopeBox, { backgroundColor: colors.surface2 }]}>

@@ -14,6 +14,9 @@ import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { ScreenSectionList } from "@/components/ui/ScreenSectionList"
 import { FamilyWeeklyGamesCard } from "@/components/family/FamilyWeeklyGamesCard"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
+
+export { ErrorBoundary } from "@/components/ErrorBoundary"
 import { useColors } from "@/theme/useTheme"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useScheduleStore, type FunctionCategory, type FamilyFunction, type FunctionTask } from "@/stores/useScheduleStore"
@@ -41,6 +44,11 @@ export default function ScheduleScreen() {
   const toggleTaskMutation = useToggleScheduleTaskMutation()
   const storeFunctions = useScheduleStore((s) => s.functions)
   const functions = queryFunctions || storeFunctions
+
+  React.useEffect(() => {
+    const root = useRootStore.getState()
+    if (root.functions.length === 0) root.loadDemoSchedule?.()
+  }, [])
 
   const toggleTask = useCallback(
     (functionId: string, taskId: string) => {
@@ -261,7 +269,8 @@ export default function ScheduleScreen() {
   )
 
   return (
-    <ScreenContainer
+    <ErrorBoundary>
+      <ScreenContainer
       safeArea
       scrollMode="external"
       dockBehavior="auto-hide"
@@ -292,6 +301,7 @@ export default function ScheduleScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
       />
     </ScreenContainer>
+    </ErrorBoundary>
   )
 }
 
