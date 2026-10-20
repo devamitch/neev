@@ -11,7 +11,7 @@ import {
   View,
   ViewStyle,
 } from "react-native"
-import { Gesture, GestureDetector } from "react-native-gesture-handler"
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler"
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -26,8 +26,8 @@ import { BlurView } from "expo-blur"
 import { AppText } from "./AppText"
 import { PressableScale } from "./PressableScale"
 
-const SWIPE_CLOSE_THRESHOLD = 80
-const SWIPE_VELOCITY_THRESHOLD = 500
+const SWIPE_CLOSE_THRESHOLD = 50
+const SWIPE_VELOCITY_THRESHOLD = 250
 
 export interface AppBottomSheetModalProps {
   visible: boolean
@@ -102,7 +102,24 @@ export function AppBottomSheetModal({
   }, [visible, backdropOpacity, translateY, screenHeight])
 
   const panGesture = Gesture.Pan()
-    .activeOffsetY([0, 10])
+    .failOffsetY([-15, 0])
+    .activeOffsetY([5, 1000])
+    .shouldCancelWhenOutside(false)
+    .onUpdate((e) => {
+      if (e.translationY > 0) {
+        translateY.value = e.translationY
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationY > SWIPE_CLOSE_THRESHOLD || e.velocityY > SWIPE_VELOCITY_THRESHOLD) {
+        runOnJS(startCloseAnimation)()
+      } else {
+        translateY.value = withSpring(0, { damping: 24, stiffness: 260 })
+      }
+    })
+
+  const headerPanGesture = Gesture.Pan()
+    .shouldCancelWhenOutside(false)
     .onUpdate((e) => {
       if (e.translationY > 0) {
         translateY.value = e.translationY
@@ -135,7 +152,7 @@ export function AppBottomSheetModal({
       onRequestClose={startCloseAnimation}
       accessibilityRole={"alert"}
     >
-      <View style={styles.modalRoot}>
+      <GestureHandlerRootView style={styles.modalRoot}>
         {/* Animated backdrop with tap to close */}
         <Animated.View style={[styles.backdrop, backdropAnimatedStyle]}>
           <BlurView intensity={60} tint="light" blurMethod="none" style={StyleSheet.absoluteFill} />
@@ -153,23 +170,24 @@ export function AppBottomSheetModal({
           enabled={avoidKeyboard}
           style={styles.keyboardAvoid}
         >
-          <Animated.View
-            style={[
-              styles.sheetSurface,
-              {
-                backgroundColor: colors.background,
-                borderTopColor: colors.border,
-                borderLeftColor: colors.border,
-                borderRightColor: colors.border,
-                maxHeight,
-                paddingBottom: Math.max(insets.bottom, 16) + 8,
-              },
-              sheetAnimatedStyle,
-            ]}
-          >
-            {/* Draggable header zone with pan gesture */}
-            <GestureDetector gesture={panGesture}>
-              <View style={styles.handleAndHeaderArea}>
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[
+                styles.sheetSurface,
+                {
+                  backgroundColor: colors.background,
+                  borderTopColor: colors.border,
+                  borderLeftColor: colors.border,
+                  borderRightColor: colors.border,
+                  maxHeight,
+                  paddingBottom: Math.max(insets.bottom, 16) + 8,
+                },
+                sheetAnimatedStyle,
+              ]}
+            >
+              {/* Draggable header zone with direct pan gesture */}
+              <GestureDetector gesture={headerPanGesture}>
+                <View style={styles.handleAndHeaderArea}>
                 {/* Drag handle pill */}
                 {showHandle && (
                   <View style={styles.handleContainer}>
@@ -179,56 +197,57 @@ export function AppBottomSheetModal({
 
                 {/* Sheet header row */}
                 {(Boolean(title) || Boolean(showCloseButton) || Boolean(headerRight)) && (
-                <View style={styles.headerRow}>
-                  <View style={styles.titleColumn}>
-                    {eyebrow ? (
-                      <AppText
-                        variant="overline"
-                        style={{ color: colors.accentText, marginBottom: 2 }}
-                      >
-                        {eyebrow}
-                      </AppText>
-                    ) : null}
-                    {title ? (
-                      <AppText variant="h3" style={styles.titleText}>
-                        {title}
-                      </AppText>
-                    ) : null}
-                    {subtitle ? (
-                      <AppText
-                        variant="caption"
-                        style={{ color: colors.text.secondary, marginTop: 2 }}
-                      >
-                        {subtitle}
-                      </AppText>
-                    ) : null}
-                  </View>
+                  <View style={styles.headerRow}>
+                    <View style={styles.titleColumn}>
+                      {eyebrow ? (
+                        <AppText
+                          variant="overline"
+                          style={{ color: colors.accentText, marginBottom: 2 }}
+                        >
+                          {eyebrow}
+                        </AppText>
+                      ) : null}
+                      {title ? (
+                        <AppText variant="h3" style={styles.titleText}>
+                          {title}
+                        </AppText>
+                      ) : null}
+                      {subtitle ? (
+                        <AppText
+                          variant="caption"
+                          style={{ color: colors.text.secondary, marginTop: 2 }}
+                        >
+                          {subtitle}
+                        </AppText>
+                      ) : null}
+                    </View>
 
-                  <View style={styles.headerActions}>
-                    {headerRight}
-                    {showCloseButton && (
-                      <PressableScale
-                        onPress={startCloseAnimation}
-                        hitSlop={8}
-                        scaleTo={0.92}
-                        style={[styles.closeButton, { backgroundColor: colors.surface2 }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Close modal"
-                      >
-                        <Ionicons name="close" size={20} color={colors.text.primary} />
-                      </PressableScale>
-                    )}
+                    <View style={styles.headerActions}>
+                      {headerRight}
+                      {showCloseButton && (
+                        <PressableScale
+                          onPress={startCloseAnimation}
+                          hitSlop={8}
+                          scaleTo={0.92}
+                          style={[styles.closeButton, { backgroundColor: colors.surface2 }]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Close modal"
+                        >
+                          <Ionicons name="close" size={20} color={colors.text.primary} />
+                        </PressableScale>
+                      )}
+                    </View>
                   </View>
-                </View>
-              )}
-            </View>
-          </GestureDetector>
+                )}
+              </View>
+            </GestureDetector>
 
-          {/* Sheet body */}
-          <View style={[styles.body, contentContainerStyle]}>{children}</View>
-        </Animated.View>
+            {/* Sheet body */}
+            <View style={[styles.body, contentContainerStyle]}>{children}</View>
+          </Animated.View>
+        </GestureDetector>
       </KeyboardAvoidingView>
-    </View>
+    </GestureHandlerRootView>
   </Modal>
   )
 }
@@ -298,6 +317,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   body: {
+    flexShrink: 1,
     width: "100%",
   },
 })

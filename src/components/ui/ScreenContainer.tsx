@@ -17,6 +17,7 @@ import { useLayout } from "@/theme/layout"
 import { useTheme } from "@/theme/useTheme"
 
 import { AppHeader, type AppHeaderProps } from "./AppHeader"
+import { SanctuaryHeader } from "./SanctuaryHeader"
 import {
   CollapsingHeaderBar,
   CollapsingLargeTitle,
@@ -182,12 +183,19 @@ export function ScreenContainer({
   const rootStyle = [styles.root, { backgroundColor: colors.background }, style]
 
   const resolvedScrollMode = scrollMode ?? (scrollable ? "shell-scroll-view" : "external")
+  const isSanctuaryHeader =
+    isValidElement(header) &&
+    (header.type === SanctuaryHeader ||
+      (typeof header.type === "object" && (header.type as any)?.name === "SanctuaryHeader") ||
+      Boolean((header.props as any)?.mascotSize))
+
   const isExplicitCompact =
     headerMode === "compact" ||
     headerProps?.compact === true ||
     headerProps?.variant === "compact"
 
   const isCollapsingHeader =
+    !isSanctuaryHeader &&
     Boolean(headerProps) &&
     !isExplicitCompact &&
     headerMode !== "none" &&
@@ -203,25 +211,31 @@ export function ScreenContainer({
   /* ── Header: Pinned compact or custom node ─────────────── */
   const pinnedHeaderNode =
     header && stickyHeader && headerMode !== "none" ? (
-      <View
-        style={[
-          styles.pinnedHeader,
-          { backgroundColor: colors.background, paddingTop: statusInset + 4 },
-          headerContainerStyle,
-        ]}
-      >
-        {header}
-      </View>
+      isSanctuaryHeader ? (
+        <View style={[styles.sanctuaryHeaderWrapper, headerContainerStyle]}>
+          {header}
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.pinnedHeader,
+            { backgroundColor: colors.background, paddingTop: statusInset + 4 },
+            headerContainerStyle,
+          ]}
+        >
+          {header}
+        </View>
+      )
     ) : null
 
-  /* ── Collapsing large-title header (when not compact) ─────────────── */
+  /* ── Collapsing animated header (when not compact) ─────────────── */
   if (isCollapsingHeader && headerProps) {
     const contentTop = headerContentTop(headerProps, statusInset)
     const largeTitle = (
       <CollapsingLargeTitle props={headerProps} scrollY={scrollY} titleHeight={titleHeight} />
     )
     return (
-      <ScreenScrollContext.Provider value={contextValue}>
+      <ScreenScrollContext.Provider value={{ ...contextValue, headerProps, contentTop }}>
         <ContainerComponent {...containerProps} style={rootStyle}>
           {resolvedScrollMode === "shell-scroll-view" ? (
             <Animated.ScrollView
@@ -243,7 +257,7 @@ export function ScreenContainer({
               {children}
             </Animated.ScrollView>
           ) : resolvedScrollMode === "external" ? (
-            <View style={[styles.externalBody, column, { paddingTop: contentTop }]}>
+            <View style={[styles.externalBody, column]}>
               {children}
             </View>
           ) : (
@@ -266,6 +280,7 @@ export function ScreenContainer({
           <CollapsingHeaderBar
             props={headerProps}
             progress={progress}
+            scrollY={scrollY}
             statusInset={statusInset}
             gutter={layout.sideInset}
           />
@@ -336,6 +351,10 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
+  },
+  sanctuaryHeaderWrapper: {
+    width: "100%",
+    zIndex: 20,
   },
   scroll: {
     flex: 1,

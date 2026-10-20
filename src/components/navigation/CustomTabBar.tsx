@@ -24,10 +24,10 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { ClipPath, Defs, Path } from "react-native-svg"
 
-import { AnimatedNeevLogoIcon } from "@/components/brand/AnimatedNeevLogoIcon"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useLayout } from "@/theme/layout"
 
+import NeevLogoIcon from "../brand/NeevLogoIcon"
 import {
   hideTabBar,
   showTabBar,
@@ -55,8 +55,8 @@ const TAB_META: Record<string, TabMeta> = {
 const ORB_ROUTE = "quick-action"
 
 /* ── BlinkQuest Canonical Dock Constants (Pista Edition) ───────── */
-const DOCK_COLOR = "#192216"
-const ACCENT_COLOR = "#7D8C7D"
+const DOCK_COLOR = "#141514ff"
+const ACCENT_COLOR = "#DA7756"
 const MUTED_COLOR = "#8F9F8B"
 
 const CENTER_SIZE = 60
@@ -359,7 +359,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             style={styles.orbButton}
           >
             <View style={styles.centerOrb}>
-              <AnimatedNeevLogoIcon size={46} withBackground={true} />
+              {/* <AnimatedNeevLogoIcon size={56} withBackground={true} animated={true} /> */}
+              <NeevLogoIcon size={56} withBackground={true} />
             </View>
 
             <Animated.Text style={styles.scanLabel} numberOfLines={1}>

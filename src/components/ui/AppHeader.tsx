@@ -43,7 +43,7 @@ export const HEADER_BAR_HEIGHT = 52
 export const HEADER_BUTTON_SIZE = 40
 
 
-/** Round toolbar button; the back control and every `rightAction` share it. */
+/** Round squircle toolbar button; the back control and every `rightAction` share it. */
 export function HeaderIconButton({
   icon,
   label,
@@ -62,16 +62,21 @@ export function HeaderIconButton({
       onPress={() => {
         onPress()
       }}
-      hitSlop={6}
+      hitSlop={8}
       scaleTo={0.92}
       style={[
         styles.iconButton,
-        { overflow: "hidden", backgroundColor: colors.surface2 },
+        {
+          overflow: "hidden",
+          backgroundColor: colors.surface2,
+          borderColor: colors.border,
+          borderWidth: StyleSheet.hairlineWidth,
+        },
       ]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <BlurView tint="extraLight" intensity={10} style={StyleSheet.absoluteFill} />
+      <BlurView tint="extraLight" intensity={20} style={StyleSheet.absoluteFill} />
       <Ionicons name={icon} size={iconSize} color={colors.text.primary} />
     </PressableScale>
   )
@@ -83,7 +88,7 @@ export function HeaderBackButton() {
   return (
     <HeaderIconButton
       icon="chevron-back"
-      iconSize={22}
+      iconSize={21}
       label="Go back"
       onPress={() => {
         if (router.canGoBack()) router.back()
@@ -104,14 +109,14 @@ export function HeaderLargeTitle({
     <View style={styles.largeTitleBlock}>
       {eyebrow ? (
         <AppText variant="overline" color={colors.accentText} style={styles.eyebrow}>
-          {eyebrow}
+          {eyebrow.toUpperCase()}
         </AppText>
       ) : null}
-      <AppText variant="h2" style={styles.titleText} accessibilityRole="header" numberOfLines={1}>
+      <AppText variant="h1" style={styles.titleText} accessibilityRole="header" numberOfLines={2}>
         {title}
       </AppText>
       {subtitle ? (
-        <AppText variant="caption" color={colors.text.secondary} numberOfLines={1} style={styles.subtitle}>
+        <AppText variant="caption" color={colors.text.secondary} numberOfLines={2} style={styles.subtitle}>
           {subtitle}
         </AppText>
       ) : null}
@@ -141,19 +146,20 @@ export function AppHeader({
   const isCompact = compact ?? (variant === "compact" || (variant !== "large" && !eyebrow))
 
   if (isCompact) {
+    const hasLeftElement = showBack || showLogo !== false
     return (
       <View style={[styles.compactToolbar, style]}>
-        <View style={styles.left}>
-          {showBack ? (
-            <HeaderBackButton />
-          ) : showLogo ? (
-            <NeevLogoIcon size={24} withBackground={false} />
-          ) : (
-            <View style={{ width: 4 }} />
-          )}
-        </View>
+        {hasLeftElement ? (
+          <View style={styles.left}>
+            {showBack ? (
+              <HeaderBackButton />
+            ) : showLogo !== false ? (
+              <NeevLogoIcon size={32} withBackground playful interactive />
+            ) : null}
+          </View>
+        ) : null}
 
-        <View style={styles.compactCenter}>
+        <View style={[styles.compactCenter, !hasLeftElement && { alignItems: "flex-start", paddingHorizontal: 0 }]}>
           {eyebrow ? (
             <AppText
               variant="overline"
@@ -167,7 +173,7 @@ export function AppHeader({
           <AppText
             variant="h3"
             numberOfLines={1}
-            style={[styles.compactTitle, titleStyle]}
+            style={[styles.compactTitle, !hasLeftElement && { textAlign: "left" }, titleStyle]}
             accessibilityRole="header"
           >
             {title}
@@ -184,16 +190,21 @@ export function AppHeader({
           ) : null}
         </View>
 
-        <View style={styles.right}>{rightAction}</View>
+        {rightAction ? <View style={styles.right}>{rightAction}</View> : null}
       </View>
     )
   }
 
+  const hasLeft = showBack || showLogo !== false
   return (
     <View style={[styles.container, style]}>
-      {showBack || rightAction ? (
-        <View style={styles.toolbar}>
-          {showBack ? <HeaderBackButton /> : <View />}
+      {hasLeft || rightAction ? (
+        <View style={[styles.toolbar, !hasLeft && { justifyContent: "flex-end" }]}>
+          {showBack ? (
+            <HeaderBackButton />
+          ) : showLogo !== false ? (
+            <NeevLogoIcon size={32} withBackground playful interactive />
+          ) : null}
           {rightAction ? <View style={styles.right}>{rightAction}</View> : null}
         </View>
       ) : null}
@@ -244,22 +255,25 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   largeTitleBlock: {
-    paddingVertical: 2,
+    paddingVertical: 4,
+    width: "100%",
   },
   eyebrow: {
-    fontSize: 10,
-    letterSpacing: 0.8,
-    marginBottom: 2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.1,
+    marginBottom: 4,
   },
   titleText: {
-    fontSize: 19,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-    lineHeight: 24,
+    fontFamily: "spaceGroteskBold",
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   iconButton: {
     alignItems: "center",
-    borderRadius: HEADER_BUTTON_SIZE / 2,
+    borderRadius: 13,
     height: HEADER_BUTTON_SIZE,
     justifyContent: "center",
     width: HEADER_BUTTON_SIZE,
@@ -272,9 +286,9 @@ const styles = StyleSheet.create({
     minWidth: HEADER_BUTTON_SIZE,
   },
   subtitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
+    fontSize: 13.5,
+    lineHeight: 18,
+    marginTop: 4,
   },
   toolbar: {
     alignItems: "center",

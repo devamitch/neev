@@ -1,8 +1,3 @@
-/**
- * The first screen of a fresh install: sign in with Google or Setu.
- * Both are real providers; there is no guest path. Scans and progress stay on
- * this phone either way, the account only gives them an owner.
- */
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { useState, type ReactNode } from "react"
@@ -10,12 +5,15 @@ import { ActivityIndicator, StyleSheet, View } from "react-native"
 import Svg, { Path } from "react-native-svg"
 
 import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
+import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
+import { AppButton } from "@/components/ui/AppButton"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
+import { Badge } from "@/components/ui/Badge"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SquircleSurface } from "@/components/ui/SquircleSurface"
-import { useRootStore, useShallow } from "@/stores/useRootStore"
+import { resetAllToCleanAccount, useRootStore, useShallow } from "@/stores/useRootStore"
 import { useTheme } from "@/theme/useTheme"
 
 type Pending = "google" | "setu" | "demo" | "guest" | null
@@ -24,6 +22,7 @@ export default function SignInScreen() {
   const { colors } = useTheme()
   const router = useRouter()
   const [pending, setPending] = useState<Pending>(null)
+  const [showGoogleDisclosure, setShowGoogleDisclosure] = useState(false)
 
   const {
     signInWithGoogle,
@@ -45,7 +44,8 @@ export default function SignInScreen() {
     })),
   )
 
-  const google = async () => {
+  const proceedWithGoogleSignIn = async () => {
+    setShowGoogleDisclosure(false)
     setPending("google")
     try {
       const status = await signInWithGoogle()
@@ -55,7 +55,7 @@ export default function SignInScreen() {
         showAlert({
           title: "Google sign-in isn't set up",
           message:
-            "This build has no Google client ID yet. Continue with Setu, or install a build with Google enabled.",
+            "This build has no Google client ID yet. Continue with Guest Mode or Setu.",
           confirmText: "OK",
           cancelText: null,
         })
@@ -101,12 +101,19 @@ export default function SignInScreen() {
   const handleGuest = async () => {
     setPending("guest")
     try {
+      // Clear any prior cached data so the tester starts with a completely clean, isolated state
+      resetAllToCleanAccount()
       await signInAsGuest()
-      showToast("Continuing as Guest", "info")
+      showToast("Entering Clean Guest Sandbox", "info")
       router.replace("/(app)/(tabs)/dashboard")
     } finally {
       setPending(null)
     }
+  }
+
+  const handleClearStorage = () => {
+    resetAllToCleanAccount()
+    showToast("Local Storage (MMKV) Cleared", "success")
   }
 
   return (
@@ -130,34 +137,53 @@ export default function SignInScreen() {
       </View>
 
       <View style={styles.actions}>
+        {/* Android Tester Priority Flow */}
         <ProviderButton
-          label="Try Demo Sanctuary (All Features)"
-          icon={<Ionicons name="play-circle-outline" size={20} color={colors.accentText} />}
-          busy={pending === "demo"}
+          label="Continue as Guest Tester"
+          subtitle="Clean sandbox · No Google account required · Local isolated storage"
+          icon={<Ionicons name="flask-outline" size={22} color={colors.accentText} />}
+          busy={pending === "guest"}
           disabled={pending !== null}
-          onPress={() => void handleDemo()}
+          onPress={() => void handleGuest()}
+          highlighted
         />
+
         <ProviderButton
           label="Continue with Google"
+          subtitle="Privacy disclosure shown before connecting"
           icon={<GoogleG />}
           busy={pending === "google"}
           disabled={pending !== null}
-          onPress={() => void google()}
+          onPress={() => setShowGoogleDisclosure(true)}
         />
+
         <ProviderButton
           label="Continue with Setu"
+          subtitle="On-device decentralized SSO"
           icon={<Ionicons name="finger-print-outline" size={20} color={colors.accentText} />}
           busy={pending === "setu"}
           disabled={pending !== null}
           onPress={() => void setu()}
         />
+
         <ProviderButton
-          label="Continue as Guest"
-          icon={<Ionicons name="person-outline" size={20} color={colors.text.secondary} />}
-          busy={pending === "guest"}
+          label="Try Demo Sanctuary (Sample Data)"
+          subtitle="Pre-populated preview with sample family & chores"
+          icon={<Ionicons name="play-circle-outline" size={20} color={colors.text.secondary} />}
+          busy={pending === "demo"}
           disabled={pending !== null}
-          onPress={() => void handleGuest()}
+          onPress={() => void handleDemo()}
         />
+      </View>
+
+      {/* Storage Reset Utility for Android Testers */}
+      <View style={styles.testerBar}>
+        <PressableScale onPress={handleClearStorage} style={styles.clearStorageBtn}>
+          <Ionicons name="trash-bin-outline" size={14} color={colors.text.muted} />
+          <AppText variant="caption" style={{ color: colors.text.muted, fontWeight: "600" }}>
+            Reset App Storage (MMKV)
+          </AppText>
+        </PressableScale>
       </View>
 
       <View style={styles.note}>
@@ -166,21 +192,92 @@ export default function SignInScreen() {
           Your family data is stored locally on this phone. Zero ads, zero tracking, zero third-party brokers.
         </AppText>
       </View>
+
+      {/* ── Google Sign-In & Privacy Scope Disclosure Modal ── */}
+      <AppBottomSheetModal
+        visible={showGoogleDisclosure}
+        onClose={() => setShowGoogleDisclosure(false)}
+        eyebrow="PRIVACY & PERMISSIONS"
+        title="Google Account Transparency"
+        subtitle="Review what Neev requests before connecting"
+      >
+        <View style={styles.disclosureContent}>
+          <View style={[styles.scopeBox, { backgroundColor: colors.surface2 }]}>
+            <View style={styles.scopeRow}>
+              <Ionicons name="person-circle-outline" size={20} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
+                  Basic Profile (Name & Avatar)
+                </AppText>
+                <AppText variant="caption" color={colors.text.secondary}>
+                  OAuth Scope: <AppText variant="caption" style={{ fontFamily: "monospace" }}>profile</AppText>. Used strictly to display your name and avatar to authorized family members.
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.scopeRow}>
+              <Ionicons name="mail-outline" size={20} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
+                  Email Address
+                </AppText>
+                <AppText variant="caption" color={colors.text.secondary}>
+                  OAuth Scope: <AppText variant="caption" style={{ fontFamily: "monospace" }}>email</AppText>. Used solely as your unique account identifier.
+                </AppText>
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.guaranteeBox, { backgroundColor: colors.surface }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+              <AppText variant="caption" style={{ fontWeight: "800", color: colors.text.primary }}>
+                What Neev NEVER Accesses:
+              </AppText>
+            </View>
+            <AppText variant="caption" color={colors.text.secondary} style={{ lineHeight: 18 }}>
+              • Zero access to Google Contacts, Gmail inbox, Drive, or Calendar.{"\n"}
+              • No automatic location access (location sharing requires explicit toggle in Family Map).{"\n"}
+              • Clean state: New accounts start with zero dummy relatives or pre-seeded records.
+            </AppText>
+          </View>
+
+          <View style={{ gap: 10, marginTop: 16 }}>
+            <AppButton
+              title="I Understand & Continue with Google"
+              variant="primary"
+              onPress={() => void proceedWithGoogleSignIn()}
+            />
+            <AppButton
+              title="Continue as Guest Tester Instead"
+              variant="outline"
+              onPress={() => {
+                setShowGoogleDisclosure(false)
+                void handleGuest()
+              }}
+            />
+          </View>
+        </View>
+      </AppBottomSheetModal>
     </ScreenContainer>
   )
 }
 
 function ProviderButton({
   label,
+  subtitle,
   icon,
   busy,
   disabled,
+  highlighted,
   onPress,
 }: {
   label: string
+  subtitle?: string
   icon: ReactNode
   busy: boolean
   disabled: boolean
+  highlighted?: boolean
   onPress: () => void
 }) {
   const { colors } = useTheme()
@@ -193,11 +290,31 @@ function ProviderButton({
       accessibilityLabel={label}
       accessibilityState={{ busy, disabled }}
     >
-      <SquircleSurface radius={16} fill={colors.surface} style={styles.provider}>
+      <SquircleSurface
+        radius={16}
+        fill={highlighted ? colors.surface : colors.surface}
+        style={[
+          styles.provider,
+          highlighted && { borderWidth: 1.5, borderColor: colors.primary },
+        ]}
+      >
         <View style={styles.providerIcon}>{icon}</View>
-        <AppText variant="bodyMedium" style={styles.providerLabel}>
-          {label}
-        </AppText>
+        <View style={styles.providerTextContainer}>
+          <AppText
+            variant="bodyMedium"
+            style={[
+              styles.providerLabel,
+              highlighted && { fontWeight: "700", color: colors.text.primary },
+            ]}
+          >
+            {label}
+          </AppText>
+          {subtitle ? (
+            <AppText variant="caption" color={colors.text.secondary} numberOfLines={1}>
+              {subtitle}
+            </AppText>
+          ) : null}
+        </View>
         <View style={styles.providerIcon}>
           {busy ? <ActivityIndicator size="small" color={colors.text.secondary} /> : null}
         </View>
@@ -231,9 +348,25 @@ function GoogleG() {
 }
 
 const styles = StyleSheet.create({
-  actions: { gap: 12, marginTop: 36 },
+  actions: { gap: 12, marginTop: 28 },
   back: { marginBottom: 8 },
   center: { textAlign: "center" },
+  clearStorageBtn: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  disclosureContent: {
+    gap: 12,
+    paddingBottom: 16,
+    paddingTop: 8,
+  },
+  guaranteeBox: {
+    borderRadius: 14,
+    padding: 14,
+  },
   hero: { alignItems: "center", gap: 12 },
   mascot: {
     alignItems: "center",
@@ -243,10 +376,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     width: 96,
   },
-  note: { alignItems: "flex-start", flexDirection: "row", gap: 8, marginTop: 28, paddingHorizontal: 4 },
+  note: { alignItems: "flex-start", flexDirection: "row", gap: 8, marginTop: 20, paddingHorizontal: 4 },
   noteText: { flex: 1 },
   page: { flexGrow: 1, justifyContent: "center", paddingBottom: 32 },
-  provider: { alignItems: "center", flexDirection: "row", minHeight: 56, paddingHorizontal: 18 },
-  providerIcon: { alignItems: "center", width: 24 },
-  providerLabel: { flex: 1, textAlign: "center" },
+  provider: { alignItems: "center", flexDirection: "row", minHeight: 64, paddingHorizontal: 18, paddingVertical: 10 },
+  providerIcon: { alignItems: "center", width: 28 },
+  providerLabel: { fontWeight: "600" },
+  providerTextContainer: { flex: 1, paddingHorizontal: 12 },
+  scopeBox: {
+    borderRadius: 14,
+    gap: 12,
+    padding: 14,
+  },
+  scopeRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+  },
+  testerBar: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
 })

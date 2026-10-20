@@ -18,7 +18,7 @@ export interface AnimatedNeevLogoIconProps {
   withBackground?: boolean
 }
 
-const LOOP_MS = 9000
+const LOOP_MS = 6500
 
 /**
  * Living Neev Vector Mark for the Bottom Action Orb:
@@ -29,9 +29,9 @@ const LOOP_MS = 9000
  * - Expressive Reanimated emotion cycle: calm breath → curious tilt → joyful hop & squash-stretch!
  */
 export const AnimatedNeevLogoIcon = memo(function AnimatedNeevLogoIcon({
-  size = 44,
-  animated = false,
-  withBackground = true,
+  size = 52,
+  animated = true,
+  withBackground = false,
 }: AnimatedNeevLogoIconProps) {
   const reduceMotion = useReducedMotion()
   const progress = useSharedValue(0)
@@ -84,23 +84,14 @@ export const AnimatedNeevLogoIcon = memo(function AnimatedNeevLogoIcon({
     )
 
     return {
-      transform: [
-        { translateY },
-        { rotate: `${rotate}deg` },
-        { scale },
-      ],
+      transform: [{ translateY }, { rotate: `${rotate}deg` }, { scale }],
     }
   })
 
   // Independent living leaf sway
   const leafAnimStyle = useAnimatedStyle(() => {
     const p = progress.value
-    const leafSway = interpolate(
-      p,
-      [0, 0.25, 0.5, 0.75, 1],
-      [0, 3, -3, 2, 0],
-      Extrapolation.CLAMP,
-    )
+    const leafSway = interpolate(p, [0, 0.25, 0.5, 0.75, 1], [0, 3, -3, 2, 0], Extrapolation.CLAMP)
     return {
       transform: [{ rotate: `${leafSway}deg` }],
       transformOrigin: "bottom center",
@@ -122,7 +113,14 @@ export const AnimatedNeevLogoIcon = memo(function AnimatedNeevLogoIcon({
       <Svg width={size} height={size} viewBox="0 0 200 200">
         {/* Porcelain circular background medallion */}
         {withBackground && (
-          <Circle cx="100" cy="100" r="92" fill="#FAF9F5" />
+          <Circle
+            cx="100"
+            cy="100"
+            r="92"
+            fill="#FAFBF9"
+            stroke="rgba(125, 140, 125, 0.22)"
+            strokeWidth="3"
+          />
         )}
 
         {/* ── Terracotta Foundation Arch (Left pillar & curve) ── */}
@@ -136,6 +134,28 @@ export const AnimatedNeevLogoIcon = memo(function AnimatedNeevLogoIcon({
           d="M 124 116 L 124 144 C 124 147.3 126.7 150 130 150 L 148 150 C 151.3 150 154 147.3 154 144 L 154 84 C 154 84 146 94 136 104 L 124 116 Z"
           fill="#8DAE88"
         />
+        {true && (
+          <G>
+            {/* Left Eye */}
+            <Circle cx="76" cy="80" r="5" fill="#FFFFFF" />
+            <Circle cx="77.5" cy="80" r="2.8" fill="#1C1917" />
+            <Circle cx="78.5" cy="78.8" r="1.1" fill="#FFFFFF" />
+
+            {/* Right Eye */}
+            <Circle cx="94" cy="74" r="5" fill="#FFFFFF" />
+            <Circle cx="95.5" cy="74" r="2.8" fill="#1C1917" />
+            <Circle cx="96.5" cy="72.8" r="1.1" fill="#FFFFFF" />
+
+            {/* Gentle Warm Smile under Arch */}
+            <Path
+              d="M 78 96 Q 86 102 94 94"
+              stroke="#FFFFFF"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </G>
+        )}
       </Svg>
 
       {/* ── Living Sprout Leaf (Diagonal of 'N' with delicate white veins) ── */}

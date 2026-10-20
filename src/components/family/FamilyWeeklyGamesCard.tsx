@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons"
+import { useQueryClient } from "@tanstack/react-query"
 import * as Haptics from "expo-haptics"
 import React, { memo, useMemo, useState } from "react"
 import { StyleSheet, View } from "react-native"
 
-import { AppButton } from "@/components/ui/AppButton"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
@@ -12,7 +12,6 @@ import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
 import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useColors } from "@/theme/useTheme"
-import { useQueryClient } from "@tanstack/react-query"
 
 export interface RealFamilyGame {
   id: string
@@ -30,67 +29,67 @@ export interface RealFamilyGame {
 const REAL_FAMILY_GAMES: RealFamilyGame[] = [
   {
     id: "game-carrom",
-    title: "Sunday Carrom & Chai Championship",
-    tagline: "Real wooden board match in the living room",
+    title: "Carrom & Chai Championship",
+    tagline: "Wooden board match in the family living room",
     vibe: "Intergenerational Friendly Rivalry",
     durationMins: 45,
     recommendedDay: "Sunday 05:00 PM",
     minPlayers: "2 to 4 Players",
     icon: "disc-outline",
     rules: [
-      "No screens allowed during match time.",
-      "Pair one elder with one youth for fair team balance (e.g. Dadu + Aarav vs Papa + Maa).",
+      "No device screens during match time.",
+      "Pair an elder with a younger player for balanced teams.",
       "Winning team is exempted from post-dinner kitchen chores!",
     ],
-    scoring: "White: 10 pts, Black: 5 pts, Queen + Cover: 25 pts",
+    scoring: "White: 10 pts, Black: 5 pts, Queen: 25 pts",
   },
   {
     id: "game-antakshari",
-    title: "Antakshari & Old Melodies Circle",
-    tagline: "Vocal singing and golden era song recollection",
+    title: "Family Melodies Circle",
+    tagline: "Vocal singing and classic song recollection",
     vibe: "Heartwarming Nostalgia & Chorus",
     durationMins: 30,
     recommendedDay: "Friday 08:30 PM",
-    minPlayers: "Entire Family",
+    minPlayers: "All Generations",
     icon: "musical-notes-outline",
     rules: [
       "Songs must be sung aloud together — zero playback streaming.",
-      "Elders introduce a 1960s-1980s classic for every Bollywood track youth pick.",
-      "Singing the mukhda together earns a bonus point.",
+      "Elders introduce a vintage classic for every modern track picked.",
+      "Singing the chorus together earns bonus points.",
     ],
     scoring: "3 pts per song started within 10 seconds of letter call.",
   },
   {
     id: "game-charades",
-    title: "Family Dumb Charades & Mimicry",
-    tagline: "Physical silent acting of movies and family quirks",
+    title: "Family Dumb Charades",
+    tagline: "Physical silent acting of movies and shared family quirks",
     vibe: "High Laughter & Motion",
     durationMins: 35,
     recommendedDay: "Saturday 08:00 PM",
     minPlayers: "4+ Players",
     icon: "body-outline",
     rules: [
-      "Act out classic movies, family traditions, or elder habits without speaking.",
-      "60-second sand/phone timer per turn.",
-      "Pure physical expression — zero props or mouth movement.",
+      "Act out classic movies, traditions, or habits without speaking.",
+      "60-second timer per turn.",
+      "Pure physical expression — zero props or mouthing words.",
     ],
     scoring: "1 pt per successful family guess within 60 seconds.",
   },
   {
     id: "game-trivia",
-    title: "Ancestral Storytelling & Memory Treasure",
-    tagline: "Elders share real childhood tales; youth solve the puzzle",
+    title: "Oral History & Memory Quest",
+    tagline: "Elders share real childhood memories; kids solve the clues",
     vibe: "Oral History & Wisdom Passing",
     durationMins: 40,
     recommendedDay: "Wednesday Evening",
     minPlayers: "All Generations",
     icon: "book-outline",
     rules: [
-      "Dadu or Dida shares a real memory from their ancestral home or youth.",
-      "Grandkids listen carefully and must answer 3 riddle questions about the story.",
-      "Best answer earns the official story badge in Neev Vault.",
+      "An elder shares a genuine story from their youth or ancestral home.",
+      "Younger members listen carefully to solve three riddle questions.",
+      "Best recollection is recorded into the Family Sanctuary Vault.",
     ],
-    scoring: "Story recorded directly into Knowledge Sanctuary Vault.",
+    scoring: "Story immortalized into Knowledge Sanctuary.",
   },
 ]
 
@@ -112,15 +111,14 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
   const [isScorerActive, setIsScorerActive] = useState(false)
 
   const game = REAL_FAMILY_GAMES[activeGameIdx]
-
   const members = useFamilyStore((s) => s.members)
 
   const teamAName = useMemo(
-    () => (members.length >= 1 ? `Team ${members[0].name.split(" ")[0]}` : "Team A"),
+    () => (members.length >= 1 ? `Team ${members[0].name.split(" ")[0]}` : "Team 1"),
     [members],
   )
   const teamBName = useMemo(
-    () => (members.length >= 2 ? `Team ${members[1].name.split(" ")[0]}` : "Team B"),
+    () => (members.length >= 2 ? `Team ${members[1].name.split(" ")[0]}` : "Team 2"),
     [members],
   )
 
@@ -137,7 +135,7 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
     const secondaryAssignee = members[1]?.id || members[0]?.id || ""
 
     addFunction({
-      title: `Weekly Real Family Game: ${game.title}`,
+      title: `Family Ritual: ${game.title}`,
       date: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
       time: "06:00 PM",
       location: "Sanctuary Living Room",
@@ -149,13 +147,13 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
       tasks: [
         {
           id: `t-${Date.now()}-1`,
-          title: "Set up game area & chairs",
+          title: "Set up game area & seats",
           assignedToMemberId: primaryAssignee,
           isDone: false,
         },
         {
           id: `t-${Date.now()}-2`,
-          title: "Prepare evening refreshments",
+          title: "Prepare evening tea & refreshments",
           assignedToMemberId: secondaryAssignee,
           isDone: false,
         },
@@ -163,28 +161,25 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
     })
     void queryClient.invalidateQueries({ queryKey: ["schedule", "functions"] })
     showToast({
-      message: `Weekly real game ritual scheduled in Family Functions!`,
+      message: `Weekly game scheduled in Family Functions!`,
       type: "success",
     })
   }
 
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
       {/* ── Header Row ── */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={[styles.iconWrap, { backgroundColor: colors.surface2 }]}>
             <Ionicons name={game.icon} size={20} color={colors.primary} />
           </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <AppText variant="subheading" style={{ fontWeight: "700" }}>
-                Real Family Game of the Week
-              </AppText>
-              <Badge label="100% Real · No Screens" tone="success" size="small" />
-            </View>
-            <AppText variant="caption" style={{ color: colors.text.muted }}>
-              Screen-free multigenerational laughter & bonding
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <AppText variant="overline" style={{ color: colors.accentText, letterSpacing: 0.8 }}>
+              SCREEN-FREE BONDING
+            </AppText>
+            <AppText variant="subheading" style={styles.cardTitle}>
+              Family Game of the Week
             </AppText>
           </View>
         </View>
@@ -193,28 +188,23 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
           style={[styles.switchGameBtn, { backgroundColor: colors.surface2 }]}
           onPress={handleNextGame}
         >
-          <Ionicons name="shuffle-outline" size={14} color={colors.primary} />
-          <AppText
-            variant="caption"
-            style={{ color: colors.primary, fontWeight: "700", marginLeft: 4 }}
-          >
-            Spin
+          <Ionicons name="dice-outline" size={15} color={colors.primary} />
+          <AppText variant="caption" style={[styles.switchGameText, { color: colors.primary }]}>
+            Change
           </AppText>
         </PressableScale>
       </View>
 
       {/* ── Active Game Details ── */}
       <View style={[styles.gameBox, { backgroundColor: colors.surface2 }]}>
-        <View
-          style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
-        >
-          <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary, flex: 1 }}>
+        <View style={styles.gameTitleRow}>
+          <AppText variant="h3" style={[styles.gameHeading, { color: colors.text.primary }]}>
             {game.title}
           </AppText>
           <Badge label={game.minPlayers} tone="neutral" size="small" />
         </View>
 
-        <AppText variant="body" style={{ color: colors.primary, fontWeight: "600", marginTop: 2 }}>
+        <AppText variant="body" style={[styles.gameTagline, { color: colors.primary }]}>
           {game.tagline}
         </AppText>
 
@@ -226,12 +216,9 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
                   name="checkmark-circle"
                   size={14}
                   color={colors.primary}
-                  style={{ marginRight: 6, marginTop: 2 }}
+                  style={styles.ruleIcon}
                 />
-                <AppText
-                  variant="caption"
-                  style={{ flex: 1, color: colors.text.secondary, lineHeight: 18 }}
-                >
+                <AppText variant="caption" style={[styles.ruleText, { color: colors.text.secondary }]}>
                   {rule}
                 </AppText>
               </View>
@@ -240,88 +227,108 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
         )}
 
         {/* Real Scorekeeper Widget */}
-        {isScorerActive ? (
+        {isScorerActive && (
           <View style={[styles.scorekeeperBox, { backgroundColor: colors.surface }]}>
-            <AppText
-              variant="caption"
-              style={{ fontWeight: "700", textAlign: "center", marginBottom: 8 }}
-            >
-              REAL MATCH SCOREBOARD
+            <AppText variant="overline" style={styles.scoreboardTitle}>
+              MATCH SCOREBOARD
             </AppText>
             <View style={styles.scoreRow}>
               {/* Team 1 */}
               <View style={styles.teamCol}>
-                <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+                <AppText variant="caption" style={[styles.teamName, { color: colors.primary }]}>
                   {teamAName}
                 </AppText>
-                <AppText variant="h1" style={{ fontWeight: "800", marginVertical: 4 }}>
+                <AppText variant="display" style={styles.scoreDigits}>
                   {teamScoreA}
                 </AppText>
-                <View style={{ flexDirection: "row", gap: 6 }}>
+                <View style={styles.scoreBtnRow}>
+                  <PressableScale
+                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
+                    onPress={() => setTeamScoreA((s) => Math.max(0, s - 1))}
+                  >
+                    <AppText style={styles.scoreBtnText}>-1</AppText>
+                  </PressableScale>
+                  <PressableScale
+                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
+                    onPress={() => setTeamScoreA((s) => s + 1)}
+                  >
+                    <AppText style={styles.scoreBtnText}>+1</AppText>
+                  </PressableScale>
                   <PressableScale
                     style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
                     onPress={() => setTeamScoreA((s) => s + 5)}
                   >
-                    <AppText style={{ fontWeight: "700" }}>+5</AppText>
-                  </PressableScale>
-                  <PressableScale
-                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
-                    onPress={() => setTeamScoreA((s) => s + 10)}
-                  >
-                    <AppText style={{ fontWeight: "700" }}>+10</AppText>
+                    <AppText style={styles.scoreBtnText}>+5</AppText>
                   </PressableScale>
                 </View>
               </View>
 
-              <View style={styles.scoreDivider} />
+              <View style={[styles.scoreDivider, { backgroundColor: colors.border }]} />
 
               {/* Team 2 */}
               <View style={styles.teamCol}>
-                <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+                <AppText variant="caption" style={[styles.teamName, { color: colors.primary }]}>
                   {teamBName}
                 </AppText>
-                <AppText variant="h1" style={{ fontWeight: "800", marginVertical: 4 }}>
+                <AppText variant="display" style={styles.scoreDigits}>
                   {teamScoreB}
                 </AppText>
-                <View style={{ flexDirection: "row", gap: 6 }}>
+                <View style={styles.scoreBtnRow}>
+                  <PressableScale
+                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
+                    onPress={() => setTeamScoreB((s) => Math.max(0, s - 1))}
+                  >
+                    <AppText style={styles.scoreBtnText}>-1</AppText>
+                  </PressableScale>
+                  <PressableScale
+                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
+                    onPress={() => setTeamScoreB((s) => s + 1)}
+                  >
+                    <AppText style={styles.scoreBtnText}>+1</AppText>
+                  </PressableScale>
                   <PressableScale
                     style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
                     onPress={() => setTeamScoreB((s) => s + 5)}
                   >
-                    <AppText style={{ fontWeight: "700" }}>+5</AppText>
-                  </PressableScale>
-                  <PressableScale
-                    style={[styles.scoreBtn, { backgroundColor: colors.surface2 }]}
-                    onPress={() => setTeamScoreB((s) => s + 10)}
-                  >
-                    <AppText style={{ fontWeight: "700" }}>+10</AppText>
+                    <AppText style={styles.scoreBtnText}>+5</AppText>
                   </PressableScale>
                 </View>
               </View>
             </View>
           </View>
-        ) : null}
+        )}
 
         {/* Action Buttons */}
         <View style={styles.actionRow}>
-          <AppButton
-            title={isScorerActive ? "Hide Scorekeeper" : "Real Scorekeeper"}
-            variant="outline"
-            size="sm"
+          <PressableScale
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+            ]}
             onPress={() => {
               void Haptics.selectionAsync()
               setIsScorerActive((v) => !v)
             }}
-            style={{ flex: 1 }}
-          />
+          >
+            <Ionicons
+              name={isScorerActive ? "chevron-up" : "trophy-outline"}
+              size={15}
+              color={colors.text.primary}
+            />
+            <AppText variant="caption" style={[styles.actionBtnLabel, { color: colors.text.primary }]}>
+              {isScorerActive ? "Hide Scores" : "Scorekeeper"}
+            </AppText>
+          </PressableScale>
 
-          <AppButton
-            title="Schedule Match"
-            variant="primary"
-            size="sm"
+          <PressableScale
+            style={[styles.actionBtn, { backgroundColor: "#DA7756" }]}
             onPress={handleScheduleWeekly}
-            style={{ flex: 1 }}
-          />
+          >
+            <Ionicons name="calendar-outline" size={15} color="#FFFFFF" />
+            <AppText variant="caption" style={[styles.actionBtnLabel, { color: "#FFFFFF" }]}>
+              Add to Schedule
+            </AppText>
+          </PressableScale>
         </View>
       </View>
     </Card>
@@ -331,14 +338,14 @@ export const FamilyWeeklyGamesCard = memo(function FamilyWeeklyGamesCard({
 const styles = StyleSheet.create({
   card: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 22,
     marginBottom: 16,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   headerLeft: {
     flexDirection: "row",
@@ -347,35 +354,73 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  cardTitle: {
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   switchGameBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 4,
+  },
+  switchGameText: {
+    fontWeight: "700",
+    fontSize: 12,
   },
   gameBox: {
     padding: 14,
     borderRadius: 16,
   },
+  gameTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  gameHeading: {
+    fontWeight: "800",
+    fontSize: 17,
+    flex: 1,
+    marginRight: 8,
+  },
+  gameTagline: {
+    fontWeight: "600",
+    fontSize: 13,
+    marginTop: 3,
+  },
   rulesList: {
-    marginTop: 8,
+    marginTop: 10,
     gap: 6,
   },
   ruleItem: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
+  ruleIcon: {
+    marginRight: 6,
+    marginTop: 2,
+  },
+  ruleText: {
+    flex: 1,
+    lineHeight: 18,
+  },
   scorekeeperBox: {
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 16,
     marginTop: 12,
+  },
+  scoreboardTitle: {
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: 1,
   },
   scoreRow: {
     flexDirection: "row",
@@ -386,20 +431,55 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  scoreDivider: {
-    width: 1,
-    height: 48,
-    backgroundColor: "rgba(0,0,0,0.08)",
+  teamName: {
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  scoreDigits: {
+    fontWeight: "800",
+    fontSize: 32,
+    lineHeight: 38,
+    marginVertical: 2,
+  },
+  scoreBtnRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
   },
   scoreBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    minWidth: 40,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  scoreBtnText: {
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  scoreDivider: {
+    width: 1,
+    height: 52,
+    marginHorizontal: 8,
   },
   actionRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 12,
+    marginTop: 14,
+  },
+  actionBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  actionBtnLabel: {
+    fontWeight: "700",
+    fontSize: 13,
   },
 })
 

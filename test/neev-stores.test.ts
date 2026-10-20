@@ -9,8 +9,31 @@ import { neevHeuristicEngine } from "../src/services/ai/neevHeuristicEngine"
 import { neevAiOrchestrator } from "../src/services/ai/neevAiOrchestrator"
 import { notificationsService } from "../src/services/notifications/notificationsService"
 
+import { DEMO_MEMBERS, DEMO_HOUSEHOLD } from "../src/stores/slices/createFamilySlice"
+import { DEMO_FUNCTIONS } from "../src/stores/slices/createScheduleSlice"
+import { DEMO_INTENTIONS } from "../src/stores/slices/createIntentionsSlice"
+import { DEMO_ENTRIES } from "../src/stores/slices/createKnowledgeSlice"
+import { DEMO_ROUTINES } from "../src/stores/slices/createRoutineSlice"
+import { DEMO_TASKS } from "../src/stores/slices/createSpacesSlice"
+
 describe("Neev Family Operating System Stores & Intelligent Slices", () => {
-  it("initializes family household, multigenerational members, and pets in root store", () => {
+  it("initializes fresh state cleanly without dummy data and can load demo fixtures on request", () => {
+    const initialState = useFamilyStore.getState()
+    // Fresh state must start completely clean for real accounts
+    expect(initialState.household.name).toBe("")
+    expect(initialState.members.length).toBe(0)
+
+    // Load demo fixtures explicitly for subsequent store tests
+    useRootStore.setState({
+      household: DEMO_HOUSEHOLD,
+      members: DEMO_MEMBERS,
+      functions: DEMO_FUNCTIONS,
+      intentions: DEMO_INTENTIONS,
+      entries: DEMO_ENTRIES,
+      routines: DEMO_ROUTINES,
+      tasks: DEMO_TASKS,
+    })
+
     const state = useFamilyStore.getState()
     expect(state.household.name).toBe("Chakraborty Family Sanctuary")
     expect(state.members.length).toBeGreaterThan(0)

@@ -54,9 +54,11 @@ export interface SpacesSlice {
   addMeeting: (meeting: Omit<SpaceMeeting, "id" | "calendarSynced">) => void
   dismissBriefing: (id: string) => void
   generateAiBriefing: (context: "school_prep" | "doctor_visit" | "career_interview" | "family_event") => void
+  resetSpacesToClean: () => void
+  loadDemoSpaces: () => void
 }
 
-export const INITIAL_TASKS: SpaceTask[] = [
+export const DEMO_TASKS: SpaceTask[] = [
   // Personal Space Tasks (Confidential)
   {
     id: "tsk-p1",
@@ -136,7 +138,7 @@ export const INITIAL_TASKS: SpaceTask[] = [
   },
 ]
 
-export const INITIAL_MEETINGS: SpaceMeeting[] = [
+export const DEMO_MEETINGS: SpaceMeeting[] = [
   {
     id: "mtg-1",
     title: "Staff Engineering Architecture Interview (Round 3)",
@@ -172,7 +174,7 @@ export const INITIAL_MEETINGS: SpaceMeeting[] = [
   },
 ]
 
-export const INITIAL_BRIEFINGS: AiBriefing[] = [
+export const DEMO_BRIEFINGS: AiBriefing[] = [
   {
     id: "ab-1",
     space: "personal",
@@ -217,11 +219,15 @@ export const INITIAL_BRIEFINGS: AiBriefing[] = [
   },
 ]
 
+export const INITIAL_TASKS = DEMO_TASKS
+export const INITIAL_MEETINGS = DEMO_MEETINGS
+export const INITIAL_BRIEFINGS = DEMO_BRIEFINGS
+
 export const createSpacesSlice: ImmerStateCreator<SpacesSlice> = (set) => ({
   currentSpace: "nuclear",
-  tasks: INITIAL_TASKS,
-  meetings: INITIAL_MEETINGS,
-  aiBriefings: INITIAL_BRIEFINGS,
+  tasks: [],
+  meetings: [],
+  aiBriefings: [],
 
   setSpace: (space) =>
     set((state) => {
@@ -330,5 +336,19 @@ export const createSpacesSlice: ImmerStateCreator<SpacesSlice> = (set) => ({
         contextTag: context,
         timestamp: "Just now",
       })
+    }),
+
+  resetSpacesToClean: () =>
+    set((state) => {
+      state.tasks = []
+      state.meetings = []
+      state.aiBriefings = []
+    }),
+
+  loadDemoSpaces: () =>
+    set((state) => {
+      state.tasks = DEMO_TASKS
+      state.meetings = DEMO_MEETINGS
+      state.aiBriefings = DEMO_BRIEFINGS
     }),
 })

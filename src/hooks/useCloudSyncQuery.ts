@@ -14,9 +14,15 @@ import type { FamilyIntention } from "@/stores/slices/createIntentionsSlice"
 import type { KnowledgeEntry } from "@/stores/slices/createKnowledgeSlice"
 import type { FamilyRoutineItem } from "@/stores/slices/createRoutineSlice"
 
+function useActiveHouseholdId(): string {
+  const user = useRootStore((s) => s.user)
+  const household = useRootStore((s) => s.household)
+  return household?.id || (user?.uid ? `household_${user.uid}` : "household_local")
+}
+
 export function useSyncMemberMutation() {
   const queryClient = useQueryClient()
-  const householdId = useRootStore((s) => s.household?.id) || "sharma_household_root"
+  const householdId = useActiveHouseholdId()
 
   return useMutation({
     mutationFn: (member: FamilyMember) => resilientNetworkClient.syncMember(householdId, member),
@@ -31,7 +37,7 @@ export function useSyncMemberMutation() {
 
 export function useSyncFunctionMutation() {
   const queryClient = useQueryClient()
-  const householdId = useRootStore((s) => s.household?.id) || "sharma_household_root"
+  const householdId = useActiveHouseholdId()
 
   return useMutation({
     mutationFn: (fn: FamilyFunction) => resilientNetworkClient.syncFunction(householdId, fn),
@@ -46,7 +52,7 @@ export function useSyncFunctionMutation() {
 
 export function useSyncIntentionMutation() {
   const queryClient = useQueryClient()
-  const householdId = useRootStore((s) => s.household?.id) || "sharma_household_root"
+  const householdId = useActiveHouseholdId()
 
   return useMutation({
     mutationFn: (intention: FamilyIntention) =>
@@ -62,7 +68,7 @@ export function useSyncIntentionMutation() {
 
 export function useSyncKnowledgeMutation() {
   const queryClient = useQueryClient()
-  const householdId = useRootStore((s) => s.household?.id) || "sharma_household_root"
+  const householdId = useActiveHouseholdId()
 
   return useMutation({
     mutationFn: (entry: KnowledgeEntry) => resilientNetworkClient.syncKnowledge(householdId, entry),
@@ -77,7 +83,7 @@ export function useSyncKnowledgeMutation() {
 
 export function useSyncRoutineMutation() {
   const queryClient = useQueryClient()
-  const householdId = useRootStore((s) => s.household?.id) || "sharma_household_root"
+  const householdId = useActiveHouseholdId()
 
   return useMutation({
     mutationFn: (routine: FamilyRoutineItem) =>

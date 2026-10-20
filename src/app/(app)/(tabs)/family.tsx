@@ -9,6 +9,7 @@ import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
+import { SanctuaryHeader, SanctuaryLargeTitle } from "@/components/ui/SanctuaryHeader"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
@@ -27,6 +28,8 @@ import { useFamilyNetworkStore, type KinshipType } from "@/stores/useFamilyNetwo
 import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useColors } from "@/theme/useTheme"
+import { FamilyMemberDetailSheet } from "@/components/family/FamilyMemberDetailSheet"
+import { FamilyPhotoBoothModal } from "@/components/family/FamilyPhotoBoothModal"
 
 const KINSHIP_OPTIONS: { relation: KinshipType; label: string }[] = [
   { relation: "parent", label: "Parent of" },
@@ -120,8 +123,19 @@ export default function FamilyScreen() {
   const [newClusterName, setNewClusterName] = useState("")
   const [newClusterDesc, setNewClusterDesc] = useState("")
   const [newClusterColor, setNewClusterColor] = useState("#8B5CF6")
+  const [selectedDetailMember, setSelectedDetailMember] = useState<FamilyMember | null>(null)
+  const [photoBoothVisible, setPhotoBoothVisible] = useState(false)
 
-  const activeRealm = realms.find((r) => r.id === activeRealmId) || realms[0]
+  const fallbackRealm = {
+    id: "realm_primary",
+    name: "Ancestral Realm",
+    city: "Sanctuary",
+    establishedYear: 1980,
+    motto: "Love, respect, and mutual shelter",
+    ownerId: "usr_self",
+    isPrimary: true,
+  }
+  const activeRealm = realms.find((r) => r.id === activeRealmId) || realms[0] || fallbackRealm
 
   // Filter members based on active cluster
   const currentCluster = clusters.find((c) => c.type === activeClusterType)
@@ -270,7 +284,14 @@ export default function FamilyScreen() {
     const memberClusters = clusters.filter((c) => c.memberIds.includes(m.id))
 
     return (
-      <Card key={m.id} style={[styles.memberCard, { backgroundColor: colors.surface }]}>
+      <PressableScale
+        key={m.id}
+        onPress={() => {
+          void Haptics.selectionAsync()
+          setSelectedDetailMember(m)
+        }}
+      >
+        <Card style={[styles.memberCard, { backgroundColor: colors.surface }]}>
         <View style={styles.memberCardTop}>
           <View style={[styles.avatarCircle, { backgroundColor: m.avatarColor }]}>
             <AppText style={styles.avatarText}>{m.avatarText}</AppText>
@@ -400,7 +421,8 @@ export default function FamilyScreen() {
           </View>
         )}
       </Card>
-    )
+    </PressableScale>
+  )
   }
 
   return (
@@ -408,11 +430,10 @@ export default function FamilyScreen() {
       safeArea
       scrollable
       header={
-        <AppHeader
-          sticky
+        <SanctuaryHeader
+          eyebrow="ANCESTRAL REALM"
           title="Family Sanctuary"
           subtitle={`${activeRealm.name} · ${members.length} Members`}
-          showBack={false}
           rightAction={
             <View style={{ flexDirection: "row", gap: 8 }}>
               <HeaderIconButton
@@ -430,6 +451,10 @@ export default function FamilyScreen() {
         />
       }
     >
+      <SanctuaryLargeTitle
+        title="Family Sanctuary"
+        subtitle={`${activeRealm.name} · ${members.length} Members`}
+      />
       {/* Active Realm Enclave Header (Interactive Switcher) */}
       <PressableScale onPress={() => setRealmModalVisible(true)}>
         <Card style={[styles.householdCard, { backgroundColor: colors.surface }]}>
@@ -583,15 +608,43 @@ export default function FamilyScreen() {
         </View>
       )}
 
-      {/* ── Toolbar: Quick Kinship Link & Claim ── */}
+      {/* ── Toolbar: Quick Family Actions & Gatherings ── */}
       <View style={styles.quickToolsRow}>
+        <PressableScale
+          style={[styles.toolBtn, { backgroundColor: colors.surface }]}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+            void Linking.openURL("https://meet.google.com/new")
+          }}
+        >
+          <Ionicons name="videocam" size={15} color={colors.primary} style={{ marginRight: 6 }} />
+          <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
+            Family Meet
+          </AppText>
+        </PressableScale>
+
+        <PressableScale
+          style={[styles.toolBtn, { backgroundColor: colors.surface }]}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            setPhotoBoothVisible(true)
+          }}
+        >
+          <Ionicons name="camera" size={15} color="#DA7756" style={{ marginRight: 6 }} />
+          <AppText variant="caption" style={{ fontWeight: "700", color: "#DA7756" }}>
+            Photo Booth
+          </AppText>
+        </PressableScale>
+      </View>
+
+      <View style={[styles.quickToolsRow, { marginTop: 8 }]}>
         <PressableScale
           style={[styles.toolBtn, { backgroundColor: colors.surface }]}
           onPress={() => setKinshipModalVisible(true)}
         >
           <Ionicons name="git-branch" size={15} color={colors.primary} style={{ marginRight: 6 }} />
           <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-            Connect Kinship Edge
+            Connect Kinship
           </AppText>
         </PressableScale>
 
@@ -601,7 +654,7 @@ export default function FamilyScreen() {
         >
           <Ionicons name="key" size={15} color="#D97706" style={{ marginRight: 6 }} />
           <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
-            Claim Profile with Code
+            Claim Profile
           </AppText>
         </PressableScale>
       </View>
@@ -620,9 +673,39 @@ export default function FamilyScreen() {
           displayedMembers.map(renderMemberCard)
         ) : (
           <Card style={styles.emptyCard}>
-            <AppText variant="caption" style={{ color: colors.text.muted, textAlign: "center" }}>
-              No members assigned to this cluster yet.
-            </AppText>
+            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+              <Ionicons name="people-outline" size={32} color={colors.text.muted} style={{ marginBottom: 8 }} />
+              <AppText variant="bodyMedium" style={{ fontWeight: "700", textAlign: "center" }}>
+                No Family Members Enrolled Yet
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.text.secondary, textAlign: "center", marginTop: 4, paddingHorizontal: 16 }}>
+                Welcome your children, grandparents, home tutors, or caregivers to start your family network.
+              </AppText>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+                <PressableScale
+                  onPress={() => router.push("/modal/add-member")}
+                  style={[styles.toolBtn, { backgroundColor: colors.primary, paddingHorizontal: 16 }]}
+                >
+                  <Ionicons name="person-add" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <AppText variant="caption" style={{ fontWeight: "700", color: "#FFFFFF" }}>
+                    + Welcome Member
+                  </AppText>
+                </PressableScale>
+                <PressableScale
+                  onPress={() => {
+                    useRootStore.getState().loadDemoFamily?.()
+                    useRootStore.getState().loadDemoNetwork?.()
+                    showToast("Sample Family Preview Loaded", "info")
+                  }}
+                  style={[styles.toolBtn, { backgroundColor: colors.surface2, paddingHorizontal: 16 }]}
+                >
+                  <Ionicons name="play-outline" size={15} color={colors.primary} style={{ marginRight: 6 }} />
+                  <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+                    Preview Sample
+                  </AppText>
+                </PressableScale>
+              </View>
+            </View>
           </Card>
         )}
       </View>
@@ -973,6 +1056,20 @@ export default function FamilyScreen() {
           <AppButton title="Create Circle" onPress={handleAddCluster} variant="primary" />
         </View>
       </AppBottomSheetModal>
+
+      {/* ── Family Member Detail Sheet ── */}
+      <FamilyMemberDetailSheet
+        visible={selectedDetailMember !== null}
+        member={selectedDetailMember}
+        onClose={() => setSelectedDetailMember(null)}
+        onSelectRelative={(rel) => setSelectedDetailMember(rel)}
+      />
+
+      {/* ── Family Photo Booth Modal ── */}
+      <FamilyPhotoBoothModal
+        visible={photoBoothVisible}
+        onClose={() => setPhotoBoothVisible(false)}
+      />
     </ScreenContainer>
   )
 }

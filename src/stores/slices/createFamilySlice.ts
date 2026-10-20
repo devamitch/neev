@@ -1,6 +1,6 @@
 import type { ImmerStateCreator } from "../types"
 
-export type FamilyRole = "elder" | "parent" | "youth" | "pet"
+export type FamilyRole = "elder" | "parent" | "youth" | "child" | "tutor" | "caregiver" | "pet"
 
 export interface FamilyMember {
   id: string
@@ -15,6 +15,21 @@ export interface FamilyMember {
   favoriteTreat?: string
   superpower?: string
   notes?: string
+
+  // Supervised Child fields (managed by parents/elders)
+  guardianIds?: string[]
+  schoolGrade?: string
+  learningGoals?: string[]
+
+  // Home Tutor fields (classes & homework)
+  subjectsTaught?: string[]
+  tutoringSchedule?: string
+  assignedChildIds?: string[]
+
+  // Nanny / Caregiver fields (daily care & routines)
+  caregiverType?: "nanny" | "elder_care" | "home_nurse"
+  careSchedule?: string
+  caredMemberIds?: string[]
 }
 
 export interface HouseholdInfo {
@@ -31,7 +46,7 @@ export interface HouseholdInfo {
  */
 export function isMemberUnderage(member?: FamilyMember | null): boolean {
   if (!member) return false
-  if (member.role === "youth") return true
+  if (member.role === "youth" || member.role === "child") return true
   if (member.dateOfBirth) {
     const birthYear = new Date(member.dateOfBirth).getFullYear()
     const currentYear = new Date().getFullYear()
@@ -49,12 +64,15 @@ export function getMemberPermissions(member?: FamilyMember | null) {
     return { canEdit: false, canDelete: false, canInvite: false, canManageSettings: false, isReadOnly: true }
   }
   const underage = isMemberUnderage(member)
+  const isTutorOrCaregiver = member.role === "tutor" || member.role === "caregiver"
   return {
-    canEdit: !underage,
+    canEdit: !underage && !isTutorOrCaregiver,
     canDelete: !underage && (member.role === "parent" || member.role === "elder"),
-    canInvite: !underage,
+    canInvite: !underage && (member.role === "parent" || member.role === "elder"),
     canManageSettings: !underage && member.role === "parent",
-    isReadOnly: underage,
+    isReadOnly: underage || isTutorOrCaregiver,
+    isSupervisedChild: member.role === "child" || member.role === "youth",
+    isTutorOrCaregiver,
   }
 }
 
@@ -66,9 +84,12 @@ export interface FamilySlice {
   removeMember: (id: string) => void
   updateMember: (id: string, updates: Partial<FamilyMember>) => void
   setActiveMember: (id: string) => void
+  setHousehold: (household: Partial<HouseholdInfo>) => void
+  resetFamilyToClean: () => void
+  loadDemoFamily: () => void
 }
 
-export const INITIAL_MEMBERS: FamilyMember[] = [
+export const DEMO_MEMBERS: FamilyMember[] = [
   {
     id: "m-1",
     name: "Shyamal Chakraborty",
@@ -133,6 +154,9 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
     favoriteTreat: "Mango Kulfi & Homemade French Toast",
     superpower: "Lego architecture mastermind & Simba's best friend",
     notes: "Class 4 · Passionate about astronomy, cricket, and science projects.",
+    schoolGrade: "Class 4",
+    guardianIds: ["m-3", "m-4"],
+    learningGoals: ["Astronomy Explorer", "Cricket Practice", "Mathematics Mastery"],
   },
   {
     id: "m-6",
@@ -148,20 +172,33 @@ export const INITIAL_MEMBERS: FamilyMember[] = [
   },
 ]
 
+export const INITIAL_MEMBERS = DEMO_MEMBERS
+
+export const DEMO_HOUSEHOLD: HouseholdInfo = {
+  name: "Chakraborty Family Sanctuary",
+  motto: "Ground in love, grow with laughter",
+  city: "Bengaluru & Kolkata",
+  establishedYear: 1978,
+}
+
 export const createFamilySlice: ImmerStateCreator<FamilySlice> = (set) => ({
+  // Production accounts and fresh installs start with clean, empty family state
   household: {
-    name: "Chakraborty Family Sanctuary",
-    motto: "Ground in love, grow with laughter",
-    city: "Bengaluru & Kolkata",
-    establishedYear: 1978,
+    name: "",
+    motto: "",
+    city: "",
+    establishedYear: new Date().getFullYear(),
   },
-  members: INITIAL_MEMBERS,
-  activeMemberId: "m-3",
+  members: [],
+  activeMemberId: null,
 
   addMember: (member) => {
     const id = member.id || `m-${Date.now()}`
     set((state) => {
       state.members.push({ ...member, id })
+      if (!state.activeMemberId) {
+        state.activeMemberId = id
+      }
     })
     return id
   },
@@ -169,6 +206,9 @@ export const createFamilySlice: ImmerStateCreator<FamilySlice> = (set) => ({
   removeMember: (id) =>
     set((state) => {
       state.members = state.members.filter((m) => m.id !== id)
+      if (state.activeMemberId === id) {
+        state.activeMemberId = state.members[0]?.id || null
+      }
     }),
 
   updateMember: (id, updates) =>
@@ -182,5 +222,29 @@ export const createFamilySlice: ImmerStateCreator<FamilySlice> = (set) => ({
   setActiveMember: (id) =>
     set((state) => {
       state.activeMemberId = id
+    }),
+
+  setHousehold: (household) =>
+    set((state) => {
+      state.household = { ...state.household, ...household }
+    }),
+
+  resetFamilyToClean: () =>
+    set((state) => {
+      state.household = {
+        name: "",
+        motto: "",
+        city: "",
+        establishedYear: new Date().getFullYear(),
+      }
+      state.members = []
+      state.activeMemberId = null
+    }),
+
+  loadDemoFamily: () =>
+    set((state) => {
+      state.household = DEMO_HOUSEHOLD
+      state.members = DEMO_MEMBERS
+      state.activeMemberId = "m-3"
     }),
 })

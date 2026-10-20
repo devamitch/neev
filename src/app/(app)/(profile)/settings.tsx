@@ -4,15 +4,17 @@ import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
-import { AppHeader } from "@/components/ui/AppHeader"
+import { SanctuaryHeader, SanctuaryLargeTitle } from "@/components/ui/SanctuaryHeader"
 import { AppText } from "@/components/ui/AppText"
 import { AppButton } from "@/components/ui/AppButton"
 import { Card } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SectionHeader, ListGroup, ListRow } from "@/components/ui/Section"
+import { PressableScale } from "@/components/ui/PressableScale"
 import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
-import { useColors } from "@/theme/useTheme"
+import { ByokModal } from "@/components/settings/ByokModal"
+import { useTheme } from "@/theme/useTheme"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
@@ -25,7 +27,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { offlineMapTileService } from "@/services/location/offlineMapTileService"
 
 export default function SettingsScreen() {
-  const colors = useColors()
+  const { colors, themePalette, setThemePalette } = useTheme()
+  const [byokModalVisible, setByokModalVisible] = useState(false)
 
   const user = useRootStore((s) => s.user)
   const signOut = useRootStore((s) => s.signOut)
@@ -131,14 +134,16 @@ export default function SettingsScreen() {
       safeArea
       scrollable
       header={
-        <AppHeader
-          sticky
-          title="Sanctuary Settings"
-          subtitle="Household Preferences & Multi-User Cloud Hub"
+        <SanctuaryHeader
           showBack
+          title="Sanctuary Settings"
         />
       }
     >
+      <SanctuaryLargeTitle
+        title="Sanctuary Settings"
+        subtitle="Household Preferences & Multi-User Cloud Hub"
+      />
       {/* Active User Account & Profile */}
       <Card level={2} style={styles.accountCard}>
         <View style={styles.cardHeader}>
@@ -178,6 +183,74 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Card>
+
+      {/* Sanctuary Theme & Color Palette Flow */}
+      <SectionHeader title="SANCTUARY THEME & COLOR PALETTE" />
+      <View style={styles.themeRow}>
+        <PressableScale
+          style={[
+            styles.themeCard,
+            {
+              backgroundColor: themePalette === "pista_terracotta" ? colors.surface : colors.surface2,
+              borderColor: themePalette === "pista_terracotta" ? "#6B856E" : colors.border,
+              borderWidth: themePalette === "pista_terracotta" ? 1.5 : 1,
+            },
+          ]}
+          onPress={() => {
+            void Haptics.selectionAsync()
+            setThemePalette("pista_terracotta")
+            showToast({ message: "Switched to Pista Sanctuary with Terracotta Accent", type: "success" })
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <View style={[styles.paletteSwatch, { backgroundColor: "#6B856E" }]} />
+              <View style={[styles.paletteSwatch, { backgroundColor: "#DA7756" }]} />
+            </View>
+            {themePalette === "pista_terracotta" && (
+              <Ionicons name="checkmark-circle" size={18} color="#6B856E" />
+            )}
+          </View>
+          <AppText variant="caption" style={{ fontWeight: "700", marginTop: 8, color: colors.text.primary }}>
+            Pista Sanctuary
+          </AppText>
+          <AppText style={{ fontSize: 11, color: colors.text.muted, marginTop: 2 }}>
+            Pista Primary • Terracotta Accent
+          </AppText>
+        </PressableScale>
+
+        <PressableScale
+          style={[
+            styles.themeCard,
+            {
+              backgroundColor: themePalette === "terracotta_pista" ? colors.surface : colors.surface2,
+              borderColor: themePalette === "terracotta_pista" ? "#DA7756" : colors.border,
+              borderWidth: themePalette === "terracotta_pista" ? 1.5 : 1,
+            },
+          ]}
+          onPress={() => {
+            void Haptics.selectionAsync()
+            setThemePalette("terracotta_pista")
+            showToast({ message: "Switched to Terracotta Warmth with Pista Accent", type: "success" })
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <View style={[styles.paletteSwatch, { backgroundColor: "#DA7756" }]} />
+              <View style={[styles.paletteSwatch, { backgroundColor: "#6B856E" }]} />
+            </View>
+            {themePalette === "terracotta_pista" && (
+              <Ionicons name="checkmark-circle" size={18} color="#DA7756" />
+            )}
+          </View>
+          <AppText variant="caption" style={{ fontWeight: "700", marginTop: 8, color: colors.text.primary }}>
+            Terracotta Warmth
+          </AppText>
+          <AppText style={{ fontSize: 11, color: colors.text.muted, marginTop: 2 }}>
+            Terracotta Primary • Pista Accent
+          </AppText>
+        </PressableScale>
+      </View>
 
       {/* Cloud Backend & Scaled Multi-User Sync */}
       <SectionHeader title="SUPABASE & GOOGLE CLOUD BACKEND" />
@@ -238,6 +311,7 @@ export default function SettingsScreen() {
               ? `${credentials[0].provider.toUpperCase()} (${credentials[0].maskedKey})`
               : "Google Gemini, OpenAI, or Groq API Key"
           }
+          onPress={() => setByokModalVisible(true)}
           trailing={
             <Badge
               label={deterministicOnlyMode ? "Offline Math" : credentials.length > 0 ? "Configured" : "Free Default"}
@@ -344,11 +418,28 @@ export default function SettingsScreen() {
           onPress={handleSignOut}
         />
       </ListGroup>
+
+      <ByokModal visible={byokModalVisible} onClose={() => setByokModalVisible(false)} />
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
+  themeRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  themeCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 16,
+  },
+  paletteSwatch: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+  },
   accountCard: {
     marginBottom: 16,
     padding: 16,

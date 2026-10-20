@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react"
 import type { SharedValue } from "react-native-reanimated"
 import { useAnimatedScrollHandler } from "react-native-reanimated"
+import type { AppHeaderProps } from "./AppHeader"
 
 export type ScreenScrollHandler = ReturnType<typeof useAnimatedScrollHandler>
 
@@ -9,6 +10,8 @@ export interface ScreenScrollContextValue {
   onRootScroll: ScreenScrollHandler
   clearance: number
   gutter: number
+  headerProps?: AppHeaderProps | null
+  contentTop?: number
 }
 
 export const ScreenScrollContext = createContext<ScreenScrollContextValue | null>(null)
@@ -30,6 +33,7 @@ export function useScreenRootScrollProps() {
       clearance: 24,
       gutter: 20,
       scrollY: null,
+      contentTop: 0,
     }
   }
   return {
@@ -38,5 +42,6 @@ export function useScreenRootScrollProps() {
     clearance: context.clearance,
     gutter: context.gutter,
     scrollY: context.scrollY,
+    contentTop: context.contentTop ?? 0,
   }
 }

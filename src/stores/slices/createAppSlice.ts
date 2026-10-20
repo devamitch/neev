@@ -16,9 +16,12 @@ export interface GameSessionSummary {
   completedAt: string
 }
 
+export type ThemePalette = "pista_terracotta" | "terracotta_pista"
+
 export interface AppSlice {
   themePreference: ThemePreference
   theme: "light" | "dark"
+  themePalette: ThemePalette
   hasCompletedOnboarding: boolean
   notificationsEnabled: boolean
   intentionNudgesEnabled: boolean
@@ -26,6 +29,7 @@ export interface AppSlice {
   gameHistory: GameSessionSummary[]
   setThemePreference: (pref: ThemePreference) => void
   setTheme: (theme: "light" | "dark") => void
+  setThemePalette: (palette: ThemePalette) => void
   setHasCompletedOnboarding: (completed: boolean) => void
   setNotificationsEnabled: (enabled: boolean) => void
   setIntentionNudgesEnabled: (enabled: boolean) => void
@@ -39,6 +43,7 @@ import type { ImmerStateCreator } from "../types"
 export const createAppSlice: ImmerStateCreator<AppSlice> = (set) => ({
   themePreference: "system",
   theme: "light",
+  themePalette: "pista_terracotta",
   hasCompletedOnboarding: false,
   notificationsEnabled: true,
   intentionNudgesEnabled: true,
@@ -52,6 +57,10 @@ export const createAppSlice: ImmerStateCreator<AppSlice> = (set) => ({
   setTheme: (theme) =>
     set((state) => {
       state.theme = theme
+    }),
+  setThemePalette: (themePalette) =>
+    set((state) => {
+      state.themePalette = themePalette
     }),
   setHasCompletedOnboarding: (hasCompletedOnboarding) =>
     set((state) => {

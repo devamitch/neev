@@ -16,7 +16,9 @@ import type { SpaceTask, SpaceType } from "@/stores/useSpacesStore"
 import { useRootStore } from "@/stores/useRootStore"
 import type { MindfulNotificationCategory } from "@/stores/slices/createMindfulNotificationsSlice"
 
-// Safe handler registration for foreground alerts
+// Safe handler registration for foreground alerts:
+// Silences disruptive OS heads-up banners when the app is active in foreground;
+// In-app Notification Tray provides beautiful serene mindful alerts instead.
 try {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({

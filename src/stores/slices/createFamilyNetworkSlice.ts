@@ -101,9 +101,11 @@ export interface FamilyNetworkSlice {
   addBridgeRecord: (bridge: FamilyBridge) => void
   setInvitations: (invitations: FamilyInvitation[]) => void
   addInvitationRecord: (invitation: FamilyInvitation) => void
+  resetNetworkToClean: () => void
+  loadDemoNetwork: () => void
 }
 
-export const INITIAL_REALMS: FamilyRealm[] = [
+export const DEMO_REALMS: FamilyRealm[] = [
   {
     id: "realm_primary_chakraborty",
     name: "Chakraborty Family Sanctuary",
@@ -124,7 +126,7 @@ export const INITIAL_REALMS: FamilyRealm[] = [
   },
 ]
 
-export const INITIAL_CLUSTERS: FamilyCluster[] = [
+export const DEMO_CLUSTERS: FamilyCluster[] = [
   {
     id: "c-nuclear",
     realmId: "realm_primary_chakraborty",
@@ -177,7 +179,7 @@ export const INITIAL_CLUSTERS: FamilyCluster[] = [
   },
 ]
 
-export const INITIAL_KINSHIP_EDGES: KinshipEdge[] = [
+export const DEMO_KINSHIP_EDGES: KinshipEdge[] = [
   {
     id: "ke-1",
     realmId: "realm_primary_chakraborty",
@@ -228,7 +230,7 @@ export const INITIAL_KINSHIP_EDGES: KinshipEdge[] = [
   },
 ]
 
-export const INITIAL_BRIDGES: FamilyBridge[] = [
+export const DEMO_BRIDGES: FamilyBridge[] = [
   {
     id: "b-senroy-1",
     fromRealmId: "realm_primary_chakraborty",
@@ -240,7 +242,7 @@ export const INITIAL_BRIDGES: FamilyBridge[] = [
   },
 ]
 
-export const INITIAL_INVITATIONS: FamilyInvitation[] = [
+export const DEMO_INVITATIONS: FamilyInvitation[] = [
   {
     id: "inv-01",
     realmId: "realm_primary_chakraborty",
@@ -252,14 +254,20 @@ export const INITIAL_INVITATIONS: FamilyInvitation[] = [
   },
 ]
 
+export const INITIAL_REALMS = DEMO_REALMS
+export const INITIAL_CLUSTERS = DEMO_CLUSTERS
+export const INITIAL_KINSHIP_EDGES = DEMO_KINSHIP_EDGES
+export const INITIAL_BRIDGES = DEMO_BRIDGES
+export const INITIAL_INVITATIONS = DEMO_INVITATIONS
+
 export const createFamilyNetworkSlice: ImmerStateCreator<FamilyNetworkSlice> = (set, get) => ({
-  realms: INITIAL_REALMS,
-  activeRealmId: "realm_primary_chakraborty",
-  clusters: INITIAL_CLUSTERS,
+  realms: [],
+  activeRealmId: "",
+  clusters: [],
   activeClusterType: "all",
-  kinshipEdges: INITIAL_KINSHIP_EDGES,
-  bridges: INITIAL_BRIDGES,
-  invitations: INITIAL_INVITATIONS,
+  kinshipEdges: [],
+  bridges: [],
+  invitations: [],
 
   setActiveRealm: (realmId) =>
     set((state) => {
@@ -446,5 +454,27 @@ export const createFamilyNetworkSlice: ImmerStateCreator<FamilyNetworkSlice> = (
       } else {
         state.invitations.push(invitation)
       }
+    }),
+
+  resetNetworkToClean: () =>
+    set((state) => {
+      state.realms = []
+      state.activeRealmId = ""
+      state.clusters = []
+      state.activeClusterType = "all"
+      state.kinshipEdges = []
+      state.bridges = []
+      state.invitations = []
+    }),
+
+  loadDemoNetwork: () =>
+    set((state) => {
+      state.realms = DEMO_REALMS
+      state.activeRealmId = "realm_primary_chakraborty"
+      state.clusters = DEMO_CLUSTERS
+      state.activeClusterType = "all"
+      state.kinshipEdges = DEMO_KINSHIP_EDGES
+      state.bridges = DEMO_BRIDGES
+      state.invitations = DEMO_INVITATIONS
     }),
 })

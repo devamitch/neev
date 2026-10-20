@@ -9,7 +9,7 @@
  * - Haptic feedback for tactile mindfulness
  */
 
-import React from "react"
+import React, { useEffect } from "react"
 import { StyleSheet, View, Pressable } from "react-native"
 import { useRouter } from "expo-router"
 import * as Haptics from "expo-haptics"
@@ -22,14 +22,16 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { AppText } from "./AppText"
 import { SquircleSurface } from "./SquircleSurface"
 
-const SWIPE_DISMISS_THRESHOLD = 90
+const SWIPE_DISMISS_THRESHOLD = 30
 
 export function MindfulNotificationBanner() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { isAuthenticated, mindfulNotifications, activeBannerNotificationId, dismissMindfulNotification } =
     useRootStore(
       useShallow((s) => ({
@@ -46,8 +48,8 @@ export function MindfulNotificationBanner() {
       )
     : undefined
 
-  const translateX = useSharedValue(0)
-  const opacity = useSharedValue(1)
+  const translateY = useSharedValue(-140)
+  const opacity = useSharedValue(0)
 
   const handleDismiss = () => {
     if (activeNotif) {
@@ -56,28 +58,48 @@ export function MindfulNotificationBanner() {
     }
   }
 
+  useEffect(() => {
+    if (activeNotif) {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      translateY.value = withSpring(0, { damping: 20, stiffness: 300 })
+      opacity.value = withTiming(1, { duration: 180 })
+
+      // Auto dismiss after 4.5 seconds to never block header area permanently
+      const timer = setTimeout(() => {
+        translateY.value = withTiming(-140, { duration: 200 })
+        opacity.value = withTiming(0, { duration: 200 }, () => {
+          runOnJS(handleDismiss)()
+        })
+      }, 4500)
+
+      return () => clearTimeout(timer)
+    } else {
+      translateY.value = -140
+      opacity.value = 0
+      return undefined
+    }
+  }, [activeNotif])
+
   const pan = Gesture.Pan()
-    .activeOffsetX([-15, 15])
+    .activeOffsetY([-10, 10])
     .onUpdate((e) => {
-      translateX.value = e.translationX
+      if (e.translationY < 0) {
+        translateY.value = e.translationY
+      }
     })
     .onEnd((e) => {
-      const isPastThreshold = Math.abs(e.translationX) > SWIPE_DISMISS_THRESHOLD
-      const isFlung = Math.abs(e.velocityX) > 700
-
-      if (isPastThreshold || isFlung) {
-        const direction = e.translationX < 0 ? -1 : 1
-        translateX.value = withTiming(direction * 450, { duration: 180 })
+      if (e.translationY < -SWIPE_DISMISS_THRESHOLD || e.velocityY < -400) {
+        translateY.value = withTiming(-140, { duration: 180 })
         opacity.value = withTiming(0, { duration: 180 }, () => {
           runOnJS(handleDismiss)()
         })
       } else {
-        translateX.value = withSpring(0, { damping: 20, stiffness: 350 })
+        translateY.value = withSpring(0, { damping: 20, stiffness: 350 })
       }
     })
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
   }))
 
@@ -92,24 +114,30 @@ export function MindfulNotificationBanner() {
   }
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, { top: insets.top + 8 }]} pointerEvents="box-none">
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.bannerWrapper, animatedStyle]}>
           <SquircleSurface
             radius={20}
             smoothing={0.7}
-            fill="#FDFBF7"
-            stroke="rgba(217, 119, 6, 0.22)"
+            fill="#FFFDF9"
+            stroke="rgba(218, 119, 86, 0.25)"
             strokeWidth={1}
             style={styles.surface}
           >
             <View style={styles.contentRow}>
+              {/* Tone Icon Tile */}
+              <View style={styles.iconTile}>
+                <Ionicons name="sparkles" size={17} color="#DA7756" />
+              </View>
+
               {/* Notification Body */}
               <View style={styles.textColumn}>
                 <View style={styles.headerRow}>
                   <AppText variant="label" style={styles.categoryPill}>
                     {activeNotif.space ? activeNotif.space.toUpperCase() : "SANCTUARY"}
                   </AppText>
+                  <AppText style={styles.dotSeparator}>•</AppText>
                   <AppText variant="caption" style={styles.timeText}>
                     Mindful Nudge
                   </AppText>
@@ -144,11 +172,11 @@ export function MindfulNotificationBanner() {
                 hitSlop={12}
                 style={({ pressed }) => [
                   styles.dismissButton,
-                  pressed && { opacity: 0.6 },
+                  pressed && { opacity: 0.6, transform: [{ scale: 0.92 }] },
                 ]}
                 accessibilityLabel="Dismiss notification"
               >
-                <Ionicons name="close" size={16} color="#78716C" />
+                <Ionicons name="close" size={15} color="#78716C" />
               </Pressable>
             </View>
           </SquircleSurface>
@@ -161,40 +189,56 @@ export function MindfulNotificationBanner() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: 54,
     left: 16,
     right: 16,
     zIndex: 9999,
+    alignItems: "center",
   },
   bannerWrapper: {
+    width: "100%",
+    maxWidth: 440,
     shadowColor: "#1C1917",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 9,
   },
   surface: {
-    padding: 14,
+    padding: 13,
   },
   contentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
+  iconTile: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(218, 119, 86, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 11,
+    marginTop: 2,
+  },
   textColumn: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: 6,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
-    gap: 8,
+    marginBottom: 3,
+    gap: 6,
   },
   categoryPill: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
-    color: "#D97706",
-    letterSpacing: 0.6,
+    color: "#DA7756",
+    letterSpacing: 0.7,
+  },
+  dotSeparator: {
+    fontSize: 9,
+    color: "#D6D3D1",
   },
   timeText: {
     fontSize: 11,
@@ -202,31 +246,32 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: 14,
-    color: "#292524",
+    fontWeight: "700",
+    color: "#1C1917",
     marginBottom: 2,
   },
   bodyText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: "#57534E",
     lineHeight: 17,
   },
   actionButton: {
     alignSelf: "flex-start",
     marginTop: 8,
-    backgroundColor: "rgba(217, 119, 6, 0.08)",
+    backgroundColor: "rgba(218, 119, 86, 0.10)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   actionText: {
     fontSize: 11,
-    color: "#B45309",
-    fontWeight: "600",
+    color: "#DA7756",
+    fontWeight: "700",
   },
   dismissButton: {
     padding: 6,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    backgroundColor: "rgba(0,0,0,0.05)",
     borderRadius: 14,
-    marginTop: -2,
+    marginTop: -1,
   },
 })

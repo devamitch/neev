@@ -12,6 +12,7 @@ export const spacing = SetuSpacing
 export const radius = SetuRadius
 
 export type ThemePreference = "system" | "light" | "dark"
+export type { ThemePalette } from "./setuColors"
 
 export interface UseThemeResult {
   colors: ThemeColors
@@ -22,6 +23,8 @@ export interface UseThemeResult {
   scheme: "light" | "dark"
   themePreference: ThemePreference
   setThemePreference: (pref: ThemePreference) => void
+  themePalette: "pista_terracotta" | "terracotta_pista"
+  setThemePalette: (palette: "pista_terracotta" | "terracotta_pista") => void
 }
 
 /**
@@ -39,9 +42,10 @@ function resolveScheme(_pref: ThemePreference, _system: string | null | undefine
  */
 export function useColors(): ThemeColors {
   const themePreference = useRootStore((s) => s.themePreference)
+  const themePalette = useRootStore((s) => s.themePalette)
   const system = useColorScheme()
   const scheme = resolveScheme(themePreference as ThemePreference, system)
-  return useMemo(() => colorsFor(scheme), [scheme])
+  return useMemo(() => colorsFor(scheme, themePalette), [scheme, themePalette])
 }
 
 /**
@@ -53,15 +57,17 @@ export function useThemedStyles<T>(factory: (colors: ThemeColors) => T): T {
 }
 
 export function useTheme(): UseThemeResult {
-  const { themePreference, setThemePreference } = useRootStore(
+  const { themePreference, setThemePreference, themePalette, setThemePalette } = useRootStore(
     useShallow((s) => ({
       themePreference: s.themePreference,
       setThemePreference: s.setThemePreference,
+      themePalette: s.themePalette,
+      setThemePalette: s.setThemePalette,
     })),
   )
   const system = useColorScheme()
   const scheme = resolveScheme(themePreference as ThemePreference, system)
-  const colors = useMemo(() => colorsFor(scheme), [scheme])
+  const colors = useMemo(() => colorsFor(scheme, themePalette), [scheme, themePalette])
   const gradients = useMemo(() => gradientsFor(colors), [colors])
 
   return {
@@ -73,5 +79,7 @@ export function useTheme(): UseThemeResult {
     scheme,
     themePreference: themePreference as ThemePreference,
     setThemePreference,
+    themePalette: themePalette || "pista_terracotta",
+    setThemePalette,
   }
 }

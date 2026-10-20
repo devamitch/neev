@@ -1,7 +1,8 @@
-import React, { forwardRef } from "react"
-import { SectionList, SectionListProps, StyleSheet, ViewStyle } from "react-native"
+import React, { forwardRef, isValidElement, useMemo } from "react"
+import { SectionList, SectionListProps, StyleSheet, View, ViewStyle } from "react-native"
 import Animated from "react-native-reanimated"
-import { useScreenRootScrollProps } from "./ScreenScrollContext"
+import { useScreenRootScrollProps, useScreenScrollContext } from "./ScreenScrollContext"
+import { CollapsingLargeTitle } from "./CollapsingHeader"
 
 const AnimatedSectionList = Animated.createAnimatedComponent(SectionList)
 
@@ -16,11 +17,16 @@ function ScreenSectionListInner<ItemT, SectionT = any>(
     applyBottomClearance = true,
     contentContainerStyle,
     onScroll,
+    ListHeaderComponent,
     ...rest
   }: ScreenSectionListProps<ItemT, SectionT>,
   ref: React.ForwardedRef<any>,
 ) {
   const rootProps = useScreenRootScrollProps()
+  const scrollContext = useScreenScrollContext()
+  const headerProps = scrollContext?.headerProps
+  const scrollY = scrollContext?.scrollY
+
   const userContent = (StyleSheet.flatten(contentContainerStyle) ?? {}) as ViewStyle
   const paddingBottom = applyBottomClearance
     ? Math.max(
@@ -28,6 +34,30 @@ function ScreenSectionListInner<ItemT, SectionT = any>(
         rootProps.clearance,
       )
     : userContent.paddingBottom
+
+  const combinedHeader = useMemo(() => {
+    const largeTitle =
+      headerProps && scrollY ? (
+        <CollapsingLargeTitle props={headerProps} scrollY={scrollY} />
+      ) : null
+
+    if (!largeTitle) {
+      return ListHeaderComponent
+    }
+
+    const originalHeader = isValidElement(ListHeaderComponent)
+      ? ListHeaderComponent
+      : typeof ListHeaderComponent === "function"
+        ? (ListHeaderComponent as any)()
+        : null
+
+    return (
+      <View>
+        {largeTitle}
+        {originalHeader}
+      </View>
+    )
+  }, [ListHeaderComponent, headerProps, scrollY])
 
   return (
     <AnimatedSectionList
@@ -37,7 +67,11 @@ function ScreenSectionListInner<ItemT, SectionT = any>(
       keyboardDismissMode="on-drag"
       scrollEventThrottle={16}
       onScroll={onScroll ?? rootProps.onScroll}
-      contentContainerStyle={[contentContainerStyle, { paddingBottom }]}
+      ListHeaderComponent={combinedHeader}
+      contentContainerStyle={[
+        contentContainerStyle,
+        { paddingTop: rootProps.contentTop, paddingBottom },
+      ]}
       {...(rest as any)}
     />
   )

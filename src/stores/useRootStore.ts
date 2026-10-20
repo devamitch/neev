@@ -51,12 +51,14 @@ export const useRootStore = create<RootStoreState>()(
       ...createMindfulNotificationsSlice(...a),
     })),
     {
-      name: "neev_root_v2",
+      name: "neev_root_v3",
       storage: createJSONStorage(() => rootMMKVStorage),
       partialize: (state) => ({
         // App Preferences
         themePreference: state.themePreference,
         theme: state.theme,
+        themePalette: state.themePalette,
+        easyMode: state.easyMode,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         notificationsEnabled: state.notificationsEnabled,
         intentionNudgesEnabled: state.intentionNudgesEnabled,
@@ -117,3 +119,23 @@ export const useRootStore = create<RootStoreState>()(
     },
   ),
 )
+
+import { familyLocationService } from "../services/location/familyLocationService"
+
+/**
+ * Resets all slices to a completely clean, unseeded state and clears MMKV storage.
+ * Guarantees zero dummy data appears on fresh accounts, sign-out, or user-initiated reset.
+ */
+export const resetAllToCleanAccount = () => {
+  const store = useRootStore.getState()
+  store.resetFamilyToClean?.()
+  store.resetNetworkToClean?.()
+  store.resetSpacesToClean?.()
+  store.resetScheduleToClean?.()
+  store.resetKnowledgeToClean?.()
+  store.resetRoutineToClean?.()
+  store.resetIntentionsToClean?.()
+  store.resetMindfulNotificationsToClean?.()
+  familyLocationService.clearAllLocations()
+  storage.clearAll()
+}

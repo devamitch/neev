@@ -11,12 +11,16 @@ export interface ToastItem {
   message: string
   type: ToastType
   title?: string
+  actionLabel?: string
+  actionRoute?: string
 }
 
 export interface ToastInput {
   message: string
   type?: ToastType
   title?: string
+  actionLabel?: string
+  actionRoute?: string
 }
 
 export interface AlertOptions {
@@ -35,6 +39,7 @@ export interface UiSlice {
   toasts: ToastItem[]
   alert: AlertOptions | null
   isDrawerOpen: boolean
+  easyMode: boolean
   showToast: (input: string | ToastInput, type?: ToastType) => void
   hideToast: (id: string) => void
   showAlert: (options: AlertOptions) => void
@@ -42,6 +47,8 @@ export interface UiSlice {
   setDrawerOpen: (open: boolean) => void
   openDrawer: () => void
   closeDrawer: () => void
+  setEasyMode: (enabled: boolean) => void
+  toggleEasyMode: () => void
 }
 
 import type { ImmerStateCreator } from "../types"
@@ -50,15 +57,18 @@ export const createUiSlice: ImmerStateCreator<UiSlice> = (set) => ({
   toasts: [],
   alert: null,
   isDrawerOpen: false,
+  easyMode: false,
 
   showToast: (input, maybeType = "info") => {
     const id = Math.random().toString(36).slice(2, 9)
     const message = typeof input === "string" ? input : input.message
     const type = typeof input === "string" ? maybeType : (input.type ?? "info")
     const title = typeof input === "string" ? undefined : input.title
+    const actionLabel = typeof input === "string" ? undefined : input.actionLabel
+    const actionRoute = typeof input === "string" ? undefined : input.actionRoute
 
     set((state) => {
-      state.toasts.push({ id, message, type, title })
+      state.toasts.push({ id, message, type, title, actionLabel, actionRoute })
       if (state.toasts.length > 3) {
         state.toasts.shift()
       }
@@ -99,5 +109,15 @@ export const createUiSlice: ImmerStateCreator<UiSlice> = (set) => ({
   closeDrawer: () =>
     set((state) => {
       state.isDrawerOpen = false
+    }),
+
+  setEasyMode: (enabled) =>
+    set((state) => {
+      state.easyMode = enabled
+    }),
+
+  toggleEasyMode: () =>
+    set((state) => {
+      state.easyMode = !state.easyMode
     }),
 })

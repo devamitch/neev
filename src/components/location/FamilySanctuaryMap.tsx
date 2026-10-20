@@ -1,15 +1,16 @@
+import { Ionicons } from "@expo/vector-icons"
+import * as Haptics from "expo-haptics"
+import { Image } from "expo-image"
 import React, { memo, useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native"
-import { Image } from "expo-image"
-import { Ionicons } from "@expo/vector-icons"
-import * as Haptics from "expo-haptics"
 import Animated, {
   cancelAnimation,
   Easing,
@@ -32,6 +33,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg"
 
+import { FamilyMemberDetailSheet } from "@/components/family/FamilyMemberDetailSheet"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { AppText } from "@/components/ui/AppText"
@@ -39,25 +41,24 @@ import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
 import { PressableScale } from "@/components/ui/PressableScale"
 import {
+  useDownloadOfflineMapMutation,
+  useFamilyLocationsQuery,
+  useOfflineMapPackQuery,
+} from "@/hooks/useFamilyLocationQuery"
+import { googleServicesClient } from "@/services/google/googleServicesClient"
+import {
+  calculateDistanceKm,
   familyLocationService,
+  formatDistance,
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
-import {
-  latLonToTileXY,
-  getTileUrl,
-  TILE_SERVERS,
-} from "@/services/location/offlineMapTileService"
-import {
-  useFamilyLocationsQuery,
-  useOfflineMapPackQuery,
-  useDownloadOfflineMapMutation,
-} from "@/hooks/useFamilyLocationQuery"
-import { googleServicesClient } from "@/services/google/googleServicesClient"
-import { useScheduleStore } from "@/stores/useScheduleStore"
+import { getTileUrl, latLonToTileXY, TILE_SERVERS } from "@/services/location/offlineMapTileService"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useRootStore } from "@/stores/useRootStore"
+import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useColors } from "@/theme/useTheme"
+import { router } from "expo-router"
 
 const MAP_HEIGHT = 220
 const TILE_SIZE = 256
@@ -84,7 +85,8 @@ const DINE_OUT_SUGGESTIONS: DineOutSuggestion[] = [
     distanceMins: 14,
     elderFriendly: true,
     petFriendly: false,
-    aiReason: "Equidistant for family members. Gentle elevator access and quiet acoustic corners loved by grandparents.",
+    aiReason:
+      "Equidistant for family members. Gentle elevator access and quiet acoustic corners loved by grandparents.",
   },
   {
     id: "do-2",
@@ -95,7 +97,8 @@ const DINE_OUT_SUGGESTIONS: DineOutSuggestion[] = [
     distanceMins: 8,
     elderFriendly: true,
     petFriendly: true,
-    aiReason: "Outdoor lawn area allows family pets to join. Right along morning walkway with zero staircase barriers.",
+    aiReason:
+      "Outdoor lawn area allows family pets to join. Right along morning walkway with zero staircase barriers.",
   },
   {
     id: "do-3",
@@ -132,7 +135,11 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const downloadMapMutation = useDownloadOfflineMapMutation()
 
   const [mapMode, setMapMode] = useState<"tile" | "schematic">("tile")
-  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number } | null>(null)
+  const [downloadProgress, setDownloadProgress] = useState<{
+    current: number
+    total: number
+  } | null>(null)
+  const [detailSheetVisible, setDetailSheetVisible] = useState(false)
   const [selectedMember, setSelectedMember] = useState<FamilyLocationData | null>(null)
   const [finderModalVisible, setFinderModalVisible] = useState(false)
   const [fullscreenMapVisible, setFullscreenMapVisible] = useState(false)
@@ -140,6 +147,10 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const [radarScan, setRadarScan] = useState<PhoneRadarScan | null>(null)
   const [isSirenActive, setIsSirenActive] = useState(false)
   const [isStrobeActive, setIsStrobeActive] = useState(false)
+
+  const activeFullMember = useMemo(() => {
+    return familyMembers.find((m) => m.id === selectedMember?.memberId) || null
+  }, [familyMembers, selectedMember])
 
   // Interactive zoom level for real tile map (zoom 14 = neighbourhood level)
   const [tileZoom, setTileZoom] = useState(14)
@@ -154,7 +165,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   const radarPulse = useSharedValue(1)
 
   const locations = useMemo(() => {
-    return queryLocations.length > 0 ? queryLocations : familyLocationService.getAllFamilyLocations()
+    return queryLocations.length > 0
+      ? queryLocations
+      : familyLocationService.getAllFamilyLocations()
   }, [queryLocations])
 
   useEffect(() => {
@@ -185,10 +198,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   useEffect(() => {
     if (isStrobeActive) {
       strobeOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.1, { duration: 140 }),
-          withTiming(1, { duration: 140 }),
-        ),
+        withSequence(withTiming(0.1, { duration: 140 }), withTiming(1, { duration: 140 })),
         -1,
         true,
       )
@@ -224,17 +234,20 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   }, [centerTile, tileZoom])
 
   // Converts member lat/lon into screen X/Y offset from center
-  const getScreenCoordinates = (lat: number, lon: number, canvasWidth: number, canvasHeight: number) => {
+  const getScreenCoordinates = (
+    lat: number,
+    lon: number,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
     const n = Math.pow(2, tileZoom)
     const centerWorldX = ((centerLon + 180) / 360) * (TILE_SIZE * n)
     const centerLatRad = (centerLat * Math.PI) / 180
-    const centerWorldY =
-      ((1 - Math.asinh(Math.tan(centerLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
+    const centerWorldY = ((1 - Math.asinh(Math.tan(centerLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
 
     const pointWorldX = ((lon + 180) / 360) * (TILE_SIZE * n)
     const pointLatRad = (lat * Math.PI) / 180
-    const pointWorldY =
-      ((1 - Math.asinh(Math.tan(pointLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
+    const pointWorldY = ((1 - Math.asinh(Math.tan(pointLatRad)) / Math.PI) / 2) * (TILE_SIZE * n)
 
     const x = canvasWidth / 2 + (pointWorldX - centerWorldX)
     const y = canvasHeight / 2 + (pointWorldY - centerWorldY)
@@ -321,8 +334,18 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       invitationsCount: locations.length,
       reminderSet: true,
       tasks: [
-        { id: `t-${Date.now()}-1`, title: `Reserve table at ${suggestion.name}`, assignedToMemberId: primaryAssignee, isDone: false },
-        { id: `t-${Date.now()}-2`, title: "Confirm transportation & elder seating", assignedToMemberId: secondaryAssignee, isDone: false },
+        {
+          id: `t-${Date.now()}-1`,
+          title: `Reserve table at ${suggestion.name}`,
+          assignedToMemberId: primaryAssignee,
+          isDone: false,
+        },
+        {
+          id: `t-${Date.now()}-2`,
+          title: "Confirm transportation & elder seating",
+          assignedToMemberId: secondaryAssignee,
+          isDone: false,
+        },
       ],
     }
 
@@ -336,11 +359,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
   }
 
   const zoomAnimStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: zoomScale.value },
-      { translateX: panX.value },
-      { translateY: panY.value },
-    ],
+    transform: [{ scale: zoomScale.value }, { translateX: panX.value }, { translateY: panY.value }],
   }))
 
   const strobeAnimStyle = useAnimatedStyle(() => ({
@@ -403,12 +422,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         />
 
         {/* Dining Suggestions Pins */}
-        <View
-          style={[
-            styles.dineOutPinWrap,
-            { left: halfW + 64, top: halfH + 32 },
-          ]}
-        >
+        <View style={[styles.dineOutPinWrap, { left: halfW + 64, top: halfH + 32 }]}>
           <View style={[styles.dineOutDot, { backgroundColor: colors.warning }]}>
             <Ionicons name="restaurant" size={10} color="#FFFFFF" />
           </View>
@@ -495,9 +509,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
         {/* Provider Attribution Badge */}
         <View style={styles.osmAttributionBadge}>
-          <AppText style={styles.osmAttributionText}>
-            © OpenStreetMap contributors
-          </AppText>
+          <AppText style={styles.osmAttributionText}>© OpenStreetMap contributors</AppText>
         </View>
       </View>
     )
@@ -508,12 +520,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     <Svg width={width} height={height} viewBox="0 0 360 220">
       <Defs>
         <LinearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#EEF4EB" />
-          <Stop offset="1" stopColor="#E0EDE8" />
+          <Stop offset="0" stopColor="#FAF8F5" />
+          <Stop offset="1" stopColor="#F2EDE4" />
         </LinearGradient>
         <LinearGradient id="greenZone" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#D3E5DC" stopOpacity="0.85" />
-          <Stop offset="1" stopColor="#C4DEC8" stopOpacity="0.9" />
+          <Stop offset="0" stopColor="#E8E2D7" stopOpacity="0.85" />
+          <Stop offset="1" stopColor="#DDD6C9" stopOpacity="0.9" />
         </LinearGradient>
       </Defs>
 
@@ -525,20 +537,57 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         d="M 20 40 Q 90 20 140 60 T 260 50 Q 320 70 340 120 L 340 200 L 20 200 Z"
         fill="url(#greenZone)"
       />
-      <Path
-        d="M 180 120 Q 240 100 300 130 T 360 170 L 360 220 L 160 220 Z"
-        fill="#CADFC7"
-      />
+      <Path d="M 180 120 Q 240 100 300 130 T 360 170 L 360 220 L 160 220 Z" fill="#DDD6C9" />
 
       {/* Clean Pista City Roads */}
-      <Line x1="0" y1="90" x2="360" y2="90" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
-      <Line x1="120" y1="0" x2="120" y2="220" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
-      <Line x1="240" y1="0" x2="240" y2="220" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
-      <Line x1="0" y1="160" x2="360" y2="160" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
+      <Line
+        x1="0"
+        y1="90"
+        x2="360"
+        y2="90"
+        stroke="#FFFFFF"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="120"
+        y1="0"
+        x2="120"
+        y2="220"
+        stroke="#FFFFFF"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="240"
+        y1="0"
+        x2="240"
+        y2="220"
+        stroke="#FFFFFF"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="0"
+        y1="160"
+        x2="360"
+        y2="160"
+        stroke="#FFFFFF"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
 
       {/* Sanctuary Boundary Zone */}
-      <Circle cx="120" cy="90" r="44" fill="rgba(125, 140, 125, 0.14)" stroke="#7D8C7D" strokeWidth="1.5" strokeDasharray="4,4" />
-      <SvgText x="120" y="58" fontSize="9" fontWeight="700" fill="#3D5250" textAnchor="middle">
+      <Circle
+        cx="120"
+        cy="90"
+        r="44"
+        fill="rgba(218, 119, 86, 0.08)"
+        stroke="#DA7756"
+        strokeWidth="1.5"
+        strokeDasharray="4,4"
+      />
+      <SvgText x="120" y="58" fontSize="9" fontWeight="700" fill="#8C3E23" textAnchor="middle">
         HOME SANCTUARY
       </SvgText>
 
@@ -609,7 +658,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
           <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-          <AppText variant="subheading" style={{ fontWeight: "700" }}>
+          <AppText
+            variant={"bodyMedium"}
+            style={{ fontWeight: "600" }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             Family Live Sanctuary & Map
           </AppText>
         </View>
@@ -625,10 +679,13 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
           >
             <Ionicons
               name={mapMode === "tile" ? "map-outline" : "grid-outline"}
-              size={13}
+              size={10}
               color={colors.primary}
             />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 11 }}>
+            <AppText
+              variant="caption"
+              style={{ color: colors.primary, fontWeight: "700", fontSize: 9 }}
+            >
               {mapMode === "tile" ? "OSM Map" : "Layout"}
             </AppText>
           </PressableScale>
@@ -637,19 +694,28 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             style={[styles.smallActionBtn, { backgroundColor: colors.surface2 }]}
             onPress={() => setDineoutModalVisible(true)}
           >
-            <Ionicons name="restaurant-outline" size={13} color={colors.primary} />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 11 }}>
+            <Ionicons name="restaurant-outline" size={10} color={colors.primary} />
+            <AppText
+              variant="caption"
+              style={{ color: colors.primary, fontWeight: "700", fontSize: 9 }}
+            >
               Outings
             </AppText>
           </PressableScale>
 
           <PressableScale
             style={[styles.smallActionBtn, { backgroundColor: colors.surface2 }]}
-            onPress={() => setFullscreenMapVisible(true)}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              router.push("/(app)/map")
+            }}
           >
-            <Ionicons name="scan-outline" size={13} color={colors.primary} />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 11 }}>
-              Zoom
+            <Ionicons name="expand" size={10} color={colors.primary} />
+            <AppText
+              variant="caption"
+              style={{ color: colors.primary, fontWeight: "700", fontSize: 9 }}
+            >
+              Full Map
             </AppText>
           </PressableScale>
         </View>
@@ -664,7 +730,11 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
             color={offlinePack?.isOfflineReady ? colors.success : colors.text.muted}
             style={{ marginRight: 6 }}
           />
-          <AppText variant="caption" style={{ color: colors.text.secondary, fontSize: 11, flex: 1 }} numberOfLines={1}>
+          <AppText
+            variant="caption"
+            style={{ color: colors.text.secondary, fontSize: 11, flex: 1 }}
+            numberOfLines={1}
+          >
             {offlinePack?.isOfflineReady
               ? `Offline Map Ready (${offlinePack.tileCount} tiles · ${Math.round(offlinePack.sizeBytes / 1024)} KB)`
               : "Download local map for zero-network offline resilience"}
@@ -681,7 +751,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
           ) : (
             <>
               <Ionicons name="download-outline" size={12} color={colors.primary} />
-              <AppText style={{ fontSize: 10, fontWeight: "700", color: colors.primary, marginLeft: 4 }}>
+              <AppText
+                style={{ fontSize: 10, fontWeight: "700", color: colors.primary, marginLeft: 4 }}
+              >
                 {offlinePack?.isOfflineReady ? "Update Pack" : "Download Area"}
               </AppText>
             </>
@@ -691,7 +763,10 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
       {downloadProgress && (
         <View style={[styles.progressDownloadBar, { backgroundColor: colors.surface2 }]}>
-          <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", fontSize: 10 }}>
+          <AppText
+            variant="caption"
+            style={{ color: colors.primary, fontWeight: "700", fontSize: 10 }}
+          >
             Caching tiles: {downloadProgress.current} / {downloadProgress.total}…
           </AppText>
         </View>
@@ -705,17 +780,24 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       </View>
 
       {/* ── Horizontal Family Member Chips ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChipsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.memberChipsRow}
+      >
         {locations.map((m) => {
           const isSelected = selectedMember?.memberId === m.memberId
+          const distKm = calculateDistanceKm(centerLat, centerLon, m.latitude, m.longitude)
+          const distStr = formatDistance(distKm)
           return (
             <PressableScale
               key={m.memberId}
               style={[
                 styles.memberChip,
                 {
-                  backgroundColor: isSelected ? colors.primary : colors.surface,
-                  borderColor: isSelected ? colors.primary : "transparent",
+                  backgroundColor: isSelected ? "#FFFDF9" : colors.surface2,
+                  borderColor: isSelected ? "#DA7756" : "rgba(0,0,0,0.06)",
+                  borderWidth: isSelected ? 1.5 : 1,
                 },
               ]}
               onPress={() => {
@@ -724,12 +806,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 if (onSelectMember) onSelectMember(m)
               }}
             >
-              <View style={[styles.chipAvatar, { backgroundColor: isSelected ? "#FFFFFF" : m.avatarColor }]}>
+              <View style={[styles.chipAvatar, { backgroundColor: m.avatarColor }]}>
                 <AppText
                   style={{
-                    fontSize: 10,
+                    fontSize: 10.5,
                     fontWeight: "800",
-                    color: isSelected ? colors.primary : "#FFFFFF",
+                    color: "#FFFFFF",
                   }}
                 >
                   {m.memberNickname?.[0] || m.memberName[0]}
@@ -739,9 +821,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 <AppText
                   variant="caption"
                   style={{
-                    fontWeight: "700",
-                    fontSize: 11,
-                    color: isSelected ? "#FFFFFF" : colors.text.primary,
+                    fontWeight: isSelected ? "800" : "600",
+                    fontSize: 11.5,
+                    color: isSelected ? colors.text.primary : colors.text.secondary,
                   }}
                   numberOfLines={1}
                 >
@@ -749,11 +831,12 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                 </AppText>
                 <AppText
                   style={{
-                    fontSize: 9,
-                    color: isSelected ? "rgba(255,255,255,0.85)" : colors.text.muted,
+                    fontSize: 9.5,
+                    fontWeight: isSelected ? "700" : "500",
+                    color: isSelected ? "#DA7756" : colors.text.muted,
                   }}
                 >
-                  {m.batteryLevel}%
+                  {distStr} · {m.batteryLevel}%
                 </AppText>
               </View>
             </PressableScale>
@@ -762,85 +845,167 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
       </ScrollView>
 
       {/* ── Active Member Details & "Where is My Phone" Card ── */}
-      {selectedMember && (
-        compact ? (
-          <View style={[styles.compactMemberBar, { backgroundColor: colors.surface }]}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }} numberOfLines={1}>
-                {selectedMember.memberName} • {selectedMember.placeName}
-              </AppText>
-              <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 11 }} numberOfLines={1}>
-                {selectedMember.roomDetail} · {selectedMember.batteryLevel}%
-              </AppText>
-            </View>
-            <PressableScale
-              style={[styles.compactFindBtn, { backgroundColor: colors.primary }]}
-              onPress={() => handleOpenFinder(selectedMember)}
-            >
-              <Ionicons name="volume-high" size={13} color="#FFFFFF" />
-              <AppText style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", marginLeft: 4 }}>
-                Find Phone
-              </AppText>
-            </PressableScale>
-          </View>
-        ) : (
-        <Card style={styles.detailCard}>
-          <View style={styles.detailHeader}>
-            <View style={{ flex: 1 }}>
+      {selectedMember &&
+        (compact ? (
+          <PressableScale
+            style={[
+              styles.compactMemberBar,
+              { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            ]}
+            onPress={() => {
+              void Haptics.selectionAsync()
+              setDetailSheetVisible(true)
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <AppText variant="subheading" style={{ fontWeight: "700" }}>
-                  {selectedMember.memberName} ({selectedMember.memberNickname || selectedMember.relationship})
+                <AppText
+                  variant="caption"
+                  style={{ fontWeight: "800", color: colors.text.primary, fontSize: 13 }}
+                  numberOfLines={1}
+                >
+                  {selectedMember.memberName}
                 </AppText>
-                {selectedMember.relationship.toLowerCase().includes("child") || selectedMember.memberId === "m-5" ? (
-                  <Badge label="Protected Youth" tone="neutral" size="small" />
+                {selectedMember.memberNickname ? (
+                  <Badge label={selectedMember.memberNickname} tone="neutral" size="small" />
                 ) : null}
               </View>
-
-              <View style={styles.locationSubtitleRow}>
-                <Ionicons name="location" size={13} color={colors.primary} />
-                <AppText variant="caption" style={{ color: colors.text.primary, fontWeight: "600", marginLeft: 4 }}>
-                  {selectedMember.placeName}
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.muted, marginLeft: 4 }}>
-                  • {selectedMember.roomDetail}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                <Ionicons name="location" size={11} color="#DA7756" />
+                <AppText
+                  variant="caption"
+                  style={{ color: colors.text.secondary, fontSize: 11 }}
+                  numberOfLines={1}
+                >
+                  {selectedMember.placeName} • {selectedMember.roomDetail}
                 </AppText>
               </View>
             </View>
 
-            <PressableScale
-              style={[styles.findPhoneBtn, { backgroundColor: colors.primary }]}
-              onPress={() => handleOpenFinder(selectedMember)}
-            >
-              <Ionicons name="volume-high" size={16} color="#FFFFFF" />
-              <AppText style={styles.findPhoneBtnText}>Find Phone</AppText>
-            </PressableScale>
-          </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <PressableScale
+                style={[styles.compactFindBtn, { backgroundColor: "#DA7756" }]}
+                onPress={() => handleOpenFinder(selectedMember)}
+              >
+                <Ionicons name="volume-high" size={13} color="#FFFFFF" />
+                <AppText
+                  style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", marginLeft: 4 }}
+                >
+                  Find Phone
+                </AppText>
+              </PressableScale>
 
-          {/* Unified Telemetry Bar (Battery + Steps + Sleep) */}
-          <View style={[styles.telemetryBar, { backgroundColor: colors.surface2 }]}>
-            <View style={styles.telemetryItem}>
-              <Ionicons name="battery-charging" size={14} color={colors.primary} />
-              <AppText variant="caption" style={styles.telemetryText}>
-                {selectedMember.batteryLevel}% {selectedMember.isCharging ? "Charging" : "Battery"}
-              </AppText>
+              <PressableScale
+                style={[styles.compactFindBtn, { backgroundColor: colors.surface2 }]}
+                onPress={() => setDetailSheetVisible(true)}
+              >
+                <Ionicons name="person-outline" size={13} color={colors.primary} />
+              </PressableScale>
             </View>
-            <View style={styles.telemetryDivider} />
-            <View style={styles.telemetryItem}>
-              <Ionicons name="footsteps-outline" size={14} color={colors.primary} />
-              <AppText variant="caption" style={styles.telemetryText}>
-                {selectedMember.health.dailySteps.toLocaleString()} Fit steps
-              </AppText>
+          </PressableScale>
+        ) : (
+          <Card style={styles.detailCard}>
+            <View style={styles.detailHeader}>
+              <View style={{ flex: 1 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}
+                >
+                  <AppText variant="subheading" style={{ fontWeight: "700" }}>
+                    {selectedMember.memberName}
+                  </AppText>
+                  {selectedMember.memberNickname && (
+                    <Badge label={selectedMember.memberNickname} tone="neutral" size="small" />
+                  )}
+                  <Badge
+                    label={formatDistance(
+                      calculateDistanceKm(
+                        centerLat,
+                        centerLon,
+                        selectedMember.latitude,
+                        selectedMember.longitude,
+                      ),
+                    )}
+                    tone="info"
+                    size="small"
+                  />
+                </View>
+
+                <View style={styles.locationSubtitleRow}>
+                  <Ionicons name="location" size={13} color={colors.primary} />
+                  <AppText
+                    variant="caption"
+                    style={{ color: colors.text.primary, fontWeight: "600", marginLeft: 4 }}
+                  >
+                    {selectedMember.placeName}
+                  </AppText>
+                  <AppText variant="caption" style={{ color: colors.text.muted, marginLeft: 4 }}>
+                    • {selectedMember.roomDetail}
+                  </AppText>
+                </View>
+              </View>
             </View>
-            <View style={styles.telemetryDivider} />
-            <View style={styles.telemetryItem}>
-              <Ionicons name="moon-outline" size={14} color={colors.primary} />
-              <AppText variant="caption" style={styles.telemetryText}>
-                {selectedMember.health.sleepHours}h sleep
-              </AppText>
+
+            {/* Action Buttons: Find Phone + Full Profile */}
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 10, marginBottom: 12 }}>
+              <PressableScale
+                style={[styles.findPhoneBtn, { backgroundColor: colors.primary, flex: 1.2 }]}
+                onPress={() => handleOpenFinder(selectedMember)}
+              >
+                <Ionicons name="volume-high" size={15} color="#FFFFFF" />
+                <AppText style={styles.findPhoneBtnText}>Find Phone</AppText>
+              </PressableScale>
+
+              <PressableScale
+                style={[styles.findPhoneBtn, { backgroundColor: colors.surface2, flex: 1 }]}
+                onPress={() => setDetailSheetVisible(true)}
+              >
+                <Ionicons name="person-circle-outline" size={16} color={colors.primary} />
+                <AppText style={[styles.findPhoneBtnText, { color: colors.primary }]}>
+                  Full Profile
+                </AppText>
+              </PressableScale>
             </View>
-          </View>
-        </Card>
-      ))}
+
+            {/* Unified Telemetry Bar (Battery + Steps + Sleep) */}
+            <View style={[styles.telemetryBar, { backgroundColor: colors.surface2 }]}>
+              <View style={styles.telemetryItem}>
+                <Ionicons
+                  name={selectedMember.isCharging ? "battery-charging" : "battery-full"}
+                  size={14}
+                  color={colors.primary}
+                />
+                <AppText variant="caption" style={styles.telemetryText}>
+                  {selectedMember.batteryLevel}%{" "}
+                  {selectedMember.isCharging ? "Charging" : "Battery"}
+                </AppText>
+              </View>
+              <View style={styles.telemetryDivider} />
+              <View style={styles.telemetryItem}>
+                <Ionicons name="footsteps-outline" size={14} color={colors.primary} />
+                <AppText variant="caption" style={styles.telemetryText}>
+                  {selectedMember.health.dailySteps.toLocaleString()} Steps
+                </AppText>
+              </View>
+              <View style={styles.telemetryDivider} />
+              <View style={styles.telemetryItem}>
+                <Ionicons name="moon-outline" size={14} color={colors.primary} />
+                <AppText variant="caption" style={styles.telemetryText}>
+                  {selectedMember.health.sleepHours}h Sleep
+                </AppText>
+              </View>
+            </View>
+          </Card>
+        ))}
+
+      {/* ── Detail Sheet Modal for Selected Member ── */}
+      {activeFullMember && (
+        <FamilyMemberDetailSheet
+          visible={detailSheetVisible}
+          member={activeFullMember}
+          onClose={() => setDetailSheetVisible(false)}
+          onFindPhone={() => selectedMember && handleOpenFinder(selectedMember)}
+        />
+      )}
 
       {/* ── Modal: Fullscreen Zoomable Map View ── */}
       <Modal visible={fullscreenMapVisible} animationType="fade" transparent>
@@ -890,23 +1055,37 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
           {DINE_OUT_SUGGESTIONS.map((item) => (
             <Card key={item.id} style={styles.dineoutCard}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <AppText variant="subheading" style={{ fontWeight: "800", flex: 1 }}>
                   {item.name}
                 </AppText>
                 <Badge label={`Rating: ${item.rating}`} tone="success" size="small" />
               </View>
 
-              <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}>
+              <AppText
+                variant="caption"
+                style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}
+              >
                 {item.vibe} · {item.distanceMins} mins away
               </AppText>
 
               <View style={styles.dineoutTagsRow}>
-                {item.elderFriendly && <Badge label="Elder Accessible" tone="neutral" size="small" />}
+                {item.elderFriendly && (
+                  <Badge label="Elder Accessible" tone="neutral" size="small" />
+                )}
                 {item.petFriendly && <Badge label="Pet Friendly" tone="neutral" size="small" />}
               </View>
 
-              <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 6, lineHeight: 18 }}>
+              <AppText
+                variant="caption"
+                style={{ color: colors.text.secondary, marginTop: 6, lineHeight: 18 }}
+              >
                 {item.aiReason}
               </AppText>
 
@@ -934,46 +1113,112 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
         title="Pinpoint Phone Finder"
         subtitle={`Locating ${selectedMember?.memberName || "Family Member"}'s phone`}
       >
-        {/* Honest Telemetry & Pinpoint Radar Readout */}
+        {/* Honest Telemetry & 3D Spatial Radar Readout */}
         <View style={[styles.radarBox, { backgroundColor: colors.surface2 }]}>
           <View style={styles.radarIconWrap}>
             <Ionicons
-              name="radio-outline"
-              size={36}
+              name={
+                radarScan?.planeEstimate === "cushion_sofa_bed"
+                  ? "bed-outline"
+                  : radarScan?.planeEstimate === "basement_subterranean"
+                    ? "cube-outline"
+                    : "radio-outline"
+              }
+              size={34}
               color={radarScan?.status === "last_location_available" ? colors.primary : "#9CA3AF"}
             />
           </View>
 
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
               <AppText variant="h3" style={{ fontWeight: "800", color: colors.text.primary }}>
                 Accuracy: ±{radarScan?.accuracyMeters ?? 5}m
               </AppText>
+              {radarScan?.altitudeMeters !== undefined && (
+                <Badge
+                  label={`Alt: ${radarScan.altitudeMeters > 0 ? "+" : ""}${radarScan.altitudeMeters.toFixed(1)}m`}
+                  tone="info"
+                  size="small"
+                />
+              )}
             </View>
+
             <AppText variant="body" style={{ fontWeight: "700", marginTop: 2 }}>
               {radarScan?.areaDescription || "Last-Known Sanctuary Area"}
             </AppText>
-            <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 4 }}>
-              GPS provides area-level coordinates. Trigger the siren and haptic pulse below to locate the device by ear.
-            </AppText>
+
+            {/* 3D Vertical Plane & Micro-Location Estimation */}
+            <View style={{ marginTop: 6, gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Ionicons name="layers-outline" size={13} color={colors.primary} />
+                <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+                  3D Plane: {radarScan?.planeDescription || "Floor / Counter Surface"}
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Ionicons name="wifi-outline" size={13} color={colors.text.secondary} />
+                <AppText variant="caption" style={{ color: colors.text.secondary }}>
+                  RF Occlusion: {radarScan?.rfOcclusionNote || "Direct RF Line of Sight"}
+                </AppText>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Acoustic Siren & Strobe Controls */}
+        {/* Action Controls: Acoustic Siren */}
         <View style={styles.modalActionButtons}>
           <AppButton
-            title={isSirenActive ? "Stop Loud Siren" : "Sound Audio & Haptic Siren"}
+            title={isSirenActive ? "Stop Audio Siren" : "Sound Audio & Haptic Siren"}
             variant={isSirenActive ? "outline" : "primary"}
             onPress={toggleSiren}
             style={{ flex: 1 }}
           />
         </View>
 
+        {/* Lost Outside / Left in Public: Google Find My Device */}
+        <View style={[styles.googleFindBox, { backgroundColor: colors.surface }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.accentText} />
+            <AppText variant="caption" style={{ fontWeight: "800", color: colors.text.primary }}>
+              Lost Outside or Left at Bank/Market?
+            </AppText>
+          </View>
+          <AppText variant="caption" style={{ color: colors.text.secondary, marginBottom: 8 }}>
+            If the device was left in a shop, bank, market, or suspected stolen, launch Google Find
+            My Device to lock, remotely wipe, or ring through Google Play Services.
+          </AppText>
+          <PressableScale
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              void Linking.openURL("https://www.google.com/android/find")
+            }}
+            style={[styles.googleFindBtn, { borderColor: colors.border }]}
+          >
+            <Ionicons
+              name="open-outline"
+              size={14}
+              color={colors.primary}
+              style={{ marginRight: 6 }}
+            />
+            <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+              Open Google Find My Device →
+            </AppText>
+          </PressableScale>
+        </View>
+
         {isSirenActive && (
           <View style={[styles.sirenActiveBanner, { backgroundColor: "rgba(239, 68, 68, 0.12)" }]}>
             <Ionicons name="warning" size={16} color="#EF4444" style={{ marginRight: 6 }} />
             <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "700", flex: 1 }}>
-              Audible chirp and haptic pulses are active. Listen carefully nearby! Note: volume is bounded by Android system audio policy.
+              Audible chirp and haptic pulses are active. Listen carefully nearby! Note: volume is
+              bounded by Android system audio policy.
             </AppText>
           </View>
         )}
@@ -991,6 +1236,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: 16,
   },
   titleWrap: {
     flexDirection: "row",
@@ -1006,8 +1252,8 @@ const styles = StyleSheet.create({
   smallActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   offlineStatusBar: {
@@ -1077,10 +1323,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
     marginTop: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    elevation: 0,
   },
   memberPinMarker: {
     position: "absolute",
@@ -1101,10 +1346,9 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    elevation: 0,
   },
   memberPinText: {
     color: "#FFFFFF",
@@ -1117,10 +1361,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    elevation: 0,
   },
   memberPinTagText: {
     fontSize: 8,
@@ -1131,13 +1374,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 8,
     top: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 8,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    elevation: 0,
   },
   tileZoomBtn: {
     width: 28,
@@ -1189,16 +1431,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
   },
   compactFindBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
   },
   detailCard: {
     padding: 14,
@@ -1292,10 +1534,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    elevation: 0,
   },
   dineoutCard: {
     padding: 14,
@@ -1326,5 +1567,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 10,
     borderRadius: 10,
+  },
+  googleFindBox: {
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  googleFindBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
   },
 })

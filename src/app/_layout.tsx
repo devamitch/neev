@@ -256,7 +256,6 @@ export default function Root() {
           </QueryProvider>
           <CustomAlert />
           <Toast />
-          <MindfulNotificationBanner />
           {!splashDone && (
             <AnimatedSplashScreen
               onReady={hideNativeSplash}

@@ -167,7 +167,7 @@ export function QueryProvider({ children }: PropsWithChildren) {
       persistOptions={{
         persister: mmkvPersister,
         maxAge: CACHE_GC_TIME,
-        buster: "neev_rn_cache_v2",
+        buster: "neev_rn_cache_v3",
       }}
     >
       {children}

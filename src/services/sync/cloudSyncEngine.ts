@@ -11,6 +11,7 @@ import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
 import { useRoutineStore } from "@/stores/useRoutineStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
+import { useRootStore } from "@/stores/useRootStore"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
 
 export type SyncStatus = "connected" | "syncing" | "idle" | "offline" | "error"
@@ -26,46 +27,48 @@ interface CloudSyncState {
   setAutoSync: (enabled: boolean) => void
 }
 
+export const DEMO_HEALTH_METRICS: HealthTelemetry[] = [
+  {
+    memberId: "m-1",
+    memberName: "Shyamal (Dadu)",
+    date: new Date().toISOString().split("T")[0],
+    dailySteps: 4200,
+    activeMinutes: 38,
+    sleepHours: 7.4,
+    restingHeartRate: 72,
+    source: "google_fit",
+    lastUpdated: "Just now",
+  },
+  {
+    memberId: "m-2",
+    memberName: "Aparna (Dida)",
+    date: new Date().toISOString().split("T")[0],
+    dailySteps: 3800,
+    activeMinutes: 32,
+    sleepHours: 7.1,
+    restingHeartRate: 74,
+    source: "google_fit",
+    lastUpdated: "Just now",
+  },
+  {
+    memberId: "m-5",
+    memberName: "Aarav (Chotu)",
+    date: new Date().toISOString().split("T")[0],
+    dailySteps: 10400,
+    activeMinutes: 94,
+    sleepHours: 8.5,
+    restingHeartRate: 68,
+    source: "google_fit",
+    lastUpdated: "Just now",
+  },
+]
+
 export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
-  status: "connected",
-  lastSyncedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  healthMetrics: [
-    {
-      memberId: "m-1",
-      memberName: "Shyamal (Dadu)",
-      date: new Date().toISOString().split("T")[0],
-      dailySteps: 4200,
-      activeMinutes: 38,
-      sleepHours: 7.4,
-      restingHeartRate: 72,
-      source: "google_fit",
-      lastUpdated: "Just now",
-    },
-    {
-      memberId: "m-2",
-      memberName: "Aparna (Dida)",
-      date: new Date().toISOString().split("T")[0],
-      dailySteps: 3800,
-      activeMinutes: 32,
-      sleepHours: 7.1,
-      restingHeartRate: 74,
-      source: "google_fit",
-      lastUpdated: "Just now",
-    },
-    {
-      memberId: "m-5",
-      memberName: "Aarav (Chotu)",
-      date: new Date().toISOString().split("T")[0],
-      dailySteps: 10400,
-      activeMinutes: 94,
-      sleepHours: 8.5,
-      restingHeartRate: 68,
-      source: "google_fit",
-      lastUpdated: "Just now",
-    },
-  ],
+  status: "idle",
+  lastSyncedAt: null,
+  healthMetrics: [],
   autoSyncEnabled: true,
-  isGoogleConnected: true,
+  isGoogleConnected: false,
 
   syncAll: async () => {
     set({ status: "syncing" })
@@ -114,6 +117,12 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
       // 6. Batch push routines
       for (const r of routines) {
         await supabaseSyncService.syncRoutine(householdId, r)
+      }
+
+      // 7. Batch push priority space tasks / chores
+      const tasks = useRootStore.getState().tasks
+      for (const t of tasks) {
+        await supabaseSyncService.syncTask(householdId, t)
       }
 
       set({

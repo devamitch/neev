@@ -68,28 +68,28 @@ export const lightColors: ThemeColors = {
   background: "#FAFBF9",
   surface: "#FFFFFF",
   surface1: "#FFFFFF",
-  surface2: "#E0EDE8",
-  surface3: "#D3E5DC",
+  surface2: "#F3F5F2",
+  surface3: "#E8EBE6",
   surfaceGlass: "rgba(255, 255, 255, 0.92)",
   text: {
-    primary: "#0E1E1B",
+    primary: "#141F1C",
     secondary: "#3D4946",
-    muted: "#5A6F69",
+    muted: "#63736F",
   },
-  primary: "#7D8C7D",
+  primary: "#6B856E",
   onPrimary: "#FFFFFF",
-  primaryContainer: "#E0EDE8",
-  onPrimaryContainer: "#3D5250",
-  primaryFixed: "#D3E5DC",
+  primaryContainer: "#EAF0EB",
+  onPrimaryContainer: "#2E4233",
+  primaryFixed: "#DDE7DE",
   primaryFixedDim: "#A8C0B8",
   primaryDim: "#5A6F69",
-  primaryAlpha: "rgba(125, 140, 125, 0.16)",
-  primaryGradient: ["#7D8C7D", "#7D8C7D", "#7D8C7D"],
+  primaryAlpha: "rgba(107, 133, 110, 0.12)",
+  primaryGradient: ["#7D8C7D", "#8DAE88", "#DA7756"],
   primaryVivid: "#7D8C7D",
   gloss: "#FFFFFF",
-  actionTints: { camera: "#7D8C7D", share: "#5A6F69", emergency: "#BE3434" },
-  accentText: "#5A6F69",
-  border: "rgba(14, 30, 27, 0.06)",
+  actionTints: { camera: "#7D8C7D", share: "#DA7756", emergency: "#BE3434" },
+  accentText: "#DA7756",
+  border: "rgba(14, 30, 27, 0.07)",
   borderStrong: "rgba(14, 30, 27, 0.12)",
   success: "#5A8B49",
   warning: "#C27835",
@@ -165,8 +165,30 @@ export const darkColors: ThemeColors = {
   ],
 }
 
-export const colorsFor = (scheme: ColorScheme): ThemeColors =>
-  scheme === "dark" ? darkColors : lightColors
+export type ThemePalette = "pista_terracotta" | "terracotta_pista"
+
+export const terracottaColors: ThemeColors = {
+  ...lightColors,
+  primary: "#DA7756",
+  accentText: "#6B856E",
+  primaryContainer: "#FDF2EE",
+  onPrimaryContainer: "#7C2D12",
+  primaryFixed: "#FCE7DF",
+  primaryFixedDim: "#F3A992",
+  primaryDim: "#B8583B",
+  primaryAlpha: "rgba(218, 119, 86, 0.12)",
+  primaryGradient: ["#DA7756", "#E28B6E", "#6B856E"],
+  primaryVivid: "#DA7756",
+  actionTints: { camera: "#DA7756", share: "#6B856E", emergency: "#BE3434" },
+}
+
+export const colorsFor = (
+  scheme: ColorScheme,
+  palette: ThemePalette = "pista_terracotta",
+): ThemeColors => {
+  if (scheme === "dark") return darkColors
+  return palette === "terracotta_pista" ? terracottaColors : lightColors
+}
 
 export const setuColors = {
   ...lightColors,

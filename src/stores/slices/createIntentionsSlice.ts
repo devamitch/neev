@@ -30,9 +30,11 @@ export interface IntentionsSlice {
   cheerIntention: (id: string) => void
   removeIntention: (id: string) => void
   setActiveCategory: (cat: IntentionCategory | "all") => void
+  resetIntentionsToClean: () => void
+  loadDemoIntentions: () => void
 }
 
-const INITIAL_INTENTIONS: FamilyIntention[] = [
+export const DEMO_INTENTIONS: FamilyIntention[] = [
   {
     id: "int-1",
     title: "Balcony Herb & Tulsi Garden Sanctuary",
@@ -83,8 +85,10 @@ const INITIAL_INTENTIONS: FamilyIntention[] = [
   },
 ]
 
+export const INITIAL_INTENTIONS = DEMO_INTENTIONS
+
 export const createIntentionsSlice: ImmerStateCreator<IntentionsSlice> = (set) => ({
-  intentions: INITIAL_INTENTIONS,
+  intentions: [],
   activeCategory: "all",
 
   addIntention: (intention) =>
@@ -131,5 +135,15 @@ export const createIntentionsSlice: ImmerStateCreator<IntentionsSlice> = (set) =
   setActiveCategory: (cat) =>
     set((state) => {
       state.activeCategory = cat
+    }),
+
+  resetIntentionsToClean: () =>
+    set((state) => {
+      state.intentions = []
+    }),
+
+  loadDemoIntentions: () =>
+    set((state) => {
+      state.intentions = DEMO_INTENTIONS
     }),
 })

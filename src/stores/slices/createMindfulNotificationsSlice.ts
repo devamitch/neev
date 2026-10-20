@@ -41,6 +41,7 @@ export interface MindfulNotificationsSlice {
   ) => void
   dismissActiveBanner: () => void
   clearAllMindfulNotifications: () => void
+  resetMindfulNotificationsToClean: () => void
 }
 
 // Sample reference notifications for development / testing (uncomment if testing offline mock nudges)
@@ -111,7 +112,7 @@ export const createMindfulNotificationsSlice: ImmerStateCreator<MindfulNotificat
     }),
 
   addMindfulNotification: (item) =>
-    set((state) => {
+    set((state: any) => {
       const newNotif: MindfulNotification = {
         ...item,
         id: `notif_${Date.now()}`,
@@ -121,6 +122,13 @@ export const createMindfulNotificationsSlice: ImmerStateCreator<MindfulNotificat
       }
       state.mindfulNotifications.unshift(newNotif)
       state.activeBannerNotificationId = newNotif.id
+      if (typeof state.showToast === "function") {
+        state.showToast({
+          title: item.title,
+          message: item.body,
+          type: "info",
+        })
+      }
     }),
 
   dismissActiveBanner: () =>
@@ -143,6 +151,12 @@ export const createMindfulNotificationsSlice: ImmerStateCreator<MindfulNotificat
         n.isDismissed = true
         n.isRead = true
       })
+      state.activeBannerNotificationId = null
+    }),
+
+  resetMindfulNotificationsToClean: () =>
+    set((state) => {
+      state.mindfulNotifications = []
       state.activeBannerNotificationId = null
     }),
 })

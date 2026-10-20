@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { openAppDrawer } from "@/components/navigation/AppDrawer"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
+import { SanctuaryHeader, SanctuaryLargeTitle } from "@/components/ui/SanctuaryHeader"
 import { AppText } from "@/components/ui/AppText"
 import { Badge } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
@@ -33,7 +34,7 @@ import {
   useSpaceMeetingsQuery,
   useSpaceAiBriefingsQuery,
 } from "@/hooks/useSpacesQuery"
-import { useFamilyStore } from "@/stores/useFamilyStore"
+import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
@@ -41,6 +42,7 @@ import { useRoutineStore } from "@/stores/useRoutineStore"
 import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useSpacesStore, type SpaceType } from "@/stores/useSpacesStore"
 import { useColors } from "@/theme/useTheme"
+import { FamilyMemberDetailSheet } from "@/components/family/FamilyMemberDetailSheet"
 
 const SPACES: {
   key: SpaceType
@@ -73,6 +75,8 @@ export default function DashboardScreen() {
   const bottomInset = useTabBarInset()
   const insets = useSafeAreaInsets()
   const showToast = useRootStore((s) => s.showToast)
+  const easyMode = useRootStore((s) => s.easyMode)
+  const toggleEasyMode = useRootStore((s) => s.toggleEasyMode)
 
   // TanStack React Query for offline-first caching & synchronization
   const { data: scheduleData } = useScheduleQuery()
@@ -144,6 +148,7 @@ export default function DashboardScreen() {
     })
   }
 
+  const [selectedDetailMember, setSelectedDetailMember] = React.useState<FamilyMember | null>(null)
   const handleTestLiveNotification = async () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     await notificationsService.dispatchImmediateNotification(
@@ -158,6 +163,14 @@ export default function DashboardScreen() {
     [currentSpaceTasks, members],
   )
 
+  const choreBalanceStats = React.useMemo(() => {
+    if (familyLoad.length === 0) return { label: "100% Balanced", tone: "success" as const }
+    const balancedCount = familyLoad.filter((f) => f.loadLevel === "balanced").length
+    const pct = Math.round((balancedCount / familyLoad.length) * 100)
+    const tone = pct >= 80 ? ("success" as const) : pct >= 50 ? ("warning" as const) : ("error" as const)
+    return { label: `${pct}% Balanced`, tone }
+  }, [familyLoad])
+
   const openMeetingLink = (url?: string) => {
     if (!url) return
     void Haptics.selectionAsync()
@@ -169,8 +182,7 @@ export default function DashboardScreen() {
       safeArea
       scrollable
       header={
-        <AppHeader
-          sticky
+        <SanctuaryHeader
           eyebrow="FAMILY SANCTUARY"
           title={household.name || "Neev"}
           subtitle={household.motto}
@@ -180,30 +192,55 @@ export default function DashboardScreen() {
         />
       }
     >
+      <SanctuaryLargeTitle
+        title={household.name || "Neev Family Sanctuary"}
+        subtitle={household.motto || "Roots in reverence, wings in harmony"}
+      />
 
-        {/* ── Real-Time Cloud Sync Bar (Zero Borders) ── */}
-        <PressableScale
-          style={[styles.cloudBar, { backgroundColor: colors.surface }]}
-          onPress={() => router.push("/(app)/(profile)/settings")}
-        >
-          <View style={styles.cloudStatusLeft}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: status === "syncing" ? "#C27835" : "#709758" },
-              ]}
-            />
-            <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }} numberOfLines={1}>
-              {status === "syncing" ? "Syncing to Cloud..." : "Supabase Cloud Connected"}
-            </AppText>
+
+        {/* ── Grandparent Easy Mode Accessibility Bar ── */}
+        {easyMode && (
+          <View style={[styles.easyModeBanner, { backgroundColor: colors.surface }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="sunny" size={20} color="#D97706" />
+                <AppText variant="bodyMedium" style={{ fontWeight: "800", color: colors.text.primary, fontSize: 16 }}>
+                  Grandparent Easy Mode Active
+                </AppText>
+              </View>
+              <PressableScale onPress={toggleEasyMode} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                <AppText variant="caption" style={{ color: colors.primary, fontWeight: "700" }}>
+                  Exit
+                </AppText>
+              </PressableScale>
+            </View>
+            <View style={styles.easyModeQuickRow}>
+              <PressableScale
+                onPress={() => router.push("/(app)/map")}
+                style={[styles.easyModeBtn, { backgroundColor: colors.surface2 }]}
+              >
+                <Ionicons name="location" size={24} color={colors.primary} />
+                <AppText style={styles.easyModeBtnText}>Family Map</AppText>
+              </PressableScale>
+
+              <PressableScale
+                onPress={() => router.push("/(app)/(tabs)/schedule")}
+                style={[styles.easyModeBtn, { backgroundColor: colors.surface2 }]}
+              >
+                <Ionicons name="calendar" size={24} color="#D97706" />
+                <AppText style={styles.easyModeBtnText}>Schedule</AppText>
+              </PressableScale>
+
+              <PressableScale
+                onPress={() => router.push("/(app)/(tabs)/family")}
+                style={[styles.easyModeBtn, { backgroundColor: colors.surface2 }]}
+              >
+                <Ionicons name="call" size={24} color="#10B981" />
+                <AppText style={styles.easyModeBtnText}>Care Circle</AppText>
+              </PressableScale>
+            </View>
           </View>
-          <View style={styles.cloudStatusRight}>
-            <Ionicons name="cloud-done-outline" size={14} color={colors.primary} />
-            <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600", marginLeft: 4 }} numberOfLines={1}>
-              {lastSyncedAt ? `Synced ${lastSyncedAt}` : "Live Sync"}
-            </AppText>
-          </View>
-        </PressableScale>
+        )}
 
         {/* ── Sacred Spaces Switcher Bar (Zero Borders) ── */}
         <View style={styles.spacesSelectorRow}>
@@ -547,48 +584,128 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* ── Calculated Family Load & Effort Balance (Zero Borders) ── */}
-        <Card style={styles.loadCard}>
+        {/* ── Calculated Family Load & Effort Balance (Refined Apple Aesthetics) ── */}
+        <Card style={[styles.loadCard, { backgroundColor: colors.surface }]}>
           <View style={styles.loadHeader}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-              <AppText variant="subheading" style={{ fontWeight: "700", flex: 1 }} numberOfLines={1}>
-                Family Effort & Chore Balance
-              </AppText>
-              <Badge label="Heuristic Math" tone="info" size="small" style={{ flexShrink: 0 }} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="pie-chart" size={18} color={colors.primary} />
+                <AppText variant="subheading" style={{ fontWeight: "800", fontSize: 16 }}>
+                  Family Effort & Chore Balance
+                </AppText>
+              </View>
+              <Badge label={choreBalanceStats.label} tone={choreBalanceStats.tone} size="small" />
             </View>
-            <AppText variant="caption" style={{ color: colors.text.muted, marginTop: 2 }}>
-              Algorithmic task distribution ensures no single member is overwhelmed
+            <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 4 }}>
+              Algorithmic distribution ensures balanced household harmony
             </AppText>
           </View>
-          <View style={styles.loadStatsRow}>
-            {familyLoad.slice(0, 4).map((fl) => (
+
+          {/* Household Chores Overview Progress Bar */}
+          <View style={[styles.overallLoadBanner, { backgroundColor: colors.surface2 }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.primary }}>
+                Weekly Sanctuary Chores
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.text.secondary, fontWeight: "600" }}>
+                {currentSpaceTasks.filter((t) => t.isCompleted).length} Done · {currentSpaceTasks.filter((t) => !t.isCompleted).length} Active
+              </AppText>
+            </View>
+            <View style={styles.progressBarTrack}>
               <View
-                key={fl.memberId}
-                style={[styles.loadStatItem, { backgroundColor: colors.surface2 }]}
-              >
-                <AppText variant="caption" style={{ fontWeight: "700" }}>
-                  {fl.memberName}
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${
+                      currentSpaceTasks.length > 0
+                        ? Math.round(
+                            (currentSpaceTasks.filter((t) => t.isCompleted).length /
+                              currentSpaceTasks.length) *
+                              100,
+                          )
+                        : 0
+                    }%`,
+                    backgroundColor: colors.primary,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Per-Member Effort Distribution Rows */}
+          <View style={styles.loadStatsList}>
+            {familyLoad.length === 0 ? (
+              <View style={styles.emptyLoadState}>
+                <Ionicons name="leaf-outline" size={20} color={colors.primary} />
+                <AppText variant="caption" style={{ color: colors.text.secondary, textAlign: "center", marginTop: 4 }}>
+                  No chores assigned yet. Add tasks or family members to track workload balance.
                 </AppText>
-                <AppText
-                  variant="body"
-                  style={{ color: colors.primary, fontWeight: "700", marginTop: 2 }}
-                >
-                  {fl.taskCount} {fl.taskCount === 1 ? "task" : "tasks"}
-                </AppText>
-                <Badge
-                  label={fl.loadLevel.toUpperCase()}
-                  tone={
-                    fl.loadLevel === "heavy"
-                      ? "error"
-                      : fl.loadLevel === "balanced"
-                        ? "warning"
-                        : "success"
-                  }
-                  size="small"
-                  style={{ marginTop: 2 }}
-                />
               </View>
-            ))}
+            ) : (
+              familyLoad.slice(0, 4).map((fl) => {
+                const fullMem = members.find((m) => m.id === fl.memberId)
+                const maxTasks = Math.max(...familyLoad.map((f) => f.taskCount), 1)
+                const percentage = Math.round((fl.taskCount / maxTasks) * 100)
+                return (
+                  <PressableScale
+                    key={fl.memberId}
+                    style={[styles.loadMemberRow, { backgroundColor: colors.surface2 }]}
+                    onPress={() => {
+                      void Haptics.selectionAsync()
+                      if (fullMem) setSelectedDetailMember(fullMem)
+                    }}
+                  >
+                    <View style={[styles.miniAvatar, { backgroundColor: fullMem?.avatarColor || colors.primary }]}>
+                      <AppText style={styles.miniAvatarText}>
+                        {fullMem?.avatarText || fl.memberName[0]}
+                      </AppText>
+                    </View>
+
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <AppText variant="body" style={{ fontWeight: "700", fontSize: 13.5 }}>
+                          {fl.memberName}
+                        </AppText>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <AppText variant="caption" style={{ fontWeight: "700", color: colors.text.secondary }}>
+                            {fl.taskCount} {fl.taskCount === 1 ? "chore" : "chores"}
+                          </AppText>
+                          <Badge
+                            label={fl.loadLevel.toUpperCase()}
+                            tone={
+                              fl.loadLevel === "heavy"
+                                ? "error"
+                                : fl.loadLevel === "balanced"
+                                  ? "success"
+                                  : "neutral"
+                            }
+                            size="small"
+                          />
+                        </View>
+                      </View>
+
+                      {/* Member Load Bar */}
+                      <View style={styles.memberLoadTrack}>
+                        <View
+                          style={[
+                            styles.memberLoadFill,
+                            {
+                              width: `${Math.max(percentage, 12)}%`,
+                              backgroundColor:
+                                fl.loadLevel === "heavy"
+                                  ? "#EF4444"
+                                  : fl.loadLevel === "balanced"
+                                    ? colors.primary
+                                    : "#10B981",
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </PressableScale>
+                )
+              })
+            )}
           </View>
         </Card>
 
@@ -598,35 +715,81 @@ export default function DashboardScreen() {
           action={
             <PressableScale onPress={() => router.push("/(app)/(tabs)/family")}>
               <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-                View All ({members.length}) →
+                {members.length > 0 ? `View All (${members.length}) →` : "Manage →"}
               </AppText>
             </PressableScale>
           }
         />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.membersRow}
-        >
-          {members.map((member) => (
-            <PressableScale
-              key={member.id}
-              style={styles.memberPill}
-              onPress={() => router.push("/(app)/(tabs)/family")}
-            >
-              <View style={[styles.avatarCircle, { backgroundColor: member.avatarColor }]}>
-                <AppText style={styles.avatarText}>{member.avatarText}</AppText>
+        {members.length === 0 ? (
+          <Card style={styles.emptyFamilyCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.primaryAlpha }]}>
+                <Ionicons name="people" size={24} color={colors.primary} />
               </View>
-              <AppText variant="caption" style={styles.memberName} numberOfLines={1}>
-                {member.nickname || member.name.split(" ")[0]}
-              </AppText>
-              <AppText style={styles.memberRole} numberOfLines={1}>
-                {member.role === "pet" ? "Pet Pup" : member.role}
-              </AppText>
-            </PressableScale>
-          ))}
-        </ScrollView>
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
+                  Start Your Family Sanctuary
+                </AppText>
+                <AppText variant="caption" color={colors.text.secondary}>
+                  Add children, elders, tutors, or caregivers to begin coordinating schedules and care.
+                </AppText>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <PressableScale
+                onPress={() => router.push("/(app)/(tabs)/family")}
+                style={[styles.emptyActionBtn, { backgroundColor: colors.primary }]}
+              >
+                <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
+                <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "700" }}>
+                  Add Member
+                </AppText>
+              </PressableScale>
+
+              <PressableScale
+                onPress={() => {
+                  useRootStore.getState().loadDemoFamily?.()
+                  useRootStore.getState().loadDemoSpaces?.()
+                  showToast("Sample Family Preview Loaded", "info")
+                }}
+                style={[styles.emptyActionBtn, { backgroundColor: colors.surface2 }]}
+              >
+                <Ionicons name="play-outline" size={15} color={colors.primary} />
+                <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+                  Preview Sample Family
+                </AppText>
+              </PressableScale>
+            </View>
+          </Card>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.membersRow}
+          >
+            {members.map((member) => (
+              <PressableScale
+                key={member.id}
+                style={styles.memberPill}
+                onPress={() => {
+                  void Haptics.selectionAsync()
+                  setSelectedDetailMember(member)
+                }}
+              >
+                <View style={[styles.avatarCircle, { backgroundColor: member.avatarColor }]}>
+                  <AppText style={styles.avatarText}>{member.avatarText}</AppText>
+                </View>
+                <AppText variant="caption" style={styles.memberName} numberOfLines={1}>
+                  {member.nickname || member.name.split(" ")[0]}
+                </AppText>
+                <AppText style={styles.memberRole} numberOfLines={1}>
+                  {member.role === "pet" ? "Pet Pup" : member.role}
+                </AppText>
+              </PressableScale>
+            ))}
+          </ScrollView>
+        )}
 
         {/* ── Active Family Intentions & Pet Projects ── */}
         <SectionHeader
@@ -706,23 +869,31 @@ export default function DashboardScreen() {
             >
               Today&apos;s Gentle Movement Pulse
             </AppText>
-            <Badge label="Google Fit Sync" tone="success" size="small" />
+            <Badge label={healthMetrics.length > 0 ? "Google Fit Sync" : "Health Telemetry"} tone={healthMetrics.length > 0 ? "success" : "neutral"} size="small" />
           </View>
-          <View style={styles.healthStatsRow}>
-            {healthMetrics.map((hm) => (
-              <View key={hm.memberId} style={styles.healthStatItem}>
-                <AppText variant="caption" style={{ fontWeight: "700" }}>
-                  {hm.memberName}
-                </AppText>
-                <AppText variant="h3" style={{ color: colors.primary, marginTop: 2 }}>
-                  {hm.dailySteps.toLocaleString()}
-                </AppText>
-                <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 10 }}>
-                  steps · {hm.sleepHours}h sleep
-                </AppText>
-              </View>
-            ))}
-          </View>
+          {healthMetrics.length > 0 ? (
+            <View style={styles.healthStatsRow}>
+              {healthMetrics.map((hm) => (
+                <View key={hm.memberId} style={styles.healthStatItem}>
+                  <AppText variant="caption" style={{ fontWeight: "700" }}>
+                    {hm.memberName}
+                  </AppText>
+                  <AppText variant="h3" style={{ color: colors.primary, marginTop: 2 }}>
+                    {hm.dailySteps.toLocaleString()}
+                  </AppText>
+                  <AppText variant="caption" style={{ color: colors.text.muted, fontSize: 10 }}>
+                    steps · {hm.sleepHours}h sleep
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={{ paddingVertical: 12, alignItems: "center" }}>
+              <AppText variant="caption" style={{ color: colors.text.muted, textAlign: "center", lineHeight: 18 }}>
+                No active device health telemetry connected yet. Connect Google Fit or Health Connect in Settings to track family steps and resting sleep.
+              </AppText>
+            </View>
+          )}
         </Card>
 
         {/* ── Next Upcoming Function & Invitations ── */}
@@ -879,38 +1050,19 @@ export default function DashboardScreen() {
             </AppText>
           </Card>
         )}
+
+        {/* ── Family Member Detail Sheet ── */}
+        <FamilyMemberDetailSheet
+          visible={selectedDetailMember !== null}
+          member={selectedDetailMember}
+          onClose={() => setSelectedDetailMember(null)}
+          onSelectRelative={(rel) => setSelectedDetailMember(rel)}
+        />
       </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  cloudBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    marginBottom: 10,
-  },
-  cloudStatusLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-    marginRight: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  cloudStatusRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexShrink: 0,
-  },
   spacesSelectorRow: {
     flexDirection: "row",
     gap: 8,
@@ -992,24 +1144,58 @@ const styles = StyleSheet.create({
   },
   loadCard: {
     padding: 16,
-    borderRadius: 20,
-    marginBottom: 8,
+    borderRadius: 22,
+    marginBottom: 12,
   },
   loadHeader: {
     marginBottom: 12,
   },
-  loadStatsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  loadStatItem: {
-    flex: 1,
-    minWidth: "46%",
+  overallLoadBanner: {
     padding: 12,
     borderRadius: 14,
+    marginBottom: 12,
+  },
+  progressBarTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  loadStatsList: {
+    gap: 8,
+  },
+  loadMemberRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    padding: 10,
+    borderRadius: 14,
+  },
+  miniAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  memberLoadTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    marginTop: 6,
+    overflow: "hidden",
+  },
+  memberLoadFill: {
+    height: "100%",
+    borderRadius: 3,
   },
   meetingCard: {
     padding: 14,
@@ -1263,5 +1449,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
+  },
+  easyModeBanner: {
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 16,
+  },
+  easyModeQuickRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  easyModeBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    gap: 6,
+  },
+  easyModeBtnText: {
+    fontWeight: "700",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  emptyLoadState: {
+    alignItems: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  emptyFamilyCard: {
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 16,
+  },
+  emptyActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
 })

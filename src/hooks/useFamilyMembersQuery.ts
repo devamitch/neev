@@ -7,7 +7,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { QueryKeys } from "@/services/query/queryClient"
 import { useFamilyStore, type FamilyMember } from "@/stores/useFamilyStore"
 
-export function useFamilyMembersQuery(householdId = "sharma_household_root") {
+export function useFamilyMembersQuery(customHouseholdId?: string) {
+  const household = useFamilyStore((s) => s.household)
+  const householdId = customHouseholdId || household?.id || "household_local"
   const members = useFamilyStore((s) => s.members)
 
   const query = useQuery<FamilyMember[]>({
@@ -29,8 +31,10 @@ export function useFamilyMembersQuery(householdId = "sharma_household_root") {
   return query
 }
 
-export function useAddFamilyMemberMutation(householdId = "sharma_household_root") {
+export function useAddFamilyMemberMutation(customHouseholdId?: string) {
   const queryClient = useQueryClient()
+  const household = useFamilyStore((s) => s.household)
+  const householdId = customHouseholdId || household?.id || "household_local"
   const addMember = useFamilyStore((s) => s.addMember)
 
   return useMutation({
@@ -44,8 +48,10 @@ export function useAddFamilyMemberMutation(householdId = "sharma_household_root"
   })
 }
 
-export function useUpdateFamilyMemberMutation(householdId = "sharma_household_root") {
+export function useUpdateFamilyMemberMutation(customHouseholdId?: string) {
   const queryClient = useQueryClient()
+  const household = useFamilyStore((s) => s.household)
+  const householdId = customHouseholdId || household?.id || "household_local"
   const updateMember = useFamilyStore((s) => s.updateMember)
 
   return useMutation({
@@ -59,8 +65,10 @@ export function useUpdateFamilyMemberMutation(householdId = "sharma_household_ro
   })
 }
 
-export function useRemoveFamilyMemberMutation(householdId = "sharma_household_root") {
+export function useRemoveFamilyMemberMutation(customHouseholdId?: string) {
   const queryClient = useQueryClient()
+  const household = useFamilyStore((s) => s.household)
+  const householdId = customHouseholdId || household?.id || "household_local"
   const removeMember = useFamilyStore((s) => s.removeMember)
 
   return useMutation({

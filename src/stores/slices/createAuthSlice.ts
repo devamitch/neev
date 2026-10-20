@@ -220,6 +220,22 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
       state.isAuthenticated = true
       state.isAuthLoading = false
       state.authError = null
+
+      // Clean guest isolation: start with clean personal sanctuary, zero fake relatives
+      state.household = {
+        name: "My Family Sanctuary",
+        motto: "Roots in reverence, wings in harmony",
+        city: "",
+        establishedYear: new Date().getFullYear(),
+      }
+      state.members = []
+      state.activeMemberId = null
+      state.realms = []
+      state.activeRealmId = ""
+      state.clusters = []
+      state.kinshipEdges = []
+      state.bridges = []
+      state.invitations = []
     })
   },
 
@@ -365,6 +381,25 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
       state.isAuthLoading = false
       state.authError = null
       state.pendingSsoState = null
+
+      // Account & Family isolation: reset family state to clean on sign-out
+      state.household = {
+        name: "",
+        motto: "",
+        city: "",
+        establishedYear: new Date().getFullYear(),
+      }
+      state.members = []
+      state.activeMemberId = null
+      state.realms = []
+      state.activeRealmId = ""
+      state.clusters = []
+      state.kinshipEdges = []
+      state.bridges = []
+      state.invitations = []
+      state.tasks = []
+      state.functions = []
+      state.entries = []
     })
   },
 })

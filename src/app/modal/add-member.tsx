@@ -19,10 +19,13 @@ import { useRootStore } from "@/stores/useRootStore"
 import { useAddFamilyMemberMutation } from "@/hooks/useFamilyMembersQuery"
 
 const ROLES: { key: FamilyRole; label: string; description: string; defaultColor: string }[] = [
-  { key: "elder", label: "Elder", description: "Pillar of wisdom & traditions", defaultColor: "#C27835" },
-  { key: "parent", label: "Parent", description: "Organizer & protector", defaultColor: "#709758" },
-  { key: "youth", label: "Youth & Child", description: "Learner & bright future", defaultColor: "#588D6A" },
-  { key: "pet", label: "Pet", description: "Beloved furry companion", defaultColor: "#5A8B49" },
+  { key: "parent", label: "Parent / Guardian", description: "Organizer & household protector", defaultColor: "#3D5A4C" },
+  { key: "child", label: "Supervised Child", description: "Under guardian care · Chores & school goals", defaultColor: "#2563EB" },
+  { key: "elder", label: "Elder / Grandparent", description: "Pillar of wisdom & traditions", defaultColor: "#D97706" },
+  { key: "tutor", label: "Home Tutor", description: "Academic mentor · Lessons & homework", defaultColor: "#7C3AED" },
+  { key: "caregiver", label: "Caregiver / Nanny", description: "Care assistance · Daily family routines", defaultColor: "#0D9488" },
+  { key: "youth", label: "Youth & Teen", description: "Independent young family member", defaultColor: "#059669" },
+  { key: "pet", label: "Pet Companion", description: "Beloved furry family member", defaultColor: "#DA7756" },
 ]
 
 const AVATAR_COLORS = ["#709758", "#5A8B49", "#8EB574", "#C27835", "#588D6A", "#789262", "#485642"]
@@ -57,6 +60,14 @@ export default function AddMemberModal() {
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
   const [notes, setNotes] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+
+  // Specialized Role Metadata
+  const [schoolGrade, setSchoolGrade] = useState("")
+  const [learningGoals, setLearningGoals] = useState("")
+  const [subjectsTaught, setSubjectsTaught] = useState("")
+  const [tutoringSchedule, setTutoringSchedule] = useState("")
+  const [caregiverType, setCaregiverType] = useState("")
+  const [careSchedule, setCareSchedule] = useState("")
 
   const [selectedRelativeId, setSelectedRelativeId] = useState<string>(members[0]?.id || "")
   const [selectedRelation, setSelectedRelation] = useState<KinshipType>("parent")
@@ -103,6 +114,12 @@ export default function AddMemberModal() {
       superpower: superpower.trim() || undefined,
       favoriteTreat: favoriteTreat.trim() || undefined,
       notes: notes.trim() || undefined,
+      schoolGrade: role === "child" ? schoolGrade.trim() || undefined : undefined,
+      learningGoals: role === "child" && learningGoals.trim() ? [learningGoals.trim()] : undefined,
+      subjectsTaught: role === "tutor" && subjectsTaught.trim() ? subjectsTaught.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+      tutoringSchedule: role === "tutor" ? tutoringSchedule.trim() || undefined : undefined,
+      caregiverType: role === "caregiver" && caregiverType.trim() ? (caregiverType.trim() as "nanny" | "elder_care" | "home_nurse") : undefined,
+      careSchedule: role === "caregiver" ? careSchedule.trim() || undefined : undefined,
     })
     const newMemberId = saved.id
 
@@ -223,6 +240,75 @@ return (
             })}
           </View>
         </View>
+
+        {/* ── Specialized Child Supervision Details ── */}
+        {role === "child" && (
+          <View style={styles.sectionMargin}>
+            <AppText variant="caption" style={styles.label}>
+              CHILD SUPERVISION & LEARNING (MANAGED BY PARENTS)
+            </AppText>
+            <View style={{ gap: 12 }}>
+              <TextField
+                label="Class / School Grade"
+                placeholder="e.g. Grade 7 · St. Xavier's"
+                value={schoolGrade}
+                onChangeText={setSchoolGrade}
+              />
+              <TextField
+                label="Learning & Activity Goals"
+                placeholder="e.g. Daily reading, Math Olympiad, Tennis practice"
+                value={learningGoals}
+                onChangeText={setLearningGoals}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* ── Specialized Home Tutor Details ── */}
+        {role === "tutor" && (
+          <View style={styles.sectionMargin}>
+            <AppText variant="caption" style={styles.label}>
+              HOME TUTOR ACADEMIC DETAILS
+            </AppText>
+            <View style={{ gap: 12 }}>
+              <TextField
+                label="Subjects Taught"
+                placeholder="e.g. Mathematics & Science"
+                value={subjectsTaught}
+                onChangeText={setSubjectsTaught}
+              />
+              <TextField
+                label="Class Schedule & Hours"
+                placeholder="e.g. Tuesday & Thursday · 4:30 PM - 6:00 PM"
+                value={tutoringSchedule}
+                onChangeText={setTutoringSchedule}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* ── Specialized Caregiver / Nanny Details ── */}
+        {role === "caregiver" && (
+          <View style={styles.sectionMargin}>
+            <AppText variant="caption" style={styles.label}>
+              CAREGIVER / NANNY DETAILS
+            </AppText>
+            <View style={{ gap: 12 }}>
+              <TextField
+                label="Caregiver Role & Duties"
+                placeholder="e.g. Full-time Nanny, Elder Care Nurse, Baby Care"
+                value={caregiverType}
+                onChangeText={setCaregiverType}
+              />
+              <TextField
+                label="Care Schedule & Timings"
+                placeholder="e.g. Mon - Fri · 8:30 AM - 4:30 PM"
+                value={careSchedule}
+                onChangeText={setCareSchedule}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Profile Connection Mode */}
         <View style={styles.sectionMargin}>

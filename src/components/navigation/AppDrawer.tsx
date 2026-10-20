@@ -34,7 +34,10 @@ export const useDrawerStore = Object.assign(
   },
 )
 
-export const openAppDrawer = () => useRootStore.getState().openDrawer()
+export const openAppDrawer = () => {
+  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  useRootStore.getState().setDrawerOpen(true)
+}
 
 type Item = {
   icon: keyof typeof Ionicons.glyphMap
@@ -57,15 +60,27 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: "Quick Actions",
     items: [
       { icon: "add-circle-outline", label: "Schedule Family Event", href: "/modal/add-event" },
-      { icon: "document-text-outline", label: "Record Heirloom Wisdom", href: "/modal/add-knowledge" },
+      {
+        icon: "document-text-outline",
+        label: "Record Heirloom Wisdom",
+        href: "/modal/add-knowledge",
+      },
     ],
   },
   {
     title: "Household & Security",
     items: [
       { icon: "settings-outline", label: "Sanctuary Settings", href: "/(app)/(profile)/settings" },
-      { icon: "shield-checkmark-outline", label: "Local-First Privacy Policy", href: "/(app)/(profile)/privacy-policy" },
-      { icon: "information-circle-outline", label: "About Neev OS", href: "/(app)/(profile)/about" },
+      {
+        icon: "shield-checkmark-outline",
+        label: "Local-First Privacy Policy",
+        href: "/(app)/(profile)/privacy-policy",
+      },
+      {
+        icon: "information-circle-outline",
+        label: "About Neev OS",
+        href: "/(app)/(profile)/about",
+      },
     ],
   },
 ]
@@ -76,6 +91,77 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   const router = useRouter()
   const household = useFamilyStore((s) => s.household)
   const members = useFamilyStore((s) => s.members)
+  const easyMode = useRootStore((s) => s.easyMode)
+  const toggleEasyMode = useRootStore((s) => s.toggleEasyMode)
+
+  const groups: { title: string; items: Item[] }[] = React.useMemo(
+    () => [
+      {
+        title: "Sanctuary Spaces",
+        items: [
+          { icon: "home-outline", label: "Sanctuary Home", href: "/(app)/(tabs)/dashboard" },
+          { icon: "location-outline", label: "Interactive Family Map", href: "/(app)/map" },
+          {
+            icon: "calendar-outline",
+            label: "Functions & Rituals",
+            href: "/(app)/(tabs)/schedule",
+          },
+          {
+            icon: "book-outline",
+            label: "Shared Knowledge Vault",
+            href: "/(app)/(tabs)/knowledge",
+          },
+          {
+            icon: "people-outline",
+            label: "Family Directory & Roles",
+            href: "/(app)/(tabs)/family",
+          },
+        ],
+      },
+      {
+        title: "Care & Accessibility",
+        items: [
+          {
+            icon: easyMode ? "sunny" : "sunny-outline",
+            label: easyMode ? "Disable Easy Mode (Active)" : "Enable Grandparent Easy Mode",
+            action: () => toggleEasyMode(),
+          },
+        ],
+      },
+      {
+        title: "Quick Actions",
+        items: [
+          { icon: "add-circle-outline", label: "Schedule Family Event", href: "/modal/add-event" },
+          {
+            icon: "document-text-outline",
+            label: "Record Heirloom Wisdom",
+            href: "/modal/add-knowledge",
+          },
+        ],
+      },
+      {
+        title: "Household & Security",
+        items: [
+          {
+            icon: "settings-outline",
+            label: "Sanctuary Settings",
+            href: "/(app)/(profile)/settings",
+          },
+          {
+            icon: "shield-checkmark-outline",
+            label: "Local-First Privacy Policy",
+            href: "/(app)/(profile)/privacy-policy",
+          },
+          {
+            icon: "information-circle-outline",
+            label: "About Neev OS",
+            href: "/(app)/(profile)/about",
+          },
+        ],
+      },
+    ],
+    [easyMode, toggleEasyMode],
+  )
 
   const handlePress = (item: Item) => {
     void Haptics.selectionAsync()
@@ -88,7 +174,9 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
   }
 
   return (
-    <View style={[styles.drawerRoot, { backgroundColor: colors.surface, paddingTop: insets.top + 16 }]}>
+    <View
+      style={[styles.drawerRoot, { backgroundColor: colors.surface, paddingTop: insets.top + 16 }]}
+    >
       {/* Brand header */}
       <View style={styles.brandHeader}>
         <NeevLogoIcon size={46} />
@@ -104,20 +192,26 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
 
       {/* Household Status Card (Zero Borders) */}
       <View style={[styles.householdBox, { backgroundColor: colors.surface2 }]}>
-        <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary, letterSpacing: 0.5 }}>
+        <AppText
+          variant="caption"
+          style={{ fontWeight: "700", color: colors.primary, letterSpacing: 0.5 }}
+        >
           ACTIVE HOUSEHOLD
         </AppText>
         <AppText variant="subheading" style={styles.householdName}>
-          {household.name}
+          {household?.name || "Sanctuary Home"}
         </AppText>
         <AppText variant="caption" style={{ color: colors.text.secondary }}>
-          {members.length} Multigenerational Members · {household.city}
+          {members.length} Multigenerational Members · {household?.city || "Local Sanctuary"}
         </AppText>
       </View>
 
       {/* Nav groups */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollBody, { paddingBottom: insets.bottom + 24 }]}>
-        {GROUPS.map((group) => (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollBody, { paddingBottom: insets.bottom + 24 }]}
+      >
+        {groups.map((group) => (
           <View key={group.title} style={styles.groupWrap}>
             <AppText variant="caption" style={styles.groupTitle}>
               {group.title.toUpperCase()}
@@ -143,7 +237,8 @@ function DrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
 }
 
 export function AppDrawer({ children }: { children: ReactNode }) {
-  const { open, setOpen } = useDrawerStore()
+  const open = useRootStore((s) => s.isDrawerOpen)
+  const setOpen = useRootStore((s) => s.setDrawerOpen)
 
   return (
     <Drawer
@@ -181,7 +276,6 @@ const styles = StyleSheet.create({
   householdBox: {
     padding: 14,
     borderRadius: 14,
-    borderWidth: 1,
     marginBottom: 16,
     gap: 3,
   },

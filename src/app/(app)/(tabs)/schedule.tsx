@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
+import { SanctuaryHeader, SanctuaryLargeTitle } from "@/components/ui/SanctuaryHeader"
 import { AppText } from "@/components/ui/AppText"
 import { AppButton } from "@/components/ui/AppButton"
 import { Card } from "@/components/ui/Card"
@@ -157,6 +158,10 @@ export default function ScheduleScreen() {
   const listHeader = useMemo(
     () => (
       <View style={{ marginBottom: 12 }}>
+        <SanctuaryLargeTitle
+          title="Family Functions"
+          subtitle="Shared Schedulers, Rituals & Delegations"
+        />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
             const active = selectedCat === cat.key
@@ -259,14 +264,12 @@ export default function ScheduleScreen() {
     <ScreenContainer
       safeArea
       scrollMode="external"
-      headerMode="compact"
       dockBehavior="auto-hide"
       header={
-        <AppHeader
-          sticky
+        <SanctuaryHeader
+          eyebrow="TIMELINE & RITUALS"
           title="Family Functions"
           subtitle="Shared Schedulers, Rituals & Delegations"
-          showBack={false}
           rightAction={
             <HeaderIconButton
               icon="add"

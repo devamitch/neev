@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
 import { AppHeader, HeaderIconButton } from "@/components/ui/AppHeader"
+import { SanctuaryHeader, SanctuaryLargeTitle } from "@/components/ui/SanctuaryHeader"
 import { AppText } from "@/components/ui/AppText"
 import { AppButton } from "@/components/ui/AppButton"
 import { Card } from "@/components/ui/Card"
@@ -17,6 +18,7 @@ import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useKnowledgeStore, type KnowledgeCategory, type KnowledgeEntry } from "@/stores/useKnowledgeStore"
 import { useShallow } from "@/stores/useRootStore"
 import { useKnowledgeQuery, useToggleKnowledgePinMutation } from "@/hooks/useKnowledgeQuery"
+import { FamilyPhotoBoothModal } from "@/components/family/FamilyPhotoBoothModal"
 
 const CATEGORIES: { key: KnowledgeCategory | "all"; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "All Vault", icon: "albums-outline" },
@@ -43,6 +45,7 @@ export default function KnowledgeScreen() {
   )
   const entries = queryEntries || storeEntries
   const [expandedId, setExpandedId] = useState<string | null>("k-1")
+  const [photoBoothVisible, setPhotoBoothVisible] = useState(false)
 
   const filteredEntries = useMemo(
     () => (selectedCategory === "all" ? entries : entries.filter((e) => e.category === selectedCategory)),
@@ -90,9 +93,19 @@ export default function KnowledgeScreen() {
               setExpandedId(isExpanded ? null : entry.id)
             }}
           >
-            <AppText variant="subheading" style={styles.entryTitle}>
-              {entry.title}
-            </AppText>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <AppText variant="subheading" style={styles.entryTitle}>
+                {entry.title}
+              </AppText>
+              {entry.photoFrame && (
+                <View style={[styles.photoFrameBadge, { borderColor: "#DA7756" }]}>
+                  <Ionicons name="camera-outline" size={11} color="#DA7756" style={{ marginRight: 3 }} />
+                  <AppText style={{ fontSize: 10, fontWeight: "800", color: "#DA7756" }}>
+                    POLAROID
+                  </AppText>
+                </View>
+              )}
+            </View>
 
             <AppText variant="caption" style={styles.authorLine}>
               Recorded by <AppText style={{ fontWeight: "700" }}>{entry.authorName}</AppText> ({entry.authorRole}) · {entry.createdAt}
@@ -124,6 +137,36 @@ export default function KnowledgeScreen() {
   const listHeader = useMemo(
     () => (
       <View style={{ marginBottom: 12 }}>
+        <SanctuaryLargeTitle
+          title="Knowledge Sanctuary"
+          subtitle="Family Stories, Heirloom Recipes & Traditions Vault"
+        />
+
+        {/* Photo Booth Quick Launch Banner */}
+        <PressableScale
+          style={[styles.photoBoothBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            setPhotoBoothVisible(true)
+          }}
+        >
+          <View style={[styles.photoBoothIconCircle, { backgroundColor: colors.primaryAlpha }]}>
+            <Ionicons name="camera" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <AppText variant="subheading" style={{ fontWeight: "700" }}>
+                Family Photo Booth
+              </AppText>
+              <Badge label="100% Free" tone="success" size="small" />
+            </View>
+            <AppText variant="caption" style={{ color: colors.text.secondary, marginTop: 2 }}>
+              Framed heirlooms & polaroids captured locally into your Sanctuary
+            </AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+        </PressableScale>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {CATEGORIES.map((cat) => {
             const active = selectedCategory === cat.key
@@ -191,14 +234,12 @@ export default function KnowledgeScreen() {
     <ScreenContainer
       safeArea
       scrollMode="external"
-      headerMode="compact"
       dockBehavior="auto-hide"
       header={
-        <AppHeader
-          sticky
+        <SanctuaryHeader
+          eyebrow="SANCTUARY VAULT"
           title="Knowledge Sanctuary"
           subtitle="Family Stories, Heirloom Recipes & Traditions Vault"
-          showBack={false}
           rightAction={
             <HeaderIconButton
               icon="add"
@@ -218,11 +259,40 @@ export default function KnowledgeScreen() {
         ListEmptyComponent={emptyComponent}
         contentContainerStyle={{ flexGrow: 1 }}
       />
+
+      {/* ── Family Photo Booth Modal ── */}
+      <FamilyPhotoBoothModal
+        visible={photoBoothVisible}
+        onClose={() => setPhotoBoothVisible(false)}
+      />
     </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
+  photoBoothBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  photoBoothIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoFrameBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
   filterRow: {
     gap: 8,
     marginBottom: 16,

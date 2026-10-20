@@ -10,6 +10,7 @@ import type { FamilyFunction } from "@/stores/slices/createScheduleSlice"
 import type { KnowledgeEntry } from "@/stores/slices/createKnowledgeSlice"
 import type { FamilyRoutineItem } from "@/stores/slices/createRoutineSlice"
 import type { FamilyIntention } from "@/stores/slices/createIntentionsSlice"
+import type { SpaceTask } from "@/stores/slices/createSpacesSlice"
 
 export interface HouseholdCloudData {
   id: string
@@ -171,6 +172,29 @@ export const supabaseSyncService = {
     })
     if (error) {
       console.warn("[Supabase] syncRoutine error:", error.message)
+    }
+  },
+
+  /**
+   * Push priority space task / chore to Supabase
+   */
+  async syncTask(householdId: string, task: SpaceTask): Promise<void> {
+    const { error } = await supabase.from("space_tasks").upsert({
+      id: task.id,
+      household_id: householdId,
+      title: task.title,
+      space: task.space,
+      category: task.category,
+      assigned_to: task.assignedTo,
+      due_date: task.dueDate,
+      time: task.time,
+      priority: task.priority,
+      is_completed: task.isCompleted,
+      reminder_nudge_count: task.reminderNudgeCount,
+      updated_at: new Date().toISOString(),
+    })
+    if (error) {
+      console.warn("[Supabase] syncTask error:", error.message)
     }
   },
 

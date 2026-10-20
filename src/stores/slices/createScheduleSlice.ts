@@ -29,9 +29,11 @@ export interface ScheduleSlice {
   addFunction: (fn: Omit<FamilyFunction, "id">) => void
   toggleFunctionTask: (functionId: string, taskId: string) => void
   removeFunction: (id: string) => void
+  resetScheduleToClean: () => void
+  loadDemoSchedule: () => void
 }
 
-export const INITIAL_FUNCTIONS: FamilyFunction[] = [
+export const DEMO_FUNCTIONS: FamilyFunction[] = [
   {
     id: "fn-1",
     title: "Dida's 75th Amrit Mahotsav Celebration",
@@ -110,8 +112,10 @@ export const INITIAL_FUNCTIONS: FamilyFunction[] = [
   },
 ]
 
+export const INITIAL_FUNCTIONS = DEMO_FUNCTIONS
+
 export const createScheduleSlice: ImmerStateCreator<ScheduleSlice> = (set) => ({
-  functions: INITIAL_FUNCTIONS,
+  functions: [],
 
   addFunction: (fn) =>
     set((state) => {
@@ -132,5 +136,15 @@ export const createScheduleSlice: ImmerStateCreator<ScheduleSlice> = (set) => ({
   removeFunction: (id) =>
     set((state) => {
       state.functions = state.functions.filter((f) => f.id !== id)
+    }),
+
+  resetScheduleToClean: () =>
+    set((state) => {
+      state.functions = []
+    }),
+
+  loadDemoSchedule: () =>
+    set((state) => {
+      state.functions = DEMO_FUNCTIONS
     }),
 })

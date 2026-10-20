@@ -13,6 +13,8 @@ export interface KnowledgeEntry {
   tags: string[]
   isPinned: boolean
   createdAt: string
+  photoUri?: string
+  photoFrame?: "ivory" | "pista" | "terracotta" | "vintage"
 }
 
 export interface KnowledgeSlice {
@@ -22,9 +24,11 @@ export interface KnowledgeSlice {
   removeEntry: (id: string) => void
   togglePin: (id: string) => void
   setCategory: (cat: KnowledgeCategory | "all") => void
+  resetKnowledgeToClean: () => void
+  loadDemoKnowledge: () => void
 }
 
-export const INITIAL_ENTRIES: KnowledgeEntry[] = [
+export const DEMO_ENTRIES: KnowledgeEntry[] = [
   {
     id: "k-1",
     title: "Dida's Authentic Chhanar Payesh",
@@ -87,8 +91,10 @@ export const INITIAL_ENTRIES: KnowledgeEntry[] = [
   },
 ]
 
+export const INITIAL_ENTRIES = DEMO_ENTRIES
+
 export const createKnowledgeSlice: ImmerStateCreator<KnowledgeSlice> = (set) => ({
-  entries: INITIAL_ENTRIES,
+  entries: [],
   selectedCategory: "all",
 
   addEntry: (entry) =>
@@ -116,5 +122,15 @@ export const createKnowledgeSlice: ImmerStateCreator<KnowledgeSlice> = (set) => 
   setCategory: (cat) =>
     set((state) => {
       state.selectedCategory = cat
+    }),
+
+  resetKnowledgeToClean: () =>
+    set((state) => {
+      state.entries = []
+    }),
+
+  loadDemoKnowledge: () =>
+    set((state) => {
+      state.entries = DEMO_ENTRIES
     }),
 })
