@@ -11,8 +11,9 @@
  * - `onReady` fires once the logo has decoded (or after a short fallback), so
  *   the parent can hide the native splash with no blank frame in between.
  *
- * Look: flat colour only. One soft "inhale" halo behind the logo, then the
- * wordmark rises in. No gradients, shadows or borders.
+ * Look: continues from the native splash mark ("Neev" means foundation): the mark
+ * settles upward, a terracotta foundation line draws beneath it, the wordmark rises
+ * letter by letter and a short tagline follows. Flat colour, no gradients or shadows.
  */
 import { PressableScale } from "@/components/ui/PressableScale"
 import { Image } from "expo-image"
@@ -22,7 +23,9 @@ import { SystemBars } from "react-native-edge-to-edge"
 import Animated, {
   cancelAnimation,
   Easing,
+  Extrapolation,
   interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -31,18 +34,25 @@ import Animated, {
 } from "react-native-reanimated"
 
 import { AppText } from "@/components/ui/AppText"
-import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
 import { setuColors } from "@/theme/setuColors"
 
-const HOLD_MS = 1800
+const HOLD_MS = 1900
 const HOLD_REDUCED_MS = 900
-const EXIT_MS = 260
+const EXIT_MS = 280
 const READY_FALLBACK_MS = 600
 
-const LOGO_SIZE = 84
-const MARK_SIZE = 220
-const HALO_OUTER = "rgba(125, 156, 123, 0.12)" // sage
-const HALO_INNER = "rgba(218, 119, 86, 0.09)" // terracotta
+/** Same artwork as the native splash, so the hand-off has no visual jump. */
+const MARK = require("@assets/images/splash-screen.png")
+const MARK_SIZE = 168
+const MARK_START_SCALE = 1.2
+const MARK_END_SCALE = 0.78
+const MARK_RISE = -64
+const LINE_WIDTH = 96
+const TERRACOTTA = "#DA7756"
+/** The splash artwork's own background (also the native splash colour in app.json). */
+const SPLASH_CANVAS = "#F7F6F0"
+const WORD = "Neev".split("")
+const LETTER_STAGGER = 70
 
 interface AnimatedSplashScreenProps {
   /** Fires once when the logo is on screen. Use it to hide the native splash. */
@@ -65,9 +75,10 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
   const onFinishRef = useRef(onAnimationFinish)
 
   const rootOpacity = useSharedValue(1)
-  const logoProgress = useSharedValue(0)
-  const copyProgress = useSharedValue(0)
-  const haloProgress = useSharedValue(0)
+  const markProgress = useSharedValue(0)
+  const lineProgress = useSharedValue(0)
+  const wordProgress = useSharedValue(0)
+  const taglineProgress = useSharedValue(0)
 
   // Always call the latest callbacks without restarting the animation.
   useEffect(() => {
@@ -110,23 +121,20 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
 
     onReadyRef.current?.()
 
+    const ease = Easing.out(Easing.cubic)
     if (reducedMotion) {
-      logoProgress.value = withTiming(1, { duration: 200 })
-      copyProgress.value = withTiming(1, { duration: 200 })
-      haloProgress.value = 1
+      markProgress.value = 1
+      lineProgress.value = 1
+      wordProgress.value = withTiming(1, { duration: 200 })
+      taglineProgress.value = withTiming(1, { duration: 200 })
     } else {
-      logoProgress.value = withDelay(
-        60,
-        withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
+      markProgress.value = withDelay(80, withTiming(1, { duration: 620, easing: Easing.inOut(Easing.cubic) }))
+      lineProgress.value = withDelay(420, withTiming(1, { duration: 520, easing: ease }))
+      wordProgress.value = withDelay(
+        520,
+        withTiming(1, { duration: 420 + LETTER_STAGGER * (WORD.length - 1), easing: Easing.linear }),
       )
-      copyProgress.value = withDelay(
-        420,
-        withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
-      )
-      haloProgress.value = withTiming(1, {
-        duration: HOLD_MS,
-        easing: Easing.inOut(Easing.sin),
-      })
+      taglineProgress.value = withDelay(1050, withTiming(1, { duration: 420, easing: ease }))
     }
 
     holdTimerRef.current = setTimeout(finish, reducedMotion ? HOLD_REDUCED_MS : HOLD_MS)
@@ -134,45 +142,41 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
     }
-  }, [isReady, reducedMotion, finish, logoProgress, copyProgress, haloProgress])
+  }, [isReady, reducedMotion, finish, markProgress, lineProgress, wordProgress, taglineProgress])
 
   useEffect(() => {
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
       cancelAnimation(rootOpacity)
-      cancelAnimation(logoProgress)
-      cancelAnimation(copyProgress)
-      cancelAnimation(haloProgress)
+      cancelAnimation(markProgress)
+      cancelAnimation(lineProgress)
+      cancelAnimation(wordProgress)
+      cancelAnimation(taglineProgress)
     }
-  }, [rootOpacity, logoProgress, copyProgress, haloProgress])
+  }, [rootOpacity, markProgress, lineProgress, wordProgress, taglineProgress])
 
-  const rootStyle = useAnimatedStyle(() => ({ opacity: rootOpacity.value }))
-
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: logoProgress.value,
-    transform: [{ scale: reducedMotion ? 1 : interpolate(logoProgress.value, [0, 1], [0.9, 1]) }],
+  const rootStyle = useAnimatedStyle(() => ({
+    opacity: rootOpacity.value,
+    transform: [{ scale: interpolate(rootOpacity.value, [0, 1], [1.03, 1]) }],
   }))
 
-  const haloOuterStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(haloProgress.value, [0, 0.25, 1], [0, 1, 1]),
+  const markStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: reducedMotion ? 1 : interpolate(haloProgress.value, [0, 1], [0.84, 1.04]) },
+      { translateY: interpolate(markProgress.value, [0, 1], [0, MARK_RISE]) },
+      { scale: interpolate(markProgress.value, [0, 1], [MARK_START_SCALE, MARK_END_SCALE]) },
     ],
   }))
 
-  const haloInnerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(haloProgress.value, [0, 0.25, 1], [0, 1, 1]),
-    transform: [
-      { scale: reducedMotion ? 1 : interpolate(haloProgress.value, [0, 1], [0.72, 0.92]) },
-    ],
+  // The foundation the mark settles onto.
+  const lineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(lineProgress.value, [0, 0.2, 1], [0, 1, 1]),
+    transform: [{ scaleX: lineProgress.value }],
   }))
 
-  const copyStyle = useAnimatedStyle(() => ({
-    opacity: copyProgress.value,
-    transform: [
-      { translateY: reducedMotion ? 0 : interpolate(copyProgress.value, [0, 1], [10, 0]) },
-    ],
+  const taglineStyle = useAnimatedStyle(() => ({
+    opacity: taglineProgress.value,
+    transform: [{ translateY: interpolate(taglineProgress.value, [0, 1], [6, 0]) }],
   }))
 
   if (isDone) return null
@@ -190,24 +194,61 @@ export function AnimatedSplashScreen({ onReady, onAnimationFinish }: AnimatedSpl
         accessibilityLabel="Neev"
         accessibilityHint="Skips the intro animation"
       >
-        <View style={styles.mark}>
-          <Animated.View style={[styles.haloOuter, haloOuterStyle]} />
-          <Animated.View style={[styles.haloInner, haloInnerStyle]} />
-          <Animated.View style={[styles.logoWrap, logoStyle]}>
-            <NeevLogoIcon size={84} />
+        <Animated.View style={[styles.mark, markStyle]}>
+          <Image
+            source={MARK}
+            style={styles.markImage}
+            contentFit="contain"
+            priority="high"
+            transition={0}
+            onDisplay={markReady}
+            accessible={false}
+          />
+        </Animated.View>
+
+        <View style={styles.copy} pointerEvents="none">
+          <Animated.View style={[styles.line, lineStyle]} />
+          <View style={styles.word} accessible accessibilityLabel="Neev">
+            {WORD.map((letter, i) => (
+              <Letter key={i} letter={letter} index={i} progress={wordProgress} />
+            ))}
+          </View>
+          <Animated.View style={taglineStyle}>
+            <AppText variant="body" style={styles.tagline}>
+              The foundation of your family
+            </AppText>
           </Animated.View>
         </View>
-
-        <Animated.View style={[styles.copy, copyStyle]}>
-          <AppText variant="display" style={styles.title}>
-            Neev
-          </AppText>
-          <AppText variant="body" style={styles.tagline}>
-            Family Functions Schedulers & Shared Knowledge
-          </AppText>
-        </Animated.View>
       </PressableScale>
     </Animated.View>
+  )
+}
+
+/** One wordmark letter; each rises a beat after the one before it. */
+function Letter({
+  letter,
+  index,
+  progress,
+}: {
+  letter: string
+  index: number
+  progress: SharedValue<number>
+}) {
+  const total = 420 + LETTER_STAGGER * (WORD.length - 1)
+  const start = (index * LETTER_STAGGER) / total
+  const end = (index * LETTER_STAGGER + 420) / total
+  const style = useAnimatedStyle(() => {
+    const t = interpolate(progress.value, [start, end], [0, 1], Extrapolation.CLAMP)
+    const eased = 1 - Math.pow(1 - t, 3)
+    return {
+      opacity: eased,
+      transform: [{ translateY: (1 - eased) * 14 }],
+    }
+  })
+  return (
+    <Animated.Text style={[styles.letter, style]} accessible={false}>
+      {letter}
+    </Animated.Text>
   )
 }
 
@@ -215,61 +256,53 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFill,
     zIndex: 99999,
-    backgroundColor: setuColors.canvas,
+    backgroundColor: SPLASH_CANVAS,
   },
   fill: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 28,
-    paddingBottom: 32,
   },
 
   mark: {
-    width: MARK_SIZE,
-    height: MARK_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  haloOuter: {
     position: "absolute",
     width: MARK_SIZE,
     height: MARK_SIZE,
-    borderRadius: MARK_SIZE / 2,
-    backgroundColor: HALO_OUTER,
   },
-  haloInner: {
-    position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: HALO_INNER,
-  },
-  logoWrap: {
-    width: LOGO_SIZE,
-    height: LOGO_SIZE,
-    borderRadius: LOGO_SIZE * 0.16,
-    overflow: "hidden",
-  },
-
-  copy: {
+  markImage: {
     width: "100%",
-    alignItems: "center",
-    marginTop: -40,
+    height: "100%",
   },
-  title: {
+  copy: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  line: {
+    width: LINE_WIDTH,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: TERRACOTTA,
+    marginBottom: 18,
+  },
+  word: {
+    flexDirection: "row",
+  },
+  letter: {
     color: setuColors.primaryInk,
-    fontSize: 32,
-    lineHeight: 39,
-    letterSpacing: -0.7,
-    textAlign: "center",
+    fontFamily: "Geist-Bold",
+    fontSize: 38,
+    lineHeight: 44,
+    letterSpacing: -0.8,
   },
   tagline: {
     color: setuColors.secondaryInk,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: "center",
-    marginTop: 5,
-    maxWidth: 290,
+    marginTop: 6,
   },
 })

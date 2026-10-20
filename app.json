@@ -57,7 +57,7 @@
         "image": "./assets/images/splash-screen.png",
         "imageWidth": 260,
         "resizeMode": "contain",
-        "backgroundColor": "#FAF9F5"
+        "backgroundColor": "#F7F6F0"
       }
     ],
     [
