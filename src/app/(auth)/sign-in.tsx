@@ -47,10 +47,10 @@ export default function SignInScreen() {
   )
 
   const proceedWithGoogleSignIn = async () => {
-    setShowGoogleDisclosure(false)
     setPending("google")
     try {
       const status = await signInWithGoogle()
+      setShowGoogleDisclosure(false)
       if (status === "success") {
         router.replace("/(app)/(tabs)/dashboard")
       } else if (status === "not_configured") {
@@ -61,9 +61,22 @@ export default function SignInScreen() {
           confirmText: "OK",
           cancelText: null,
         })
-      } else if (status !== "cancelled") {
-        showToast(useRootStore.getState().authError || "Google sign-in failed", "error")
+      } else if (status === "cancelled") {
+        showToast("Google sign-in was dismissed or cancelled", "info")
+      } else {
+        const errorMsg =
+          useRootStore.getState().authError ||
+          "Google sign-in could not be completed on this device."
+        showAlert({
+          title: "Google Sign-In",
+          message: `${errorMsg}\n\nTip: You can use "Continue as Guest Tester" to test all app features in clean sandbox mode.`,
+          confirmText: "OK",
+          cancelText: null,
+        })
       }
+    } catch (e) {
+      setShowGoogleDisclosure(false)
+      showToast(e instanceof Error ? e.message : "Google sign-in error", "error")
     } finally {
       setPending(null)
     }
@@ -248,11 +261,14 @@ export default function SignInScreen() {
             <AppButton
               title="I Understand & Continue with Google"
               variant="primary"
+              loading={pending === "google"}
+              disabled={pending !== null}
               onPress={() => void proceedWithGoogleSignIn()}
             />
             <AppButton
               title="Continue as Guest Tester Instead"
               variant="outline"
+              disabled={pending !== null}
               onPress={() => {
                 setShowGoogleDisclosure(false)
                 void handleGuest()
