@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Path } from "react-native-svg"
 
-import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
+import AnimatedNeevLogoIcon from "@/components/brand/AnimatedNeevLogoIcon"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
@@ -67,7 +67,8 @@ export default function SignInScreen() {
         })
         showAlert({
           title: "Google Sign-In",
-          message: "This build has no Google Web Client ID configured.\n\nUse 'Continue as Guest Tester' to explore all features in sandbox mode.",
+          message:
+            "This build has no Google Web Client ID configured.\n\nUse 'Continue as Guest Tester' to explore all features in sandbox mode.",
           confirmText: "Use Guest Mode",
           cancelText: "Dismiss",
           onConfirm: () => void handleGuest(),
@@ -165,7 +166,9 @@ export default function SignInScreen() {
 
       <View style={styles.hero}>
         <View style={[styles.mascot, { backgroundColor: colors.primaryAlpha }]}>
-          <NeevLogoIcon size={56} />
+          <AnimatedNeevLogoIcon size={56} />
+
+          {/* <NeevLogoIcon size={56} /> */}
         </View>
         <AppText variant="display" style={styles.center}>
           Neev
@@ -241,9 +244,7 @@ export default function SignInScreen() {
         title="Google Account Transparency"
         subtitle="Review what Neev requests before connecting"
       >
-        <View
-          style={[styles.disclosureContent, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}
-        >
+        <View style={[styles.disclosureContent, { paddingBottom: insets.bottom + 130 }]}>
           <View style={[styles.scopeBox, { backgroundColor: colors.surface2 }]}>
             <View style={styles.scopeRow}>
               <Ionicons name="person-circle-outline" size={20} color={colors.primary} />
@@ -292,7 +293,15 @@ export default function SignInScreen() {
             </AppText>
           </View>
 
-          <View style={{ gap: 10, marginTop: 16 }}>
+          <View
+            style={{
+              gap: 10,
+              position: "absolute",
+              bottom: insets.bottom + 10,
+              left: 16,
+              right: 16,
+            }}
+          >
             <AppButton
               title="I Understand & Continue with Google"
               variant="primary"
