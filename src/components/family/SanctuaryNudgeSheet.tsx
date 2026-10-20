@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { StyleSheet, View, TextInput, ScrollView } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
@@ -122,6 +123,8 @@ export function SanctuaryNudgeSheet({
     onClose()
   }
 
+  const insets = useSafeAreaInsets()
+
   return (
     <AppBottomSheetModal
       visible={visible}
@@ -130,7 +133,7 @@ export function SanctuaryNudgeSheet({
       title={`Nudge ${targetName}`}
       subtitle="Send a gentle, heartfelt check-in without noisy disruptions"
     >
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.container, { paddingBottom: 16 }]}>
         {/* Recipient summary bar */}
         <View style={[styles.recipientBar, { backgroundColor: colors.surface2 }]}>
           <View
@@ -177,6 +180,9 @@ export function SanctuaryNudgeSheet({
                   void Haptics.selectionAsync()
                   setSelectedTemplate(tmpl)
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${tmpl.title}: ${tmpl.body}`}
+                accessibilityState={{ selected: isSelected }}
               >
                 <View
                   style={[
@@ -253,6 +259,9 @@ export function SanctuaryNudgeSheet({
               void Haptics.selectionAsync()
               setPriority("gentle")
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Gentle Silent Toast Notification"
+            accessibilityState={{ selected: priority === "gentle" }}
           >
             <Ionicons name="leaf-outline" size={15} color={priority === "gentle" ? colors.primary : colors.text.secondary} />
             <AppText variant="caption" style={{ fontWeight: "700", color: priority === "gentle" ? colors.primary : colors.text.primary }}>
@@ -273,6 +282,9 @@ export function SanctuaryNudgeSheet({
               void Haptics.selectionAsync()
               setPriority("high")
             }}
+            accessibilityRole="button"
+            accessibilityLabel="High Priority Device Sound Alert"
+            accessibilityState={{ selected: priority === "high" }}
           >
             <Ionicons name="notifications-outline" size={15} color={priority === "high" ? "#DA7756" : colors.text.secondary} />
             <AppText variant="caption" style={{ fontWeight: "700", color: priority === "high" ? "#DA7756" : colors.text.primary }}>
@@ -280,16 +292,29 @@ export function SanctuaryNudgeSheet({
             </AppText>
           </PressableScale>
         </View>
+      </ScrollView>
 
-        {/* Send Action Button */}
+      {/* Sticky Bottom Action Footer */}
+      <View
+        style={[
+          styles.stickyFooter,
+          {
+            paddingBottom: Math.max(insets.bottom, 16) + 12,
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
         <PressableScale
           style={[styles.sendButton, { backgroundColor: "#DA7756" }]}
           onPress={handleSendNudge}
+          accessibilityRole="button"
+          accessibilityLabel="Send Loving Nudge"
         >
           <Ionicons name="paper-plane" size={18} color="#FFFFFF" />
           <AppText style={styles.sendButtonText}>Send Loving Nudge</AppText>
         </PressableScale>
-      </ScrollView>
+      </View>
     </AppBottomSheetModal>
   )
 }
@@ -364,8 +389,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 40,
+    minHeight: 44,
     borderRadius: 12,
+  },
+  stickyFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   sendButton: {
     flexDirection: "row",
@@ -373,7 +403,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     height: 50,
     borderRadius: 16,
-    marginTop: 18,
     gap: 8,
   },
   sendButtonText: {

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { useState, type ReactNode } from "react"
 import { ActivityIndicator, StyleSheet, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Path } from "react-native-svg"
 
 import { NeevLogoIcon } from "@/components/brand/NeevLogoIcon"
@@ -21,6 +22,7 @@ type Pending = "google" | "setu" | "demo" | "guest" | null
 export default function SignInScreen() {
   const { colors } = useTheme()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const [pending, setPending] = useState<Pending>(null)
   const [showGoogleDisclosure, setShowGoogleDisclosure] = useState(false)
 
@@ -201,7 +203,7 @@ export default function SignInScreen() {
         title="Google Account Transparency"
         subtitle="Review what Neev requests before connecting"
       >
-        <View style={styles.disclosureContent}>
+        <View style={[styles.disclosureContent, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
           <View style={[styles.scopeBox, { backgroundColor: colors.surface2 }]}>
             <View style={styles.scopeRow}>
               <Ionicons name="person-circle-outline" size={20} color={colors.primary} />

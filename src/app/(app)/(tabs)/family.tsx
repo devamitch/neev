@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics"
 import { router } from "expo-router"
 import React, { useState } from "react"
 import { Linking, ScrollView, StyleSheet, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FamilySanctuaryMap } from "@/components/location/FamilySanctuaryMap"
 import { useTabBarInset } from "@/components/navigation/CustomTabBar"
@@ -99,6 +100,7 @@ export default function FamilyScreen() {
 
   const showToast = useRootStore((s) => s.showToast)
   const showAlert = useRootStore((s) => s.showAlert)
+  const insets = useSafeAreaInsets()
 
   // ── Modals State ──
   const [realmModalVisible, setRealmModalVisible] = useState(false)
@@ -776,7 +778,11 @@ export default function FamilyScreen() {
         title="Select Family Realm"
         subtitle="Neev isolates independent family trees. Each realm retains its own private graph."
       >
-        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ maxHeight: 440 }}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        >
           {realms.map((r) => {
             const isSelected = r.id === activeRealmId
             return (
@@ -795,6 +801,9 @@ export default function FamilyScreen() {
                   setRealmModalVisible(false)
                   showToast({ message: `Active Enclave: ${r.name}`, type: "success" })
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Select realm ${r.name}`}
+                accessibilityState={{ selected: isSelected }}
               >
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyMedium" style={{ fontWeight: "700" }}>
@@ -866,19 +875,21 @@ export default function FamilyScreen() {
         title="Claim Sanctuary Profile"
         subtitle="Enter the single-use invitation code provided by your family organizer to claim your profile."
       >
-        <TextField
-          label="One-Time Claim Code"
-          placeholder="e.g. NEEV-DADU-8821"
-          value={enteredClaimCode}
-          onChangeText={setEnteredClaimCode}
-        />
-
-        <View style={{ marginTop: 20 }}>
-          <AppButton
-            title="Verify & Claim Profile"
-            onPress={handleClaimProfile}
-            variant="primary"
+        <View style={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
+          <TextField
+            label="One-Time Claim Code"
+            placeholder="e.g. NEEV-DADU-8821"
+            value={enteredClaimCode}
+            onChangeText={setEnteredClaimCode}
           />
+
+          <View style={{ marginTop: 20 }}>
+            <AppButton
+              title="Verify & Claim Profile"
+              onPress={handleClaimProfile}
+              variant="primary"
+            />
+          </View>
         </View>
       </AppBottomSheetModal>
 
@@ -889,102 +900,113 @@ export default function FamilyScreen() {
         title="Connect Kinship Edge"
         subtitle="Kinship edges represent family ties without leaking personal data across boundaries."
       >
-        <AppText variant="caption" style={styles.inputLabel}>
-          FROM MEMBER:
-        </AppText>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.memberChipsScroll}
-        >
-          {members.map((m) => (
-            <PressableScale
-              key={m.id}
-              style={[
-                styles.chip,
-                sourceMemberId === m.id
-                  ? [styles.chipActive, { backgroundColor: colors.primary }]
-                  : [styles.chipInactive, { backgroundColor: colors.surface }],
-              ]}
-              onPress={() => setSourceMemberId(m.id)}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+        <View style={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
+          <AppText variant="caption" style={styles.inputLabel}>
+            FROM MEMBER:
+          </AppText>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.memberChipsScroll}
+          >
+            {members.map((m) => (
+              <PressableScale
+                key={m.id}
+                style={[
+                  styles.chip,
+                  sourceMemberId === m.id
+                    ? [styles.chipActive, { backgroundColor: colors.primary }]
+                    : [styles.chipInactive, { backgroundColor: colors.surface }],
+                ]}
+                onPress={() => setSourceMemberId(m.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`From member ${m.name}`}
+                accessibilityState={{ selected: sourceMemberId === m.id }}
               >
-                {m.name.split(" ")[0]}
-              </AppText>
-            </PressableScale>
-          ))}
-        </ScrollView>
+                <AppText
+                  variant="caption"
+                  style={{ color: sourceMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+                >
+                  {m.name.split(" ")[0]}
+                </AppText>
+              </PressableScale>
+            ))}
+          </ScrollView>
 
-        <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
-          RELATIONSHIP:
-        </AppText>
-        <View style={styles.relationGrid}>
-          {KINSHIP_OPTIONS.map((k) => (
-            <PressableScale
-              key={k.relation}
-              style={[
-                styles.relChip,
-                selectedRelation === k.relation
-                  ? [
-                      styles.relChipActive,
-                      { backgroundColor: colors.primaryAlpha, borderColor: colors.primary },
-                    ]
-                  : [
-                      styles.relChipInactive,
-                      { backgroundColor: colors.surface, borderColor: colors.border },
-                    ],
-              ]}
-              onPress={() => setSelectedRelation(k.relation)}
-            >
-              <AppText
-                variant="caption"
-                style={{
-                  fontSize: 11,
-                  fontWeight: selectedRelation === k.relation ? "700" : "500",
-                  color:
-                    selectedRelation === k.relation ? colors.primary : colors.text.secondary,
-                }}
+          <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
+            RELATIONSHIP:
+          </AppText>
+          <View style={styles.relationGrid}>
+            {KINSHIP_OPTIONS.map((k) => (
+              <PressableScale
+                key={k.relation}
+                style={[
+                  styles.relChip,
+                  selectedRelation === k.relation
+                    ? [
+                        styles.relChipActive,
+                        { backgroundColor: colors.primaryAlpha, borderColor: colors.primary },
+                      ]
+                    : [
+                        styles.relChipInactive,
+                        { backgroundColor: colors.surface, borderColor: colors.border },
+                      ],
+                ]}
+                onPress={() => setSelectedRelation(k.relation)}
+                accessibilityRole="button"
+                accessibilityLabel={`Relationship ${k.label}`}
+                accessibilityState={{ selected: selectedRelation === k.relation }}
               >
-                {k.label}
-              </AppText>
-            </PressableScale>
-          ))}
-        </View>
+                <AppText
+                  variant="caption"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: selectedRelation === k.relation ? "700" : "500",
+                    color:
+                      selectedRelation === k.relation ? colors.primary : colors.text.secondary,
+                  }}
+                >
+                  {k.label}
+                </AppText>
+              </PressableScale>
+            ))}
+          </View>
 
-        <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
-          TO MEMBER:
-        </AppText>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.memberChipsScroll}
-        >
-          {members.map((m) => (
-            <PressableScale
-              key={m.id}
-              style={[
-                styles.chip,
-                targetMemberId === m.id
-                  ? [styles.chipActive, { backgroundColor: colors.primary }]
-                  : [styles.chipInactive, { backgroundColor: colors.surface }],
-              ]}
-              onPress={() => setTargetMemberId(m.id)}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+          <AppText variant="caption" style={[styles.inputLabel, { marginTop: 12 }]}>
+            TO MEMBER:
+          </AppText>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.memberChipsScroll}
+          >
+            {members.map((m) => (
+              <PressableScale
+                key={m.id}
+                style={[
+                  styles.chip,
+                  targetMemberId === m.id
+                    ? [styles.chipActive, { backgroundColor: colors.primary }]
+                    : [styles.chipInactive, { backgroundColor: colors.surface }],
+                ]}
+                onPress={() => setTargetMemberId(m.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`To member ${m.name}`}
+                accessibilityState={{ selected: targetMemberId === m.id }}
               >
-                {m.name.split(" ")[0]}
-              </AppText>
-            </PressableScale>
-          ))}
-        </ScrollView>
+                <AppText
+                  variant="caption"
+                  style={{ color: targetMemberId === m.id ? "#FFFFFF" : colors.text.primary }}
+                >
+                  {m.name.split(" ")[0]}
+                </AppText>
+              </PressableScale>
+            ))}
+          </ScrollView>
 
-        <View style={{ marginTop: 20 }}>
-          <AppButton title="Record Kinship Edge" onPress={handleAddKinship} variant="primary" />
+          <View style={{ marginTop: 20 }}>
+            <AppButton title="Record Kinship Edge" onPress={handleAddKinship} variant="primary" />
+          </View>
         </View>
       </AppBottomSheetModal>
 
@@ -995,37 +1017,39 @@ export default function FamilyScreen() {
         title="Add Bilateral Bridge (Section 51)"
         subtitle="A bilateral bridge allows safe, cross-family collaboration for weddings or ceremonies without merging trees or leaking private journals."
       >
-        <TextField
-          label="Target Family Realm Name"
-          placeholder="e.g. Sen-Roy Clan or Banerjee Branch"
-          value={targetRealmName}
-          onChangeText={setTargetRealmName}
-        />
-
-        <View style={{ marginTop: 10 }}>
+        <View style={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
           <TextField
-            label="Bridge Purpose"
-            placeholder="e.g. Wedding logistics & winter gathering"
-            value={bridgePurpose}
-            onChangeText={setBridgePurpose}
+            label="Target Family Realm Name"
+            placeholder="e.g. Sen-Roy Clan or Banerjee Branch"
+            value={targetRealmName}
+            onChangeText={setTargetRealmName}
           />
-        </View>
 
-        <View style={[styles.bridgeNoticeBox, { backgroundColor: colors.surface2 }]}>
-          <Ionicons
-            name="lock-closed"
-            size={14}
-            color={colors.primary}
-            style={{ marginRight: 6 }}
-          />
-          <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
-            Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays
-            100% hidden.
-          </AppText>
-        </View>
+          <View style={{ marginTop: 10 }}>
+            <TextField
+              label="Bridge Purpose"
+              placeholder="e.g. Wedding logistics & winter gathering"
+              value={bridgePurpose}
+              onChangeText={setBridgePurpose}
+            />
+          </View>
 
-        <View style={{ marginTop: 18 }}>
-          <AppButton title="Establish Bridge" onPress={handleAddBridge} variant="primary" />
+          <View style={[styles.bridgeNoticeBox, { backgroundColor: colors.surface2 }]}>
+            <Ionicons
+              name="lock-closed"
+              size={14}
+              color={colors.primary}
+              style={{ marginRight: 6 }}
+            />
+            <AppText variant="caption" style={{ flex: 1, color: colors.text.secondary }}>
+              Privacy Rule: Only functions and ritual invitations are shared. Personal Space stays
+              100% hidden.
+            </AppText>
+          </View>
+
+          <View style={{ marginTop: 18 }}>
+            <AppButton title="Establish Bridge" onPress={handleAddBridge} variant="primary" />
+          </View>
         </View>
       </AppBottomSheetModal>
 
@@ -1036,24 +1060,26 @@ export default function FamilyScreen() {
         title="Create Custom Family Circle"
         subtitle="Private circles coordinate specific projects, trips, or sub-groups."
       >
-        <TextField
-          label="Circle Name"
-          placeholder="e.g. Kolkata Trip, Chess Circle, Diya Team"
-          value={newClusterName}
-          onChangeText={setNewClusterName}
-        />
-
-        <View style={{ marginTop: 10 }}>
+        <View style={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
           <TextField
-            label="Purpose & Access Description"
-            placeholder="e.g. Coordination for family vacation and tickets"
-            value={newClusterDesc}
-            onChangeText={setNewClusterDesc}
+            label="Circle Name"
+            placeholder="e.g. Kolkata Trip, Chess Circle, Diya Team"
+            value={newClusterName}
+            onChangeText={setNewClusterName}
           />
-        </View>
 
-        <View style={{ marginTop: 18 }}>
-          <AppButton title="Create Circle" onPress={handleAddCluster} variant="primary" />
+          <View style={{ marginTop: 10 }}>
+            <TextField
+              label="Purpose & Access Description"
+              placeholder="e.g. Coordination for family vacation and tickets"
+              value={newClusterDesc}
+              onChangeText={setNewClusterDesc}
+            />
+          </View>
+
+          <View style={{ marginTop: 18 }}>
+            <AppButton title="Create Circle" onPress={handleAddCluster} variant="primary" />
+          </View>
         </View>
       </AppBottomSheetModal>
 
@@ -1325,6 +1351,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     marginBottom: 8,
+    minHeight: 48,
   },
   inputLabel: {
     fontWeight: "700",
@@ -1339,8 +1366,11 @@ const styles = StyleSheet.create({
   },
   chip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderRadius: 10,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
   },
   chipActive: {},
   chipInactive: {},
@@ -1351,9 +1381,12 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   relChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
   },
   relChipActive: {},
   relChipInactive: {},

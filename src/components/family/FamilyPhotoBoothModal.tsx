@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { ScrollView, StyleSheet, TextInput, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
@@ -137,6 +138,8 @@ export function FamilyPhotoBoothModal({ visible, onClose }: FamilyPhotoBoothModa
     onClose()
   }
 
+  const insets = useSafeAreaInsets()
+
   return (
     <AppBottomSheetModal
       visible={visible}
@@ -148,7 +151,10 @@ export function FamilyPhotoBoothModal({ visible, onClose }: FamilyPhotoBoothModa
     >
       <ScrollView
         showsVerticalScrollIndicator={true}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 40 },
+        ]}
         keyboardDismissMode="on-drag"
       >
         {/* 100% Free Guarantee Banner */}
@@ -357,6 +363,8 @@ export function FamilyPhotoBoothModal({ visible, onClose }: FamilyPhotoBoothModa
         <PressableScale
           style={[styles.saveMemoryBtn, { backgroundColor: colors.primary }]}
           onPress={handleSaveMemory}
+          accessibilityRole="button"
+          accessibilityLabel="Frame and Save to Sanctuary Vault"
         >
           <Ionicons name="archive-outline" size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
           <AppText style={styles.saveMemoryBtnText}>Frame & Save to Sanctuary Vault</AppText>
@@ -532,6 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 14,
+    minHeight: 50,
   },
   saveMemoryBtnText: {
     color: "#FFFFFF",

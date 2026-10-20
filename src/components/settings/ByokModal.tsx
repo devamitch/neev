@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { Alert, StyleSheet, TextInput, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 
@@ -92,6 +93,8 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
     )
   }
 
+  const insets = useSafeAreaInsets()
+
   return (
     <AppBottomSheetModal
       visible={visible}
@@ -101,7 +104,7 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
       eyebrow="AI ENGINE & CREDENTIALS"
       maxHeight="90%"
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) + 20 }]}>
         {/* Offline Deterministic Guarantee Banner */}
         <View style={[styles.offlineBanner, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
           <Ionicons name="shield-checkmark" size={18} color="#2E7D32" style={{ marginRight: 8 }} />
@@ -138,6 +141,9 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
                   void Haptics.selectionAsync()
                   setSelectedProvider(p.id)
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${p.name} AI Provider`}
+                accessibilityState={{ selected: isSelected }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                   <Ionicons
@@ -199,6 +205,8 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
                   style={[styles.btnOutline, { borderColor: colors.border }]}
                   onPress={() => handleTest(activeCred.provider)}
                   disabled={isTesting}
+                  accessibilityRole="button"
+                  accessibilityLabel="Test Connection"
                 >
                   <Ionicons name="refresh-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
                   <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
@@ -209,6 +217,8 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
                 <PressableScale
                   style={[styles.btnOutline, { borderColor: "#FCA5A5" }]}
                   onPress={() => handleDelete(activeCred.provider)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove Key"
                 >
                   <Ionicons name="trash-outline" size={14} color="#DC2626" style={{ marginRight: 6 }} />
                   <AppText variant="caption" style={{ fontWeight: "700", color: "#DC2626" }}>
@@ -233,7 +243,12 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
                   autoCorrect={false}
                   style={[styles.input, { color: colors.text.primary }]}
                 />
-                <PressableScale onPress={() => setIsSecure(!isSecure)} style={{ padding: 6 }}>
+                <PressableScale
+                  onPress={() => setIsSecure(!isSecure)}
+                  style={{ padding: 8, minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" }}
+                  accessibilityRole="button"
+                  accessibilityLabel={isSecure ? "Show API key" : "Hide API key"}
+                >
                   <Ionicons
                     name={isSecure ? "eye-outline" : "eye-off-outline"}
                     size={16}
@@ -245,6 +260,8 @@ export function ByokModal({ visible, onClose }: ByokModalProps) {
               <PressableScale
                 style={[styles.saveBtn, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
+                accessibilityRole="button"
+                accessibilityLabel="Save Securely to Device"
               >
                 <Ionicons name="lock-closed" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
                 <AppText style={styles.saveBtnText}>Save Securely to Device</AppText>
@@ -307,10 +324,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
+    minHeight: 44,
   },
   inputContainer: {
     flexDirection: "row",
@@ -322,15 +340,16 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 44,
+    height: 48,
     fontSize: 13,
   },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
+    minHeight: 48,
   },
   saveBtnText: {
     color: "#FFFFFF",

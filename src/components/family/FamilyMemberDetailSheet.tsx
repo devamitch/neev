@@ -354,6 +354,8 @@ export function FamilyMemberDetailSheet({
               <PressableScale
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                 onPress={handleCall}
+                accessibilityRole="button"
+                accessibilityLabel={`Call ${member.name}`}
               >
                 <Ionicons name="call" size={16} color="#FFFFFF" />
                 <AppText style={styles.actionBtnTextWhite}>Call</AppText>
@@ -362,6 +364,8 @@ export function FamilyMemberDetailSheet({
               <PressableScale
                 style={[styles.actionBtn, { backgroundColor: colors.surface2 }]}
                 onPress={handleShareInvite}
+                accessibilityRole="button"
+                accessibilityLabel={`Share invite code with ${member.name}`}
               >
                 <Ionicons name="key-outline" size={16} color={colors.primary} />
                 <AppText style={[styles.actionBtnTextPrimary, { color: colors.primary }]}>
@@ -376,6 +380,8 @@ export function FamilyMemberDetailSheet({
                 { backgroundColor: colors.surface2, borderColor: colors.border, borderWidth: 1 },
               ]}
               onPress={handleGoogleMeet}
+              accessibilityRole="button"
+              accessibilityLabel={`Start Google Meet with ${member.name}`}
             >
               <Ionicons name="videocam" size={16} color={colors.primary} />
               <AppText style={[styles.actionBtnTextPrimary, { color: colors.primary }]}>
@@ -389,6 +395,8 @@ export function FamilyMemberDetailSheet({
                 { backgroundColor: colors.surface2, borderColor: colors.border, borderWidth: 1 },
               ]}
               onPress={() => setNudgeSheetVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Send Nudge to ${member.name}`}
             >
               <Ionicons name="paper-plane-outline" size={16} color="#DA7756" />
               <AppText style={[styles.actionBtnTextPrimary, { color: "#DA7756" }]}>
@@ -403,6 +411,8 @@ export function FamilyMemberDetailSheet({
                   onClose()
                   onFindPhone(member)
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Find ${member.name}'s phone`}
               >
                 <Ionicons name="volume-high" size={16} color="#DA7756" />
                 <AppText style={[styles.actionBtnTextPrimary, { color: "#DA7756" }]}>

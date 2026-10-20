@@ -740,7 +740,7 @@ export default function FullscreenFamilyMapScreen() {
         subtitle="Precision Indoor & Acoustic Pinpoint Radar"
         eyebrow="PHONE FINDER"
       >
-        <View style={styles.radarModalBody}>
+        <View style={[styles.radarModalBody, { paddingBottom: Math.max(insets.bottom, 16) + 20 }]}>
           <View style={styles.radarPulseContainer}>
             <Animated.View
               style={[
@@ -880,6 +880,8 @@ export default function FullscreenFamilyMapScreen() {
                     })
                   }
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Copy coordinates"
               >
                 <Ionicons name="copy-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
                 <AppText style={[styles.coordActionBtnText, { color: colors.primary }]}>
@@ -897,6 +899,8 @@ export default function FullscreenFamilyMapScreen() {
                     )
                   }
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Navigate to coordinates in Google Maps"
               >
                 <Ionicons name="map-outline" size={13} color={colors.primary} style={{ marginRight: 4 }} />
                 <AppText style={[styles.coordActionBtnText, { color: colors.primary }]}>
@@ -912,6 +916,8 @@ export default function FullscreenFamilyMapScreen() {
               { backgroundColor: isSirenActive ? "#EF4444" : colors.primary },
             ]}
             onPress={toggleSiren}
+            accessibilityRole="button"
+            accessibilityLabel={isSirenActive ? "Stop Acoustic Siren" : "Play Maximum Loud Acoustic Siren"}
           >
             <Ionicons
               name={isSirenActive ? "stop-circle" : "play-circle"}
@@ -949,6 +955,8 @@ export default function FullscreenFamilyMapScreen() {
                 void Linking.openURL("https://www.google.com/android/find")
               }}
               style={[styles.googleFindButton, { borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Open Google Find My Device"
             >
               <Ionicons
                 name="open-outline"
@@ -1338,6 +1346,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
+    minHeight: 44,
   },
   telemetryCard: {
     width: "100%",
@@ -1403,9 +1412,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
+    minHeight: 44,
   },
   coordActionBtnText: {
     fontSize: 12,
