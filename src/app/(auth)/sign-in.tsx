@@ -10,7 +10,6 @@ import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
 import { AppText } from "@/components/ui/AppText"
-import { Badge } from "@/components/ui/Badge"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SquircleSurface } from "@/components/ui/SquircleSurface"
@@ -51,32 +50,57 @@ export default function SignInScreen() {
     try {
       const status = await signInWithGoogle()
       setShowGoogleDisclosure(false)
+      const authErr = useRootStore.getState().authError
+
       if (status === "success") {
+        showToast({
+          title: "Connected",
+          message: "Signed in with Google successfully",
+          type: "success",
+        })
         router.replace("/(app)/(tabs)/dashboard")
       } else if (status === "not_configured") {
-        showAlert({
-          title: "Google sign-in isn't set up",
-          message:
-            "This build has no Google client ID yet. Continue with Guest Mode or Setu.",
-          confirmText: "OK",
-          cancelText: null,
+        showToast({
+          title: "Not Configured",
+          message: "Google Client ID is missing in this build",
+          type: "warning",
         })
-      } else if (status === "cancelled") {
-        showToast("Google sign-in was dismissed or cancelled", "info")
-      } else {
-        const errorMsg =
-          useRootStore.getState().authError ||
-          "Google sign-in could not be completed on this device."
         showAlert({
           title: "Google Sign-In",
-          message: `${errorMsg}\n\nTip: You can use "Continue as Guest Tester" to test all app features in clean sandbox mode.`,
-          confirmText: "OK",
-          cancelText: null,
+          message: "This build has no Google Web Client ID configured.\n\nUse 'Continue as Guest Tester' to explore all features in sandbox mode.",
+          confirmText: "Use Guest Mode",
+          cancelText: "Dismiss",
+          onConfirm: () => void handleGuest(),
+        })
+      } else if (status === "cancelled") {
+        showToast({
+          title: "Google Sign-In",
+          message: authErr || "Sign-in was dismissed or closed.",
+          type: "info",
+        })
+      } else {
+        const errorMsg = authErr || "Google sign-in could not be completed on this device."
+        showToast({
+          title: "Google Sign-In Failed",
+          message: errorMsg,
+          type: "error",
+        })
+        showAlert({
+          title: "Google Sign-In Error",
+          message: `${errorMsg}\n\nTip: You can use "Continue as Guest Tester" to test all sanctuary features immediately without Google OAuth.`,
+          confirmText: "Use Guest Mode",
+          cancelText: "Dismiss",
+          onConfirm: () => void handleGuest(),
         })
       }
     } catch (e) {
       setShowGoogleDisclosure(false)
-      showToast(e instanceof Error ? e.message : "Google sign-in error", "error")
+      const errorMsg = e instanceof Error ? e.message : "Unexpected sign-in error"
+      showToast({
+        title: "Google Sign-In Error",
+        message: errorMsg,
+        type: "error",
+      })
     } finally {
       setPending(null)
     }
@@ -204,7 +228,8 @@ export default function SignInScreen() {
       <View style={styles.note}>
         <Ionicons name="lock-closed-outline" size={14} color={colors.text.muted} />
         <AppText variant="caption" style={styles.noteText}>
-          Your family data is stored locally on this phone. Zero ads, zero tracking, zero third-party brokers.
+          Your family data is stored locally on this phone. Zero ads, zero tracking, zero
+          third-party brokers.
         </AppText>
       </View>
 
@@ -216,7 +241,9 @@ export default function SignInScreen() {
         title="Google Account Transparency"
         subtitle="Review what Neev requests before connecting"
       >
-        <View style={[styles.disclosureContent, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
+        <View
+          style={[styles.disclosureContent, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}
+        >
           <View style={[styles.scopeBox, { backgroundColor: colors.surface2 }]}>
             <View style={styles.scopeRow}>
               <Ionicons name="person-circle-outline" size={20} color={colors.primary} />
@@ -225,7 +252,11 @@ export default function SignInScreen() {
                   Basic Profile (Name & Avatar)
                 </AppText>
                 <AppText variant="caption" color={colors.text.secondary}>
-                  OAuth Scope: <AppText variant="caption" style={{ fontFamily: "monospace" }}>profile</AppText>. Used strictly to display your name and avatar to authorized family members.
+                  OAuth Scope:{" "}
+                  <AppText variant="caption" style={{ fontFamily: "monospace" }}>
+                    profile
+                  </AppText>
+                  . Used strictly to display your name and avatar to authorized family members.
                 </AppText>
               </View>
             </View>
@@ -237,7 +268,11 @@ export default function SignInScreen() {
                   Email Address
                 </AppText>
                 <AppText variant="caption" color={colors.text.secondary}>
-                  OAuth Scope: <AppText variant="caption" style={{ fontFamily: "monospace" }}>email</AppText>. Used solely as your unique account identifier.
+                  OAuth Scope:{" "}
+                  <AppText variant="caption" style={{ fontFamily: "monospace" }}>
+                    email
+                  </AppText>
+                  . Used solely as your unique account identifier.
                 </AppText>
               </View>
             </View>
@@ -251,9 +286,9 @@ export default function SignInScreen() {
               </AppText>
             </View>
             <AppText variant="caption" color={colors.text.secondary} style={{ lineHeight: 18 }}>
-              • Zero access to Google Contacts, Gmail inbox, Drive, or Calendar.{"\n"}
-              • No automatic location access (location sharing requires explicit toggle in Family Map).{"\n"}
-              • Clean state: New accounts start with zero dummy relatives or pre-seeded records.
+              • Zero access to Google Contacts, Gmail inbox, Drive, or Calendar.{"\n"}• No automatic
+              location access (location sharing requires explicit toggle in Family Map).{"\n"}•
+              Clean state: New accounts start with zero dummy relatives or pre-seeded records.
             </AppText>
           </View>
 
@@ -311,10 +346,7 @@ function ProviderButton({
       <SquircleSurface
         radius={16}
         fill={highlighted ? colors.surface : colors.surface}
-        style={[
-          styles.provider,
-          highlighted && { borderWidth: 1.5, borderColor: colors.primary },
-        ]}
+        style={[styles.provider, highlighted && { borderWidth: 1.5, borderColor: colors.primary }]}
       >
         <View style={styles.providerIcon}>{icon}</View>
         <View style={styles.providerTextContainer}>
@@ -394,10 +426,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     width: 96,
   },
-  note: { alignItems: "flex-start", flexDirection: "row", gap: 8, marginTop: 20, paddingHorizontal: 4 },
+  note: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 20,
+    paddingHorizontal: 4,
+  },
   noteText: { flex: 1 },
   page: { flexGrow: 1, justifyContent: "center", paddingBottom: 32 },
-  provider: { alignItems: "center", flexDirection: "row", minHeight: 64, paddingHorizontal: 18, paddingVertical: 10 },
+  provider: {
+    alignItems: "center",
+    flexDirection: "row",
+    minHeight: 64,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
   providerIcon: { alignItems: "center", width: 28 },
   providerLabel: { fontWeight: "600" },
   providerTextContainer: { flex: 1, paddingHorizontal: 12 },

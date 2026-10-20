@@ -27,7 +27,7 @@ import Svg, { ClipPath, Defs, Path } from "react-native-svg"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { useLayout } from "@/theme/layout"
 
-import NeevLogoIcon from "../brand/NeevLogoIcon"
+import AnimatedNeevLogoIcon from "../brand/AnimatedNeevLogoIcon"
 import {
   hideTabBar,
   showTabBar,
@@ -359,8 +359,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             style={styles.orbButton}
           >
             <View style={styles.centerOrb}>
-              {/* <AnimatedNeevLogoIcon size={56} withBackground={true} animated={true} /> */}
-              <NeevLogoIcon size={56} withBackground={true} />
+              <AnimatedNeevLogoIcon size={56} withBackground={true} />
+              {/* <NeevLogoIcon size={56} withBackground={true} /> */}
             </View>
 
             <Animated.Text style={styles.scanLabel} numberOfLines={1}>

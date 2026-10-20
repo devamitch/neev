@@ -66,10 +66,16 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     })
     const result = await signInWithGoogleAccount()
     if (result.status !== "success") {
+      const errorMsg =
+        ("message" in result && result.message) ||
+        (result.status === "cancelled"
+          ? "Google sign-in was dismissed or closed."
+          : result.status === "not_configured"
+            ? "Google Web Client ID is not configured."
+            : "Google sign-in could not be completed.")
       set((state) => {
         state.isAuthLoading = false
-        state.authError =
-          result.status === "error" || result.status === "unavailable" ? result.message : null
+        state.authError = errorMsg
       })
       return result.status
     }

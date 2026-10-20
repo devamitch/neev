@@ -36,36 +36,77 @@ export type GoogleSignInResult =
       idToken: string
       user: { id: string; email: string; name: string | null; photo: string | null }
     }
-  | { status: "cancelled" }
-  | { status: "not_configured" }
+  | { status: "cancelled"; message?: string }
+  | { status: "not_configured"; message?: string }
   | { status: "unavailable"; message: string }
   | { status: "error"; message: string }
 
 export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
-  if (!isGoogleConfigured()) return { status: "not_configured" }
+  if (!isGoogleConfigured()) {
+    return {
+      status: "not_configured",
+      message: "Google Web Client ID is not configured in this build.",
+    }
+  }
   ensureConfigured()
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
     const response = await GoogleSignin.signIn()
-    if (!isSuccessResponse(response)) return { status: "cancelled" }
+    if (!isSuccessResponse(response)) {
+      return { status: "cancelled", message: "Google sign-in was dismissed or closed." }
+    }
     const { idToken, user } = response.data
-    if (!idToken) return { status: "error", message: "Google didn't return an ID token" }
+    if (!idToken) {
+      return { status: "error", message: "Google didn't return an ID token for this account." }
+    }
     return {
       status: "success",
       idToken,
       user: { id: user.id, email: user.email, name: user.name, photo: user.photo },
     }
-  } catch (err) {
-    if (isErrorWithCode(err)) {
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) return { status: "cancelled" }
-      if (err.code === statusCodes.IN_PROGRESS) return { status: "cancelled" }
-      if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        return { status: "unavailable", message: "Google Play services isn't available" }
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string | number; statusCode?: number; message?: string } | undefined
+    const code = errorObj?.code ?? errorObj?.statusCode
+    const rawMessage = errorObj?.message ?? (err instanceof Error ? err.message : String(err))
+
+    if (code === statusCodes.SIGN_IN_CANCELLED || String(code) === "12501") {
+      return {
+        status: "cancelled",
+        message: "Google sign-in dismissed. If Google closed automatically, ensure your email is added to Test Users in GCP.",
+      }
+    }
+    if (code === statusCodes.IN_PROGRESS || code === "ASYNC_OP_IN_PROGRESS") {
+      return { status: "cancelled", message: "A Google sign-in prompt is already active." }
+    }
+    if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      return {
+        status: "unavailable",
+        message: "Google Play Services is not available or needs to be updated on this device.",
+      }
+    }
+    if (String(code) === "10" || code === 10 || String(rawMessage).includes("DEVELOPER_ERROR")) {
+      return {
+        status: "error",
+        message:
+          "Google Sign-In configuration mismatch (Code 10: DEVELOPER_ERROR). Keystore SHA-1 must match Firebase / GCP Console.",
+      }
+    }
+    if (String(code) === "12500") {
+      return {
+        status: "error",
+        message:
+          "Google Sign-In internal error (Code 12500). Verify OAuth consent screen and authorized test users in GCP Console.",
+      }
+    }
+    if (String(code) === "7") {
+      return {
+        status: "error",
+        message: "Network error connecting to Google Play Services. Please check your internet connection.",
       }
     }
     return {
       status: "error",
-      message: err instanceof Error ? err.message : "Google sign-in failed",
+      message: rawMessage || "Google sign-in could not be completed.",
     }
   }
 }
