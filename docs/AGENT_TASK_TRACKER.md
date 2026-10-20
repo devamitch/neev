@@ -7,6 +7,32 @@
 
 ---
 
+## 2026-10-20 — Slider, splash, backend security, Google scopes (scope limited by owner)
+
+Owner instruction: do not touch headers, lists or other UI; only intro slider, splash, backend.
+
+| Area / check | Status | Evidence | Commit |
+| --- | --- | --- | --- |
+| Intro slider: one canvas, one pista CTA, terracotta accent only | DONE | Moto G71 dev build, all 3 slides viewed | 53ecaa7 |
+| Google sign-in config (`extra.googleWebClientId` from google-services.json) | DONE | tsc | 64e5fbe |
+| RLS lock-down migration `20261020000001_secure_backend.sql` | WRITTEN, NOT APPLIED | parses with libpg-query (156 stmts); CLI token lacks DB privileges | 59c4971 |
+| `realm_memberships`, profile trigger, invitation claim columns | WRITTEN, NOT APPLIED | same migration | 59c4971 |
+| BYOK vault: AES-256-GCM sealed keys bound to user+provider, real key tests | DEPLOYED, needs secret + migration | round-trip/tamper test passed; functions return 401 without session | 59c4971 |
+| ai-request calls user's own provider (no canned text), hourly cap | DEPLOYED, needs secret + migration | deno check OK | 59c4971 |
+| Fixed `authResult.user` crash, audit columns, delete-user-data | DEPLOYED | deno check OK on 8/8 functions | 59c4971 |
+| Animated splash: foundation story from native mark | DONE (final frame verified) | dev build screenshot | c0e9e4f |
+| Google Calendar / Tasks / Meet real via incremental scopes; no invented health data | IMPLEMENTED_NOT_VERIFIED | needs a Google-signed-in device test | a517ea7 |
+
+Owner actions required (token lacks permission):
+
+1. Apply the migration: `supabase link --project-ref kwrdugillyakxgvgbrsu && supabase db push` (or paste the file into the SQL editor).
+2. Set the vault secret: `supabase secrets set --project-ref kwrdugillyakxgvgbrsu PROVIDER_KEY_ENCRYPTION_SECRET=$(openssl rand -base64 32)`.
+3. Supabase Auth → Google provider: add the web client id from google-services.json to authorized client ids.
+
+Known open items (not touched per owner instruction): the app has no Supabase session (auth is local-only), so server BYOK/realms/RLS-protected data can't be used from the app until sign-in calls `supabase.auth.signInWithIdToken` / `signInAnonymously`; client BYOK keys sit in unencrypted MMKV; demo data loaders still reachable from sign-in ("Try Demo Sanctuary"), dashboard/family "Preview Sample", and the map's locate button loads a demo family when none exists.
+
+---
+
 ## CURRENT REPAIR & UNIVERSALIZATION PHASE (Phase 5.0 — 2026-10-20)
 
 ### Completed & Verified:
