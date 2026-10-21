@@ -34,6 +34,7 @@ const GOOGLE_SIGN_IN_SCOPES = [
   "email",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/tasks",
+  "https://www.googleapis.com/auth/drive.file",
 ]
 
 function ensureConfigured() {
@@ -165,6 +166,8 @@ export const GOOGLE_FEATURE_SCOPES = {
   calendarEvents: "https://www.googleapis.com/auth/calendar.events",
   /** Add chores/prep tasks to the user's Google Tasks. */
   tasks: "https://www.googleapis.com/auth/tasks",
+  /** Export encrypted family vault backups to user's Google Drive (app-created files only). */
+  driveFile: "https://www.googleapis.com/auth/drive.file",
 } as const
 
 export type GoogleFeatureScope = (typeof GOOGLE_FEATURE_SCOPES)[keyof typeof GOOGLE_FEATURE_SCOPES]
