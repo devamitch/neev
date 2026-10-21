@@ -32,10 +32,8 @@ export const isGoogleConfigured = () => WEB_CLIENT_ID.length > 0
 const GOOGLE_SIGN_IN_SCOPES = [
   "profile",
   "email",
-  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/tasks",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/contacts.readonly",
 ]
 
 function ensureConfigured() {
@@ -163,16 +161,10 @@ export async function signOutOfGoogle(): Promise<void> {
  * fallback if a scope wasn't granted during the initial sign-in.
  */
 export const GOOGLE_FEATURE_SCOPES = {
-  /** Full Google Calendar access — read events, create family events, Meet links. */
-  calendar: "https://www.googleapis.com/auth/calendar",
-  /** Add family events to the user's Google Calendar (and create Meet links on them). */
+  /** Add family events to the user's Google Calendar. */
   calendarEvents: "https://www.googleapis.com/auth/calendar.events",
   /** Add chores/prep tasks to the user's Google Tasks. */
   tasks: "https://www.googleapis.com/auth/tasks",
-  /** Read-only access to Google Drive. */
-  driveReadonly: "https://www.googleapis.com/auth/drive.readonly",
-  /** Read-only access to Google Contacts. */
-  contactsReadonly: "https://www.googleapis.com/auth/contacts.readonly",
 } as const
 
 export type GoogleFeatureScope = (typeof GOOGLE_FEATURE_SCOPES)[keyof typeof GOOGLE_FEATURE_SCOPES]
