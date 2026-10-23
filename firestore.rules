@@ -1,0 +1,214 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model (see src/services/sync/cloudSyncEngine.ts)
+// ===============================================================
+//
+// Collection: users
+// Document ID: Firebase Auth uid
+// Fields (owner-only, may contain email = PII):
+//   - uid: string (required, == doc id)
+//   - displayName, email, photoURL, provider: string (optional, <= 500 chars)
+//   - isAnonymous: bool (optional)
+//   - householdId: string (optional, <= 128) - the household this account syncs with
+//   - lastLoginAt, createdAt: timestamp (optional)
+//
+// Collection: households
+// Document ID: auto id
+// Fields:
+//   - ownerUid: string (required, immutable) - creator
+//   - memberUids: list<string> (required, <= 50) - accounts allowed to read/write
+//   - inviteCode: string (required, 6-12 chars, immutable)
+//   - name (<= 120), motto (<= 300), city (<= 120): string
+//   - establishedYear: number
+//   - createdAt, updatedAt: timestamp
+//   - joinCode: string (optional) - the code a joining account presented
+//
+// Subcollections households/{hid}/{members|functions|knowledge|routines|intentions|tasks}/{id}
+//   App records (family profiles, events, notes, routines, goals, tasks) mirrored from the
+//   client store. Schema is app-defined JSON; rules enforce membership, authorship
+//   bookkeeping (_updatedBy == caller, _updatedAt == request.time) and a size cap.
+//
+// Subcollection households/{hid}/locations/{uid}
+//   - uid: string (== doc id == caller), memberName: string (<= 120)
+//   - latitude: number [-90, 90], longitude: number [-180, 180], accuracyMeters: number >= 0
+//   - _updatedAt: timestamp, _updatedBy: string
+//
+// Collection: inviteCodes
+// Document ID: the invite code (knowing it is the capability to join)
+//   - householdId: string, createdBy: string, createdAt: timestamp
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function data() {
+      return request.resource.data;
+    }
+
+    function optionalString(field, maxLen) {
+      return !(field in data()) || data()[field] == null ||
+        (data()[field] is string && data()[field].size() <= maxLen);
+    }
+
+    function optionalTimestamp(field) {
+      return !(field in data()) || data()[field] is timestamp;
+    }
+
+    function household(hid) {
+      return get(/databases/$(database)/documents/households/$(hid)).data;
+    }
+
+    function isHouseholdMember(hid) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/households/$(hid)) &&
+        request.auth.uid in household(hid).memberUids;
+    }
+
+    // ── Domain validators ─────────────────────────────────────
+    function isValidUserProfile(userId) {
+      return data().keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'provider',
+          'isAnonymous', 'householdId', 'lastLoginAt', 'createdAt']) &&
+        data().uid == userId &&
+        optionalString('displayName', 500) &&
+        optionalString('email', 500) &&
+        optionalString('photoURL', 2000) &&
+        optionalString('provider', 50) &&
+        optionalString('householdId', 128) &&
+        (!('isAnonymous' in data()) || data().isAnonymous is bool) &&
+        optionalTimestamp('lastLoginAt') &&
+        optionalTimestamp('createdAt');
+    }
+
+    function isValidMemberUids(uids) {
+      return uids is list && uids.size() >= 1 && uids.size() <= 50;
+    }
+
+    function isValidHousehold() {
+      return data().keys().hasOnly(['ownerUid', 'memberUids', 'inviteCode', 'name', 'motto',
+          'city', 'establishedYear', 'createdAt', 'updatedAt', 'joinCode']) &&
+        data().keys().hasAll(['ownerUid', 'memberUids', 'inviteCode', 'name']) &&
+        data().ownerUid is string &&
+        isValidMemberUids(data().memberUids) &&
+        data().inviteCode is string && data().inviteCode.size() >= 6 && data().inviteCode.size() <= 12 &&
+        data().name is string && data().name.size() <= 120 &&
+        optionalString('motto', 300) &&
+        optionalString('city', 120) &&
+        (!('establishedYear' in data()) || (data().establishedYear is number &&
+          data().establishedYear >= 1800 && data().establishedYear <= 2200)) &&
+        optionalString('joinCode', 12) &&
+        optionalTimestamp('createdAt') &&
+        optionalTimestamp('updatedAt');
+    }
+
+    function householdDiff() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // Member editing details; only the owner may change who belongs.
+    function isMemberEdit() {
+      return request.auth.uid in resource.data.memberUids &&
+        !householdDiff().hasAny(['ownerUid', 'inviteCode', 'createdAt']) &&
+        (!householdDiff().hasAny(['memberUids']) || request.auth.uid == resource.data.ownerUid);
+    }
+
+    // A member (not the owner) leaving: removes only themselves.
+    function isSelfLeave() {
+      return request.auth.uid in resource.data.memberUids &&
+        request.auth.uid != resource.data.ownerUid &&
+        householdDiff().hasOnly(['memberUids', 'updatedAt']) &&
+        data().memberUids.toSet() == resource.data.memberUids.toSet().difference([request.auth.uid].toSet());
+    }
+
+    // A non-member joining with the correct invite code: appends only themselves.
+    function isJoinWithCode() {
+      return !(request.auth.uid in resource.data.memberUids) &&
+        householdDiff().hasOnly(['memberUids', 'joinCode', 'updatedAt']) &&
+        data().joinCode == resource.data.inviteCode &&
+        data().memberUids == resource.data.memberUids.concat([request.auth.uid]);
+    }
+
+    function isValidSyncedRecord() {
+      return data().size() <= 80 &&
+        data()._updatedBy == request.auth.uid &&
+        data()._updatedAt == request.time &&
+        data().id is string && data().id.size() <= 200;
+    }
+
+    function isValidLocation(uid) {
+      return data().keys().hasOnly(['uid', 'memberName', 'latitude', 'longitude',
+          'accuracyMeters', '_updatedAt', '_updatedBy']) &&
+        data().uid == uid &&
+        optionalString('memberName', 120) &&
+        data().latitude is number && data().latitude >= -90 && data().latitude <= 90 &&
+        data().longitude is number && data().longitude >= -180 && data().longitude <= 180 &&
+        data().accuracyMeters is number && data().accuracyMeters >= 0 &&
+        data()._updatedBy == request.auth.uid &&
+        data()._updatedAt == request.time;
+    }
+
+    function isValidInviteCode(code) {
+      return data().keys().hasOnly(['householdId', 'createdBy', 'createdAt']) &&
+        data().createdBy == request.auth.uid &&
+        data().householdId is string && data().householdId.size() <= 128 &&
+        code.size() >= 6 && code.size() <= 12 &&
+        exists(/databases/$(database)/documents/households/$(data().householdId)) &&
+        household(data().householdId).ownerUid == request.auth.uid &&
+        household(data().householdId).inviteCode == code;
+    }
+
+    // ── Rules ────────────────────────────────────────────────
+
+    // Private account profile: only its owner.
+    match /users/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidUserProfile(userId);
+    }
+
+    // Household root: members read; creator starts as sole member; join/leave via narrow paths.
+    match /households/{hid} {
+      allow get: if isAuthenticated() && request.auth.uid in resource.data.memberUids;
+      allow list: if false;
+      allow create: if isAuthenticated() && isValidHousehold() &&
+        data().ownerUid == request.auth.uid &&
+        data().memberUids == [request.auth.uid] &&
+        !('joinCode' in data());
+      allow update: if isAuthenticated() && isValidHousehold() &&
+        (isMemberEdit() || isSelfLeave() || isJoinWithCode());
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.ownerUid;
+
+      // Shared family records: any household account may read and write.
+      match /{collection}/{docId} {
+        allow read, delete: if collection in ['members', 'functions', 'knowledge', 'routines', 'intentions', 'tasks'] &&
+          isHouseholdMember(hid);
+        allow create, update: if collection in ['members', 'functions', 'knowledge', 'routines', 'intentions', 'tasks'] &&
+          isHouseholdMember(hid) && isValidSyncedRecord() && data().id == docId;
+      }
+
+      // Opt-in live location: members read; each account writes only its own.
+      match /locations/{uid} {
+        allow read: if isHouseholdMember(hid);
+        allow create, update: if isOwner(uid) && isHouseholdMember(hid) && isValidLocation(uid);
+        allow delete: if isOwner(uid) && isHouseholdMember(hid);
+      }
+    }
+
+    // Invite codes: fetched by exact code only; issued by the household owner.
+    match /inviteCodes/{code} {
+      allow get: if isAuthenticated();
+      allow list, update: if false;
+      allow create: if isAuthenticated() && isValidInviteCode(code);
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+  }
+}
