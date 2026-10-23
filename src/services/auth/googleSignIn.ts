@@ -13,6 +13,8 @@ import {
   statusCodes,
 } from "@react-native-google-signin/google-signin"
 import Constants from "expo-constants"
+import { Platform } from "react-native"
+import { auth as firebaseAuth } from "@/services/firebase/firebaseClient"
 
 // Set by app.config.ts from google-services.json (or EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).
 const WEB_CLIENT_ID =
@@ -25,25 +27,37 @@ let configured = false
 export const isGoogleConfigured = () => WEB_CLIENT_ID.length > 0
 
 /**
- * All Google API scopes requested at sign-in so the consent screen shows
- * permission checkboxes (matching what neev-v2 web does via Firebase addScope).
- * This is what makes calendar, tasks, drive, contacts etc. actually work.
+ * All Google API scopes requested at sign-in.
+ * NOTE: Requesting sensitive/restricted scopes (calendar, tasks, drive) at initial
+ * sign-in causes Google Play Services to hang, block unverified apps, or fail with
+ * Code 10 / 12500 when not pre-approved. Standard OpenID ("profile", "email")
+ * provides reliable one-tap sign-in. Feature scopes are authorized incrementally
+ * on-demand via getGoogleAccessToken().
  */
 const GOOGLE_SIGN_IN_SCOPES = [
   "profile",
   "email",
+  /* Commented out to prevent sign-in freeze/blocking on Android devices:
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/tasks",
   "https://www.googleapis.com/auth/drive.file",
+  */
 ]
 
 function ensureConfigured() {
   if (configured) return
+  if (Platform.OS === "web") {
+    configured = true
+    return
+  }
   GoogleSignin.configure({
     webClientId: WEB_CLIENT_ID,
     scopes: GOOGLE_SIGN_IN_SCOPES,
+    /* Commented out offlineAccess and forceCodeForRefreshToken to prevent hanging
+     * and developer configuration mismatches when no backend code exchange exists:
     offlineAccess: true,
     forceCodeForRefreshToken: true,
+    */
   })
   configured = true
 }
@@ -67,6 +81,34 @@ export type GoogleSignInResult =
   | { status: "error"; message: string }
 
 export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
+  // Web Platform Support: Use Firebase Web Google Sign-In Popup
+  if (Platform.OS === "web") {
+    try {
+      const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth")
+      const provider = new GoogleAuthProvider()
+      const userCred = await signInWithPopup(firebaseAuth, provider)
+      const credential = GoogleAuthProvider.credentialFromResult(userCred)
+      const idToken = await userCred.user.getIdToken()
+      return {
+        status: "success",
+        idToken,
+        accessToken: credential?.accessToken || "",
+        user: {
+          id: userCred.user.uid,
+          email: userCred.user.email || "",
+          name: userCred.user.displayName,
+          photo: userCred.user.photoURL,
+        },
+      }
+    } catch (webErr: unknown) {
+      console.warn("[GoogleSignIn] Web popup notice:", webErr)
+      return {
+        status: "error",
+        message: webErr instanceof Error ? webErr.message : "Web Google sign-in could not be completed.",
+      }
+    }
+  }
+
   if (!isGoogleConfigured()) {
     return {
       status: "not_configured",
@@ -76,7 +118,17 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
   ensureConfigured()
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+
+    /* Previous direct call without timeout:
     const response = await GoogleSignin.signIn()
+    */
+    // Race GoogleSignin.signIn() with a 45s safety timeout so the UI never stays stuck
+    const signInPromise = GoogleSignin.signIn()
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Google sign-in timed out. Please try again.")), 45000),
+    )
+    const response = await Promise.race([signInPromise, timeoutPromise])
+
     if (!isSuccessResponse(response)) {
       return { status: "cancelled", message: "Google sign-in was dismissed or closed." }
     }
@@ -85,10 +137,22 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
       return { status: "error", message: "Google didn't return an ID token for this account." }
     }
 
-    // Get the access token that carries all the granted scopes.
-    // This is what's needed to call Google Calendar, Tasks, Drive etc. APIs.
-    const tokens = await GoogleSignin.getTokens()
-    const accessToken = tokens.accessToken
+    // Safely retrieve access token with timeout and error fallback so it never blocks
+    let accessToken = ""
+    try {
+      /* Previous direct getTokens call:
+      const tokens = await GoogleSignin.getTokens()
+      accessToken = tokens.accessToken
+      */
+      const tokensPromise = GoogleSignin.getTokens()
+      const tokenTimeout = new Promise<{ accessToken?: string }>((resolve) =>
+        setTimeout(() => resolve({ accessToken: "" }), 5000),
+      )
+      const tokens = await Promise.race([tokensPromise, tokenTimeout])
+      accessToken = tokens.accessToken || ""
+    } catch (tokenErr) {
+      console.warn("[GoogleSignIn] getTokens notice (non-fatal):", tokenErr)
+    }
 
     if (!accessToken) {
       console.warn("[GoogleSignIn] signIn succeeded but getTokens() returned no accessToken")
@@ -148,20 +212,25 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
 }
 
 export async function signOutOfGoogle(): Promise<void> {
+  if (Platform.OS === "web") {
+    try {
+      const { signOut } = await import("firebase/auth")
+      await signOut(firebaseAuth)
+    } catch { /* ignore web signout errors */ }
+    return
+  }
   if (!isGoogleConfigured()) return
   ensureConfigured()
   await GoogleSignin.signOut().catch(() => undefined)
 }
 
 /**
- * Google API scopes used by Neev features. All of these are now also requested
- * during initial sign-in (see GOOGLE_SIGN_IN_SCOPES above), so the user
- * sees the consent screen with all permissions at once.
- *
- * getGoogleAccessToken() still supports incremental authorization as a
- * fallback if a scope wasn't granted during the initial sign-in.
+ * Google API scopes used by Neev features.
+ * Incremental authorization is used on-demand when features are accessed.
  */
 export const GOOGLE_FEATURE_SCOPES = {
+  /** Full Google Calendar access (aliased for compatibility). */
+  calendar: "https://www.googleapis.com/auth/calendar.events",
   /** Add family events to the user's Google Calendar. */
   calendarEvents: "https://www.googleapis.com/auth/calendar.events",
   /** Add chores/prep tasks to the user's Google Tasks. */

@@ -46,10 +46,12 @@ export default function SignInScreen() {
   )
 
   const proceedWithGoogleSignIn = async () => {
+    // Dismiss the disclosure sheet first to prevent bottom sheet overlay lockup on Android
+    setShowGoogleDisclosure(false)
     setPending("google")
     try {
       const status = await signInWithGoogle()
-      setShowGoogleDisclosure(false)
+      // setShowGoogleDisclosure(false)
       const authErr = useRootStore.getState().authError
 
       if (status === "success") {
