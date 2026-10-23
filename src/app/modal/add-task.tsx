@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { ScrollView, StyleSheet, View } from "react-native"
+import { ScrollView, StyleSheet, Switch, View } from "react-native"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
@@ -17,6 +17,7 @@ import { useAddSpaceTaskMutation } from "@/hooks/useSpacesQuery"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 import { useFamilyNetworkStore } from "@/stores/useFamilyNetworkStore"
 import { deterministicEngine, type ConstraintTask } from "@/services/engine/deterministicEngine"
+import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { useRootStore } from "@/stores/useRootStore"
 import { toLocalDateInput } from "@/utils/textUtils"
 
@@ -62,6 +63,8 @@ export default function AddTaskModal() {
   const [assignedTo, setAssignedTo] = useState(members[0]?.name || "Me")
   const [selectedDepTaskId, setSelectedDepTaskId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const isGoogleUser = useRootStore((s) => s.user?.provider === "google")
+  const [addToGoogleTasks, setAddToGoogleTasks] = useState(false)
 
   const priorities = [
     { key: "urgent" as const, label: "Urgent", color: colors.error, val: 5 },
@@ -153,6 +156,16 @@ export default function AddTaskModal() {
         message: `Task added to ${selectedSpace.toUpperCase()} space! Priority score: ${calculatedScore}`,
         type: "success",
       })
+      if (isGoogleUser && addToGoogleTasks) {
+        void googleServicesClient
+          .exportTaskToGoogleTasks(title.trim(), assignedTo, dueDate)
+          .then((ok) =>
+            showToast({
+              message: ok ? "Also added to Google Tasks" : "Couldn't add it to Google Tasks",
+              type: ok ? "success" : "error",
+            }),
+          )
+      }
       router.back()
     } finally {
       setIsSaving(false)
@@ -391,6 +404,20 @@ export default function AddTaskModal() {
             <TextField label="Time" placeholder="e.g. 05:00 PM" value={time} onChangeText={setTime} />
           </View>
         </View>
+
+        {isGoogleUser ? (
+          <View style={[styles.sectionMargin, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <AppText variant="body" style={{ fontWeight: "600" }}>
+                Also add to Google Tasks
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.text.secondary }}>
+                Puts this on your default Google Tasks list with the due date.
+              </AppText>
+            </View>
+            <Switch value={addToGoogleTasks} onValueChange={setAddToGoogleTasks} />
+          </View>
+        ) : null}
 
         <View style={styles.btnWrap}>
           <AppButton

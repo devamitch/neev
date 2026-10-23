@@ -224,6 +224,13 @@ export async function signOutOfGoogle(): Promise<void> {
   await GoogleSignin.signOut().catch(() => undefined)
 }
 
+/** Drops a rejected (expired/revoked) token so the next getTokens() call fetches a fresh one. */
+export async function invalidateGoogleAccessToken(accessToken: string): Promise<void> {
+  if (Platform.OS === "web" || !isGoogleConfigured()) return
+  ensureConfigured()
+  await GoogleSignin.clearCachedAccessToken(accessToken).catch(() => undefined)
+}
+
 /**
  * Google API scopes used by Neev features.
  * Incremental authorization is used on-demand when features are accessed.

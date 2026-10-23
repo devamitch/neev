@@ -45,10 +45,37 @@ export default function ScheduleScreen() {
   const storeFunctions = useScheduleStore((s) => s.functions)
   const functions = queryFunctions || storeFunctions
 
-  React.useEffect(() => {
-    const root = useRootStore.getState()
-    if (root.functions.length === 0) root.loadDemoSchedule?.()
-  }, [])
+  const showToast = useRootStore((s) => s.showToast)
+  const upsertFunctions = useRootStore((s) => s.upsertFunctions)
+  const isGoogleUser = useRootStore((s) => s.user?.provider === "google")
+  const [importing, setImporting] = useState(false)
+
+  const importFromGoogleCalendar = useCallback(async () => {
+    if (importing) return
+    setImporting(true)
+    try {
+      const { functions: imported, reason } = await googleServicesClient.fetchUpcomingCalendarEvents(30)
+      if (reason) {
+        showToast({
+          message:
+            reason === "declined"
+              ? "Calendar access was not granted."
+              : reason === "not_signed_in"
+                ? "Sign in with Google to import your calendar."
+                : "Couldn't reach Google Calendar. Try again.",
+          type: "error",
+        })
+        return
+      }
+      const added = upsertFunctions(imported)
+      showToast({
+        message: imported.length === 0 ? "No events in the next 30 days" : `Imported ${imported.length} events (${added} new)`,
+        type: "success",
+      })
+    } finally {
+      setImporting(false)
+    }
+  }, [importing, showToast, upsertFunctions])
 
   const toggleTask = useCallback(
     (functionId: string, taskId: string) => {
@@ -251,9 +278,18 @@ export default function ScheduleScreen() {
           onPress={() => router.push("/modal/add-event")}
           style={{ marginTop: 20 }}
         />
+        {isGoogleUser ? (
+          <AppButton
+            title={importing ? "Importing from Google Calendar…" : "Import next 30 days from Google Calendar"}
+            variant="outline"
+            onPress={() => void importFromGoogleCalendar()}
+            disabled={importing}
+            style={{ marginTop: 12 }}
+          />
+        ) : null}
       </View>
     ),
-    [],
+    [importFromGoogleCalendar, importing, isGoogleUser],
   )
 
   const emptyComponent = useMemo(
