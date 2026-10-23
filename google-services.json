@@ -1,0 +1,153 @@
+{
+  "project_info": {
+    "project_number": "955342531861",
+    "project_id": "gen-lang-client-0587640262",
+    "storage_bucket": "gen-lang-client-0587640262.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:955342531861:android:673bd728c7b99cf91acd1c",
+        "android_client_info": {
+          "package_name": "com.amit.blinkquest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "955342531861-dr54n6amei4tsfjmn7pkkcc3h1ni752r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.blinkquest",
+            "certificate_hash": "a85d4df3e6567c24c46d44a3f61b77d4a5a2ba37"
+          }
+        },
+        {
+          "client_id": "955342531861-icodoe0tiar69ehisea7r1hmcks7h53v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.blinkquest",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "955342531861-jpf87hn3cqf4id0i3gb7unjf549bfc3t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.blinkquest",
+            "certificate_hash": "2c10659894685d318214d783f75f90342c14e6c6"
+          }
+        },
+        {
+          "client_id": "955342531861-odhjdfthsohl446sdd3f6aopro798i2h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.blinkquest",
+            "certificate_hash": "416d60d80e95b2f392d6b24181ab896e4addee64"
+          }
+        },
+        {
+          "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYkY8pB3l-7VFMOeaYfqrhKU5iL9v720E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:955342531861:android:635cd833c321b7391acd1c",
+        "android_client_info": {
+          "package_name": "com.amit.neev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "955342531861-o1a0jsq4vltrm3i6u4b2nf8rbp20vq8t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.neev",
+            "certificate_hash": "416d60d80e95b2f392d6b24181ab896e4addee64"
+          }
+        },
+        {
+          "client_id": "955342531861-q27hjcnvgbvhf6elje8eh2ig89aq7ni8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.neev",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "955342531861-tjbn5cqiovtskf78ggnri4v9gr051krm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.amit.neev",
+            "certificate_hash": "a85d4df3e6567c24c46d44a3f61b77d4a5a2ba37"
+          }
+        },
+        {
+          "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYkY8pB3l-7VFMOeaYfqrhKU5iL9v720E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:955342531861:android:f495afffb3047ca51acd1c",
+        "android_client_info": {
+          "package_name": "com.amit.setu"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYkY8pB3l-7VFMOeaYfqrhKU5iL9v720E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "955342531861-d0dscnslcjibu8ndu37ad40cglqvihe3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

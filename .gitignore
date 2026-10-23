@@ -83,6 +83,7 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 google-services*.json
+!google-services.json
 
 web-build/
 dist/
