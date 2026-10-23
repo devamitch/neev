@@ -86,9 +86,9 @@ export interface FamilySlice {
   setActiveMember: (id: string) => void
   setHousehold: (household: Partial<HouseholdInfo>) => void
   resetFamilyToClean: () => void
-  loadDemoFamily: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_MEMBERS: FamilyMember[] = [
   {
     id: "m-1",
@@ -172,8 +172,8 @@ export const DEMO_MEMBERS: FamilyMember[] = [
   },
 ]
 
-export const INITIAL_MEMBERS = DEMO_MEMBERS
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_HOUSEHOLD: HouseholdInfo = {
   name: "Chakraborty Family Sanctuary",
   motto: "Ground in love, grow with laughter",
@@ -239,12 +239,5 @@ export const createFamilySlice: ImmerStateCreator<FamilySlice> = (set) => ({
       }
       state.members = []
       state.activeMemberId = null
-    }),
-
-  loadDemoFamily: () =>
-    set((state) => {
-      state.household = DEMO_HOUSEHOLD
-      state.members = DEMO_MEMBERS
-      state.activeMemberId = "m-3"
     }),
 })

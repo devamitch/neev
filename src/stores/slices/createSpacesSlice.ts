@@ -55,9 +55,9 @@ export interface SpacesSlice {
   dismissBriefing: (id: string) => void
   generateAiBriefing: (context: "school_prep" | "doctor_visit" | "career_interview" | "family_event") => void
   resetSpacesToClean: () => void
-  loadDemoSpaces: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_TASKS: SpaceTask[] = [
   // Personal Space Tasks (Confidential)
   {
@@ -138,6 +138,7 @@ export const DEMO_TASKS: SpaceTask[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_MEETINGS: SpaceMeeting[] = [
   {
     id: "mtg-1",
@@ -174,6 +175,7 @@ export const DEMO_MEETINGS: SpaceMeeting[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_BRIEFINGS: AiBriefing[] = [
   {
     id: "ab-1",
@@ -219,9 +221,6 @@ export const DEMO_BRIEFINGS: AiBriefing[] = [
   },
 ]
 
-export const INITIAL_TASKS = DEMO_TASKS
-export const INITIAL_MEETINGS = DEMO_MEETINGS
-export const INITIAL_BRIEFINGS = DEMO_BRIEFINGS
 
 export const createSpacesSlice: ImmerStateCreator<SpacesSlice> = (set) => ({
   currentSpace: "nuclear",
@@ -343,12 +342,5 @@ export const createSpacesSlice: ImmerStateCreator<SpacesSlice> = (set) => ({
       state.tasks = []
       state.meetings = []
       state.aiBriefings = []
-    }),
-
-  loadDemoSpaces: () =>
-    set((state) => {
-      state.tasks = DEMO_TASKS
-      state.meetings = DEMO_MEETINGS
-      state.aiBriefings = DEMO_BRIEFINGS
     }),
 })

@@ -15,9 +15,9 @@ export interface RoutineSlice {
   toggleRoutine: (id: string) => void
   addRoutine: (item: Omit<FamilyRoutineItem, "id" | "isCompleted">) => void
   resetRoutineToClean: () => void
-  loadDemoRoutine: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_ROUTINES: FamilyRoutineItem[] = [
   {
     id: "r-1",
@@ -75,7 +75,6 @@ export const DEMO_ROUTINES: FamilyRoutineItem[] = [
   },
 ]
 
-export const INITIAL_ROUTINES = DEMO_ROUTINES
 
 export const createRoutineSlice: ImmerStateCreator<RoutineSlice> = (set) => ({
   routines: [],
@@ -96,10 +95,5 @@ export const createRoutineSlice: ImmerStateCreator<RoutineSlice> = (set) => ({
   resetRoutineToClean: () =>
     set((state) => {
       state.routines = []
-    }),
-
-  loadDemoRoutine: () =>
-    set((state) => {
-      state.routines = DEMO_ROUTINES
     }),
 })

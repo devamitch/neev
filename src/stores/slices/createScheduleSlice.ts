@@ -29,10 +29,12 @@ export interface ScheduleSlice {
   addFunction: (fn: Omit<FamilyFunction, "id">) => void
   toggleFunctionTask: (functionId: string, taskId: string) => void
   removeFunction: (id: string) => void
+  /** Inserts or replaces functions by id (e.g. events imported from Google Calendar). */
+  upsertFunctions: (fns: FamilyFunction[]) => number
   resetScheduleToClean: () => void
-  loadDemoSchedule: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_FUNCTIONS: FamilyFunction[] = [
   {
     id: "fn-1",
@@ -112,7 +114,6 @@ export const DEMO_FUNCTIONS: FamilyFunction[] = [
   },
 ]
 
-export const INITIAL_FUNCTIONS = DEMO_FUNCTIONS
 
 export const createScheduleSlice: ImmerStateCreator<ScheduleSlice> = (set) => ({
   functions: [],
@@ -138,13 +139,26 @@ export const createScheduleSlice: ImmerStateCreator<ScheduleSlice> = (set) => ({
       state.functions = state.functions.filter((f) => f.id !== id)
     }),
 
+  upsertFunctions: (fns) => {
+    let added = 0
+    set((state) => {
+      for (const fn of fns) {
+        const idx = state.functions.findIndex((f) => f.id === fn.id)
+        if (idx === -1) {
+          state.functions.push(fn)
+          added++
+        } else {
+          // Keep the family's own checklist on re-import.
+          state.functions[idx] = { ...fn, tasks: state.functions[idx].tasks, reminderSet: state.functions[idx].reminderSet }
+        }
+      }
+      state.functions.sort((a, b) => a.date.localeCompare(b.date))
+    })
+    return added
+  },
+
   resetScheduleToClean: () =>
     set((state) => {
       state.functions = []
-    }),
-
-  loadDemoSchedule: () =>
-    set((state) => {
-      state.functions = DEMO_FUNCTIONS
     }),
 })

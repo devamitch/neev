@@ -31,9 +31,9 @@ export interface IntentionsSlice {
   removeIntention: (id: string) => void
   setActiveCategory: (cat: IntentionCategory | "all") => void
   resetIntentionsToClean: () => void
-  loadDemoIntentions: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_INTENTIONS: FamilyIntention[] = [
   {
     id: "int-1",
@@ -85,7 +85,6 @@ export const DEMO_INTENTIONS: FamilyIntention[] = [
   },
 ]
 
-export const INITIAL_INTENTIONS = DEMO_INTENTIONS
 
 export const createIntentionsSlice: ImmerStateCreator<IntentionsSlice> = (set) => ({
   intentions: [],
@@ -140,10 +139,5 @@ export const createIntentionsSlice: ImmerStateCreator<IntentionsSlice> = (set) =
   resetIntentionsToClean: () =>
     set((state) => {
       state.intentions = []
-    }),
-
-  loadDemoIntentions: () =>
-    set((state) => {
-      state.intentions = DEMO_INTENTIONS
     }),
 })

@@ -102,9 +102,9 @@ export interface FamilyNetworkSlice {
   setInvitations: (invitations: FamilyInvitation[]) => void
   addInvitationRecord: (invitation: FamilyInvitation) => void
   resetNetworkToClean: () => void
-  loadDemoNetwork: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_REALMS: FamilyRealm[] = [
   {
     id: "realm_primary_chakraborty",
@@ -126,6 +126,7 @@ export const DEMO_REALMS: FamilyRealm[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_CLUSTERS: FamilyCluster[] = [
   {
     id: "c-nuclear",
@@ -179,6 +180,7 @@ export const DEMO_CLUSTERS: FamilyCluster[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_KINSHIP_EDGES: KinshipEdge[] = [
   {
     id: "ke-1",
@@ -230,6 +232,7 @@ export const DEMO_KINSHIP_EDGES: KinshipEdge[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_BRIDGES: FamilyBridge[] = [
   {
     id: "b-senroy-1",
@@ -242,6 +245,7 @@ export const DEMO_BRIDGES: FamilyBridge[] = [
   },
 ]
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_INVITATIONS: FamilyInvitation[] = [
   {
     id: "inv-01",
@@ -254,11 +258,6 @@ export const DEMO_INVITATIONS: FamilyInvitation[] = [
   },
 ]
 
-export const INITIAL_REALMS = DEMO_REALMS
-export const INITIAL_CLUSTERS = DEMO_CLUSTERS
-export const INITIAL_KINSHIP_EDGES = DEMO_KINSHIP_EDGES
-export const INITIAL_BRIDGES = DEMO_BRIDGES
-export const INITIAL_INVITATIONS = DEMO_INVITATIONS
 
 export const createFamilyNetworkSlice: ImmerStateCreator<FamilyNetworkSlice> = (set, get) => ({
   realms: [],
@@ -465,16 +464,5 @@ export const createFamilyNetworkSlice: ImmerStateCreator<FamilyNetworkSlice> = (
       state.kinshipEdges = []
       state.bridges = []
       state.invitations = []
-    }),
-
-  loadDemoNetwork: () =>
-    set((state) => {
-      state.realms = DEMO_REALMS
-      state.activeRealmId = "realm_primary_chakraborty"
-      state.clusters = DEMO_CLUSTERS
-      state.activeClusterType = "all"
-      state.kinshipEdges = DEMO_KINSHIP_EDGES
-      state.bridges = DEMO_BRIDGES
-      state.invitations = DEMO_INVITATIONS
     }),
 })

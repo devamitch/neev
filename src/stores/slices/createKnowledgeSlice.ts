@@ -25,9 +25,9 @@ export interface KnowledgeSlice {
   togglePin: (id: string) => void
   setCategory: (cat: KnowledgeCategory | "all") => void
   resetKnowledgeToClean: () => void
-  loadDemoKnowledge: () => void
 }
 
+/** Sample record kept for tests and for purging installs seeded by older builds. Never loaded in the app. */
 export const DEMO_ENTRIES: KnowledgeEntry[] = [
   {
     id: "k-1",
@@ -91,7 +91,6 @@ export const DEMO_ENTRIES: KnowledgeEntry[] = [
   },
 ]
 
-export const INITIAL_ENTRIES = DEMO_ENTRIES
 
 export const createKnowledgeSlice: ImmerStateCreator<KnowledgeSlice> = (set) => ({
   entries: [],
@@ -127,10 +126,5 @@ export const createKnowledgeSlice: ImmerStateCreator<KnowledgeSlice> = (set) => 
   resetKnowledgeToClean: () =>
     set((state) => {
       state.entries = []
-    }),
-
-  loadDemoKnowledge: () =>
-    set((state) => {
-      state.entries = DEMO_ENTRIES
     }),
 })

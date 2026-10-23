@@ -13,10 +13,10 @@ import { AppText } from "@/components/ui/AppText"
 import { PressableScale } from "@/components/ui/PressableScale"
 import { ScreenContainer } from "@/components/ui/ScreenContainer"
 import { SquircleSurface } from "@/components/ui/SquircleSurface"
-import { resetAllToCleanAccount, useRootStore, useShallow } from "@/stores/useRootStore"
+import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useTheme } from "@/theme/useTheme"
 
-type Pending = "google" | "setu" | "demo" | "guest" | null
+type Pending = "google" | "setu" | "guest" | null
 
 export default function SignInScreen() {
   const { colors } = useTheme()
@@ -29,7 +29,6 @@ export default function SignInScreen() {
     signInWithGoogle,
     signInWithSetu,
     signInAsGuest,
-    signInAsDemoUser,
     openSetuDownload,
     showAlert,
     showToast,
@@ -38,7 +37,6 @@ export default function SignInScreen() {
       signInWithGoogle: s.signInWithGoogle,
       signInWithSetu: s.signInWithSetu,
       signInAsGuest: s.signInAsGuest,
-      signInAsDemoUser: s.signInAsDemoUser,
       openSetuDownload: s.openSetuDownload,
       showAlert: s.showAlert,
       showToast: s.showToast,
@@ -70,8 +68,8 @@ export default function SignInScreen() {
         showAlert({
           title: "Google Sign-In",
           message:
-            "This build has no Google Web Client ID configured.\n\nUse 'Continue as Guest Tester' to explore all features in sandbox mode.",
-          confirmText: "Use Guest Mode",
+            "This build has no Google Web Client ID configured.\n\nYou can continue without an account and sign in with Google later.",
+          confirmText: "Continue without account",
           cancelText: "Dismiss",
           onConfirm: () => void handleGuest(),
         })
@@ -90,8 +88,8 @@ export default function SignInScreen() {
         })
         showAlert({
           title: "Google Sign-In Error",
-          message: `${errorMsg}\n\nTip: You can use "Continue as Guest Tester" to test all sanctuary features immediately without Google OAuth.`,
-          confirmText: "Use Guest Mode",
+          message: `${errorMsg}\n\nYou can continue without an account for now.`,
+          confirmText: "Continue without account",
           cancelText: "Dismiss",
           onConfirm: () => void handleGuest(),
         })
@@ -129,31 +127,15 @@ export default function SignInScreen() {
     }
   }
 
-  const handleDemo = async () => {
-    setPending("demo")
-    try {
-      await signInAsDemoUser()
-      showToast("Welcome to Demo Sanctuary", "success")
-      router.replace("/(app)/(tabs)/dashboard")
-    } finally {
-      setPending(null)
-    }
-  }
-
   const handleGuest = async () => {
     setPending("guest")
     try {
       await signInAsGuest()
-      showToast("Welcome to Family Sanctuary Sandbox", "info")
+      showToast("Welcome to Neev", "info")
       router.replace("/(app)/(tabs)/dashboard")
     } finally {
       setPending(null)
     }
-  }
-
-  const handleClearStorage = () => {
-    resetAllToCleanAccount()
-    showToast("Local Storage (MMKV) Cleared", "success")
   }
 
   return (
@@ -179,24 +161,14 @@ export default function SignInScreen() {
       </View>
 
       <View style={styles.actions}>
-        {/* Android Tester Priority Flow */}
-        <ProviderButton
-          label="Continue as Guest Tester"
-          subtitle="Clean sandbox · No Google account required · Local isolated storage"
-          icon={<Ionicons name="flask-outline" size={22} color={colors.accentText} />}
-          busy={pending === "guest"}
-          disabled={pending !== null}
-          onPress={() => void handleGuest()}
-          highlighted
-        />
-
         <ProviderButton
           label="Continue with Google"
-          subtitle="Privacy disclosure shown before connecting"
+          subtitle="Recommended · Syncs your family across devices"
           icon={<GoogleG />}
           busy={pending === "google"}
           disabled={pending !== null}
           onPress={() => setShowGoogleDisclosure(true)}
+          highlighted
         />
 
         <ProviderButton
@@ -209,30 +181,20 @@ export default function SignInScreen() {
         />
 
         <ProviderButton
-          label="Try Demo Sanctuary (Sample Data)"
-          subtitle="Pre-populated preview with sample family & chores"
-          icon={<Ionicons name="play-circle-outline" size={20} color={colors.text.secondary} />}
-          busy={pending === "demo"}
+          label="Continue without an account"
+          subtitle="Private cloud household on this device · No Google needed"
+          icon={<Ionicons name="person-outline" size={20} color={colors.text.secondary} />}
+          busy={pending === "guest"}
           disabled={pending !== null}
-          onPress={() => void handleDemo()}
+          onPress={() => void handleGuest()}
         />
-      </View>
-
-      {/* Storage Reset Utility for Android Testers */}
-      <View style={styles.testerBar}>
-        <PressableScale onPress={handleClearStorage} style={styles.clearStorageBtn}>
-          <Ionicons name="trash-bin-outline" size={14} color={colors.text.muted} />
-          <AppText variant="caption" style={{ color: colors.text.muted, fontWeight: "600" }}>
-            Reset App Storage (MMKV)
-          </AppText>
-        </PressableScale>
       </View>
 
       <View style={styles.note}>
         <Ionicons name="lock-closed-outline" size={14} color={colors.text.muted} />
         <AppText variant="caption" style={styles.noteText}>
-          Your family data is stored locally on this phone. Zero ads, zero tracking, zero
-          third-party brokers.
+          Your family data is stored on this phone and synced privately to your household in
+          Neev&apos;s cloud. Zero ads, zero tracking, zero third-party brokers.
         </AppText>
       </View>
 
@@ -288,9 +250,10 @@ export default function SignInScreen() {
               </AppText>
             </View>
             <AppText variant="caption" color={colors.text.secondary} style={{ lineHeight: 18 }}>
-              • Zero access to Google Contacts, Gmail inbox, Drive, or Calendar.{"\n"}• No automatic
-              location access (location sharing requires explicit toggle in Family Map).{"\n"}•
-              Clean state: New accounts start with zero dummy relatives or pre-seeded records.
+              • Calendar, Tasks and Drive are asked for only when you use those features, and
+              Drive access is limited to files Neev creates.{"\n"}• No Gmail access, ever.{"\n"}• Contacts
+              are read on this phone only when you pick one to add.{"\n"}• Location is shared only after
+              you turn it on in the Family Map.
             </AppText>
           </View>
 
@@ -311,7 +274,7 @@ export default function SignInScreen() {
               onPress={() => void proceedWithGoogleSignIn()}
             />
             <AppButton
-              title="Continue as Guest Tester Instead"
+              title="Continue without an account"
               variant="outline"
               disabled={pending !== null}
               onPress={() => {
@@ -411,13 +374,6 @@ const styles = StyleSheet.create({
   actions: { gap: 12, marginTop: 28 },
   back: { marginBottom: 8 },
   center: { textAlign: "center" },
-  clearStorageBtn: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
   disclosureContent: {
     gap: 12,
     paddingBottom: 16,
@@ -464,10 +420,5 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     flexDirection: "row",
     gap: 10,
-  },
-  testerBar: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 16,
   },
 })

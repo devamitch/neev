@@ -105,11 +105,6 @@ export default function FamilyScreen() {
   const showAlert = useRootStore((s) => s.showAlert)
   const insets = useSafeAreaInsets()
 
-  React.useEffect(() => {
-    const root = useRootStore.getState()
-    if (root.members.length === 0) root.loadDemoFamily?.()
-  }, [])
-
   // ── Modals State ──
   const [realmModalVisible, setRealmModalVisible] = useState(false)
   const [newRealmName, setNewRealmName] = useState("")
@@ -703,16 +698,12 @@ export default function FamilyScreen() {
                   </AppText>
                 </PressableScale>
                 <PressableScale
-                  onPress={() => {
-                    useRootStore.getState().loadDemoFamily?.()
-                    useRootStore.getState().loadDemoNetwork?.()
-                    showToast("Sample Family Preview Loaded", "info")
-                  }}
+                  onPress={() => router.push("/modal/household")}
                   style={[styles.toolBtn, { backgroundColor: colors.surface2, paddingHorizontal: 16 }]}
                 >
-                  <Ionicons name="play-outline" size={15} color={colors.primary} style={{ marginRight: 6 }} />
+                  <Ionicons name="key-outline" size={15} color={colors.primary} style={{ marginRight: 6 }} />
                   <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
-                    Preview Sample
+                    Join a Family
                   </AppText>
                 </PressableScale>
               </View>

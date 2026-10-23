@@ -81,15 +81,6 @@ export default function DashboardScreen() {
   const easyMode = useRootStore((s) => s.easyMode)
   const toggleEasyMode = useRootStore((s) => s.toggleEasyMode)
 
-  React.useEffect(() => {
-    const root = useRootStore.getState()
-    if (root.tasks.length === 0) root.loadDemoSpaces?.()
-    if (root.functions.length === 0) root.loadDemoSchedule?.()
-    if (root.routines.length === 0) root.loadDemoRoutine?.()
-    if (root.entries.length === 0) root.loadDemoKnowledge?.()
-    if (root.members.length === 0) root.loadDemoFamily?.()
-  }, [])
-
   // TanStack React Query for offline-first caching & synchronization
   const { data: scheduleData } = useScheduleQuery()
   const { data: knowledgeData } = useKnowledgeQuery()
@@ -148,6 +139,16 @@ export default function DashboardScreen() {
     const res = await googleServicesClient.exportFunctionToCalendar(nextFunction)
     if (res.success) {
       showToast({ message: "Function exported to Google Calendar!", type: "success" })
+    } else {
+      showToast({
+        message:
+          res.reason === "declined"
+            ? "Calendar access was not granted."
+            : res.reason === "not_signed_in" || res.reason === "not_configured"
+              ? "Sign in with Google to use Google Calendar."
+              : "Couldn't reach Google Calendar. Try again.",
+        type: "error",
+      })
     }
   }
 
@@ -761,16 +762,12 @@ export default function DashboardScreen() {
               </PressableScale>
 
               <PressableScale
-                onPress={() => {
-                  useRootStore.getState().loadDemoFamily?.()
-                  useRootStore.getState().loadDemoSpaces?.()
-                  showToast("Sample Family Preview Loaded", "info")
-                }}
+                onPress={() => router.push("/modal/household")}
                 style={[styles.emptyActionBtn, { backgroundColor: colors.surface2 }]}
               >
-                <Ionicons name="play-outline" size={15} color={colors.primary} />
+                <Ionicons name="key-outline" size={15} color={colors.primary} />
                 <AppText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-                  Preview Sample Family
+                  Join a Family
                 </AppText>
               </PressableScale>
             </View>
