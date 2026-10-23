@@ -59,6 +59,7 @@ export default function AddMemberModal() {
   const [favoriteTreat, setFavoriteTreat] = useState("")
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
   const [notes, setNotes] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
 
   // Specialized Role Metadata
@@ -75,6 +76,34 @@ export default function AddMemberModal() {
   const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>(
     clusters.filter((c) => c.type === "care_circle" || c.type === "puja_tradition").map((c) => c.id),
   )
+
+  const pickFromContacts = async () => {
+    try {
+      const Contacts = await import("expo-contacts")
+      const permission = await Contacts.requestPermissionsAsync()
+      if (permission.status !== "granted") {
+        showToast({ message: "Contacts permission was not granted.", type: "error" })
+        return
+      }
+      const contact = await Contacts.presentContactPickerAsync()
+      if (!contact) return
+      void Haptics.selectionAsync()
+      const fullName = contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")
+      if (fullName) setName(fullName)
+      if (contact.nickname) setNickname(contact.nickname)
+      const number = contact.phoneNumbers?.find((p) => p.number)?.number
+      if (number) {
+        setHasPhone(true)
+        setPhone(number)
+      }
+      const bday = contact.birthday
+      if (bday?.year && bday.month !== undefined && bday.day) {
+        setDateOfBirth(`${bday.year}-${String(bday.month + 1).padStart(2, "0")}-${String(bday.day).padStart(2, "0")}`)
+      }
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : "Couldn't open contacts.", type: "error" })
+    }
+  }
 
   const toggleCluster = (clusterId: string) => {
     void Haptics.selectionAsync()
@@ -111,6 +140,7 @@ export default function AddMemberModal() {
       avatarText: initials,
       avatarColor: selectedColor,
       phone: hasPhone && phone.trim() ? phone.trim() : undefined,
+      dateOfBirth,
       superpower: superpower.trim() || undefined,
       favoriteTreat: favoriteTreat.trim() || undefined,
       notes: notes.trim() || undefined,
@@ -176,6 +206,13 @@ return (
         />
       }
     >
+        <AppButton
+          title="Pick from Contacts"
+          variant="outline"
+          onPress={() => void pickFromContacts()}
+          style={{ marginBottom: 16 }}
+        />
+
         {/* Name Fields */}
         <TextField
           label="Full Name"

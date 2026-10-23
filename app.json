@@ -19,13 +19,15 @@
       "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_COARSE_LOCATION",
       "android.permission.VIBRATE",
-      "android.permission.POST_NOTIFICATIONS"
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.READ_CONTACTS"
     ],
     "blockedPermissions": [
       "com.google.android.gms.permission.AD_ID",
       "android.permission.READ_EXTERNAL_STORAGE",
       "android.permission.WRITE_EXTERNAL_STORAGE",
-      "android.permission.SYSTEM_ALERT_WINDOW"
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.WRITE_CONTACTS"
     ]
   },
   "ios": {
@@ -39,7 +41,9 @@
       "NSPrivacyAccessedAPITypes": [
         {
           "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-          "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          "NSPrivacyAccessedAPITypeReasons": [
+            "CA92.1"
+          ]
         }
       ]
     }
@@ -77,6 +81,20 @@
       {
         "icon": "./assets/images/app-icon-android-legacy.png",
         "color": "#D97706"
+      }
+    ],
+    [
+      "expo-contacts",
+      {
+        "contactsPermission": "Neev uses your contacts only when you choose a family member to add from your address book."
+      }
+    ],
+    [
+      "expo-location",
+      {
+        "locationWhenInUsePermission": "Neev shares your location with your household only when you turn on location sharing in the Family Map.",
+        "isAndroidBackgroundLocationEnabled": false,
+        "isIosBackgroundLocationEnabled": false
       }
     ]
   ],
