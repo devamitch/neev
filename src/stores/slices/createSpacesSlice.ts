@@ -13,6 +13,12 @@ export interface SpaceTask {
   priority: "urgent" | "normal" | "low"
   isCompleted: boolean
   googleTaskId?: string
+  /** Account (uid) that created the task; decides whose Google Tasks it syncs to. */
+  createdBy?: string
+  /** "google": mirrored from this user's Google Tasks; stays on this device. */
+  source?: "google"
+  taskListName?: string
+  notes?: string
   reminderNudgeCount: number
   clusterType?: string
   estimatedMinutes?: number
@@ -237,6 +243,7 @@ export const createSpacesSlice: ImmerStateCreator<SpacesSlice> = (set) => ({
     set((state) => {
       state.tasks.unshift({
         ...task,
+        createdBy: task.createdBy ?? state.user?.uid,
         id: `tsk-${Date.now()}`,
         isCompleted: false,
         reminderNudgeCount: 0,

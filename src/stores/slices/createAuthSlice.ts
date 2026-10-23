@@ -12,9 +12,10 @@ import {
 } from "firebase/auth"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth as firebaseAuth, db as firestoreDb } from "@/services/firebase/firebaseClient"
-import { signInWithGoogleAccount, signOutOfGoogle } from "@/services/auth/googleSignIn"
+import { connectGoogleServices, signInWithGoogleAccount, signOutOfGoogle } from "@/services/auth/googleSignIn"
 import { setuSsoService, type SsoCallbackData } from "@/services/auth/setuSsoService"
 import { supabase } from "@/services/supabase/supabaseClient"
+import { Platform } from "react-native"
 import type { ImmerStateCreator } from "../types"
 
 export type AuthProvider = "google" | "setu" | "apple" | "guest"
@@ -194,11 +195,19 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
         state.isAuthLoading = false
       })
 
-      // Mark Google as connected in the cloud sync store
-      try {
-        const { useCloudSyncStore } = require("@/services/sync/cloudSyncEngine")
-        useCloudSyncStore.setState({ isGoogleConnected: !!result.accessToken })
-      } catch { /* cloud sync store may not be available yet */ }
+      // One consent screen for Calendar, Tasks and Drive right after sign-in. Declining
+      // keeps the user signed in; they can allow it later from Settings.
+      if (Platform.OS !== "web") {
+        const access = await connectGoogleServices().catch(() => null)
+        try {
+          const { useCloudSyncStore } = require("@/services/sync/cloudSyncEngine")
+          useCloudSyncStore.setState({ isGoogleConnected: access?.status === "granted" })
+        } catch { /* cloud sync store may not be available yet */ }
+        if (access?.status === "granted") {
+          const { syncGoogleNow } = require("@/services/google/googleSyncService") as typeof import("@/services/google/googleSyncService")
+          void syncGoogleNow()
+        }
+      }
 
       return "success"
     } catch (unhandledErr: unknown) {
@@ -385,6 +394,8 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     // Stop cloud sync first so clearing local state below is never pushed as deletions.
     const { stopCloudSync } = require("@/services/sync/cloudSyncEngine") as typeof import("@/services/sync/cloudSyncEngine")
     stopCloudSync()
+    const { resetGoogleSyncState } = require("@/services/google/googleSyncService") as typeof import("@/services/google/googleSyncService")
+    resetGoogleSyncState()
     await firebaseSignOut(firebaseAuth).catch(() => {})
     await supabase.auth.signOut().catch(() => {})
     if (get().user?.provider === "google") await signOutOfGoogle().catch(() => {})

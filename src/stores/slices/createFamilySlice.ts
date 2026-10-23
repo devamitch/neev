@@ -11,6 +11,7 @@ export interface FamilyMember {
   avatarText: string
   avatarColor: string
   phone?: string
+  email?: string
   dateOfBirth?: string
   favoriteTreat?: string
   superpower?: string

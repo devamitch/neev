@@ -350,10 +350,9 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
     }
 
     addFunction(newFn)
-    void googleServicesClient.exportFunctionToCalendar(newFn)
     setDineoutModalVisible(false)
     showToast({
-      message: `Scheduled ${suggestion.name}! Synced with Google Calendar.`,
+      message: `Scheduled ${suggestion.name}!`,
       type: "success",
     })
   }

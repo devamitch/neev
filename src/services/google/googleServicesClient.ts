@@ -1,7 +1,7 @@
 /**
  * Google services used by Neev, all through the signed-in user's own Google account
  * with incremental authorization (see GOOGLE_FEATURE_SCOPES):
- * 1. Google Calendar — add a family function as a real event, and import upcoming events.
+ * 1. Google Calendar — add a family function as a real event (two-way sync: googleSyncService).
  * 2. Google Tasks — add a delegated chore to the user's task list.
  * 3. Google Meet — a real Meet link, created on a Calendar event (conferenceData).
  * 4. Google Drive — back up the household's records as a file only Neev can see (drive.file).
@@ -19,7 +19,7 @@ import {
   type GoogleFeatureScope,
 } from "@/services/auth/googleSignIn"
 import type { HealthTelemetry } from "@/services/firebase/firebaseClient"
-import type { FamilyFunction, FunctionCategory } from "@/stores/useScheduleStore"
+import type { FamilyFunction } from "@/stores/useScheduleStore"
 
 /**
  * A fresh access token carrying `requiredScopes`. On Android/iOS this asks Google Sign-In
@@ -27,7 +27,10 @@ import type { FamilyFunction, FunctionCategory } from "@/stores/useScheduleStore
  * stored at sign-in only carries profile/email and expires after an hour, so it is used
  * solely on web, where the Firebase popup is the only source.
  */
-async function resolveAccessToken(requiredScopes: GoogleFeatureScope[]): Promise<{ token: string } | { reason: string }> {
+async function resolveAccessToken(
+  requiredScopes: GoogleFeatureScope[],
+  interactive = true,
+): Promise<{ token: string } | { reason: string }> {
   if (Platform.OS === "web") {
     try {
       const { useRootStore } = require("@/stores/useRootStore")
@@ -38,19 +41,22 @@ async function resolveAccessToken(requiredScopes: GoogleFeatureScope[]): Promise
     }
     return { reason: "not_signed_in" }
   }
-  const access = await getGoogleAccessToken(requiredScopes)
+  const access = await getGoogleAccessToken(requiredScopes, { interactive })
   if (access.status === "granted") return { token: access.accessToken }
   return { reason: access.status }
 }
 
-/** Authorized request; on 401 drops the cached token and retries once with a fresh one. */
-async function googleRequest(
+/**
+ * Authorized request; on 401 drops the cached token and retries once with a fresh one.
+ * `interactive: false` never shows a consent prompt (background sync).
+ */
+export async function googleRequest(
   scopes: GoogleFeatureScope[],
   url: string,
-  init: { method?: string; body?: unknown; headers?: Record<string, string>; rawBody?: string } = {},
+  init: { method?: string; body?: unknown; headers?: Record<string, string>; rawBody?: string; interactive?: boolean; acceptStatuses?: number[] } = {},
 ): Promise<{ ok: true; res: Response } | { ok: false; reason: GoogleSyncFailure }> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const resolved = await resolveAccessToken(scopes)
+    const resolved = await resolveAccessToken(scopes, init.interactive ?? true)
     if ("reason" in resolved) return { ok: false, reason: resolved.reason as GoogleSyncFailure }
     try {
       const res = await fetch(url, {
@@ -66,7 +72,7 @@ async function googleRequest(
         await invalidateGoogleAccessToken(resolved.token)
         continue
       }
-      if (!res.ok) {
+      if (!res.ok && !init.acceptStatuses?.includes(res.status)) {
         console.warn("[GoogleServices]", res.status, url.split("?")[0], await res.text().catch(() => ""))
         return { ok: false, reason: "request_failed" }
       }
@@ -106,7 +112,7 @@ function parseClock(time: string | undefined): [number, number] | null {
 const pad = (n: number) => String(n).padStart(2, "0")
 
 /** Local wall-clock start/end for a date + time; all-day when the time is unknown. */
-function eventWindow(date: string, time?: string, durationMin = 120) {
+export function eventWindow(date: string, time?: string, durationMin = 120) {
   const clock = parseClock(time)
   if (!clock) {
     const next = new Date(`${date}T00:00:00`)
@@ -123,26 +129,6 @@ function eventWindow(date: string, time?: string, durationMin = 120) {
 }
 
 const newRequestId = () => `neev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-
-export interface ImportedCalendarEvents {
-  functions: FamilyFunction[]
-  reason?: GoogleSyncFailure
-}
-
-const GCAL_PREFIX = "gcal_"
-
-function guessCategory(title: string): FunctionCategory {
-  const t = title.toLowerCase()
-  if (/birthday|anniversary|wedding|party|celebrat/.test(t)) return "celebration"
-  if (/puja|pooja|prayer|festival|diwali|eid|christmas|ritual/.test(t)) return "ritual"
-  if (/trip|outing|picnic|movie|vacation|holiday/.test(t)) return "outing"
-  if (/project|homework|school|exam/.test(t)) return "project"
-  return "gathering"
-}
-
-function clockLabel(date: Date): string {
-  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
-}
 
 export const googleServicesClient = {
   /** Adds the function to the user's primary Google Calendar. */
@@ -164,55 +150,6 @@ export const googleServicesClient = {
     if (!result.ok) return { success: false, reason: result.reason }
     const event = (await result.res.json()) as { id: string; htmlLink?: string }
     return { success: true, eventId: event.id, htmlLink: event.htmlLink }
-  },
-
-  /** Upcoming events from the user's primary calendar, as Neev functions (ids prefixed `gcal_`). */
-  async fetchUpcomingCalendarEvents(days = 30): Promise<ImportedCalendarEvents> {
-    const now = new Date()
-    const until = new Date(now.getTime() + days * 86_400_000)
-    const params = new URLSearchParams({
-      timeMin: now.toISOString(),
-      timeMax: until.toISOString(),
-      singleEvents: "true",
-      orderBy: "startTime",
-      maxResults: "100",
-    })
-    const result = await googleRequest(
-      [GOOGLE_FEATURE_SCOPES.calendar],
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
-    )
-    if (!result.ok) return { functions: [], reason: result.reason }
-    const data = (await result.res.json()) as {
-      items?: {
-        id: string
-        status?: string
-        summary?: string
-        description?: string
-        location?: string
-        start?: { date?: string; dateTime?: string }
-      }[]
-    }
-    const functions = (data.items ?? [])
-      .filter((e) => e.status !== "cancelled" && (e.start?.date || e.start?.dateTime))
-      .map<FamilyFunction>((e) => {
-        const start = e.start?.dateTime ? new Date(e.start.dateTime) : null
-        const date = start
-          ? `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
-          : (e.start?.date as string)
-        const title = e.summary?.trim() || "Untitled event"
-        return {
-          id: `${GCAL_PREFIX}${e.id}`,
-          title,
-          category: guessCategory(title),
-          date,
-          time: start ? clockLabel(start) : "All day",
-          location: e.location ?? "",
-          description: e.description ?? "",
-          tasks: [],
-          reminderSet: false,
-        }
-      })
-    return { functions }
   },
 
   /** Adds a task to the user's default Google Tasks list. */
@@ -310,5 +247,40 @@ export const googleServicesClient = {
       household: householdName,
     })
     return `https://neev.app/invite?${params.toString()}`
+  },
+
+  /**
+   * Fetches the user's Google Contacts (names, emails, phone numbers) via Google People API.
+   */
+  async fetchGoogleContacts(): Promise<
+    Array<{ name: string; email?: string; phone?: string; photo?: string }>
+  > {
+    const result = await googleRequest(
+      [GOOGLE_FEATURE_SCOPES.contactsReadOnly],
+      "https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers,photos&pageSize=100",
+    )
+    if (!result.ok) return []
+    try {
+      const data = (await result.res.json()) as {
+        connections?: Array<{
+          names?: Array<{ displayName?: string }>
+          emailAddresses?: Array<{ value?: string }>
+          phoneNumbers?: Array<{ value?: string }>
+          photos?: Array<{ url?: string }>
+        }>
+      }
+      return (
+        data.connections
+          ?.map((c) => ({
+            name: c.names?.[0]?.displayName || "",
+            email: c.emailAddresses?.[0]?.value,
+            phone: c.phoneNumbers?.[0]?.value,
+            photo: c.photos?.[0]?.url,
+          }))
+          .filter((c) => Boolean(c.name || c.email)) || []
+      )
+    } catch {
+      return []
+    }
   },
 }

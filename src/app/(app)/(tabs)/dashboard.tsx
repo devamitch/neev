@@ -24,6 +24,7 @@ import { neevAiOrchestrator, type LifeDomain } from "@/services/ai/neevAiOrchest
 import { neevHeuristicEngine } from "@/services/ai/neevHeuristicEngine"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
 import { notificationsService } from "@/services/notifications/notificationsService"
+import { syncGoogleNow } from "@/services/google/googleSyncService"
 import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useFamilyLocationsQuery } from "@/hooks/useFamilyLocationQuery"
 import { useFamilyMembersQuery } from "@/hooks/useFamilyMembersQuery"
@@ -134,22 +135,13 @@ export default function DashboardScreen() {
   )
 
   const handleSyncToGoogle = async () => {
-    if (!nextFunction) return
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    const res = await googleServicesClient.exportFunctionToCalendar(nextFunction)
-    if (res.success) {
-      showToast({ message: "Function exported to Google Calendar!", type: "success" })
-    } else {
-      showToast({
-        message:
-          res.reason === "declined"
-            ? "Calendar access was not granted."
-            : res.reason === "not_signed_in" || res.reason === "not_configured"
-              ? "Sign in with Google to use Google Calendar."
-              : "Couldn't reach Google Calendar. Try again.",
-        type: "error",
-      })
-    }
+    // Family functions sync to Google Calendar automatically; this runs it now.
+    const res = await syncGoogleNow({ interactive: true })
+    showToast({
+      message: res.ok ? "Synced with Google Calendar & Tasks" : res.error || "Couldn't sync with Google",
+      type: res.ok ? "success" : "error",
+    })
   }
 
   const handleTriggerAiPrep = async (context: LifeDomain) => {

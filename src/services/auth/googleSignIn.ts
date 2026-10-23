@@ -6,6 +6,7 @@
  * with the signing SHA-1, and a Web client whose ID app.config.ts reads from
  * google-services.json so Google returns an ID token.
  */
+import { auth as firebaseAuth } from "@/services/firebase/firebaseClient"
 import {
   GoogleSignin,
   isErrorWithCode,
@@ -14,7 +15,6 @@ import {
 } from "@react-native-google-signin/google-signin"
 import Constants from "expo-constants"
 import { Platform } from "react-native"
-import { auth as firebaseAuth } from "@/services/firebase/firebaseClient"
 
 // Set by app.config.ts from google-services.json (or EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).
 const WEB_CLIENT_ID =
@@ -104,7 +104,8 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
       console.warn("[GoogleSignIn] Web popup notice:", webErr)
       return {
         status: "error",
-        message: webErr instanceof Error ? webErr.message : "Web Google sign-in could not be completed.",
+        message:
+          webErr instanceof Error ? webErr.message : "Web Google sign-in could not be completed.",
       }
     }
   }
@@ -165,14 +166,16 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
       user: { id: user.id, email: user.email, name: user.name, photo: user.photo },
     }
   } catch (err: unknown) {
-    const errorObj = err as { code?: string | number; statusCode?: number; message?: string } | undefined
+    const errorObj = err as
+      { code?: string | number; statusCode?: number; message?: string } | undefined
     const code = errorObj?.code ?? errorObj?.statusCode
     const rawMessage = errorObj?.message ?? (err instanceof Error ? err.message : String(err))
 
     if (code === statusCodes.SIGN_IN_CANCELLED || String(code) === "12501") {
       return {
         status: "cancelled",
-        message: "Google sign-in dismissed. If Google closed automatically, ensure your email is added to Test Users in GCP.",
+        message:
+          "Google sign-in dismissed. If Google closed automatically, ensure your email is added to Test Users in GCP.",
       }
     }
     if (code === statusCodes.IN_PROGRESS || code === "ASYNC_OP_IN_PROGRESS") {
@@ -201,7 +204,8 @@ export async function signInWithGoogleAccount(): Promise<GoogleSignInResult> {
     if (String(code) === "7") {
       return {
         status: "error",
-        message: "Network error connecting to Google Play Services. Please check your internet connection.",
+        message:
+          "Network error connecting to Google Play Services. Please check your internet connection.",
       }
     }
     return {
@@ -216,7 +220,9 @@ export async function signOutOfGoogle(): Promise<void> {
     try {
       const { signOut } = await import("firebase/auth")
       await signOut(firebaseAuth)
-    } catch { /* ignore web signout errors */ }
+    } catch {
+      /* ignore web signout errors */
+    }
     return
   }
   if (!isGoogleConfigured()) return
@@ -242,23 +248,37 @@ export const GOOGLE_FEATURE_SCOPES = {
   calendarEvents: "https://www.googleapis.com/auth/calendar.events",
   /** Add chores/prep tasks to the user's Google Tasks. */
   tasks: "https://www.googleapis.com/auth/tasks",
-  /** Export encrypted family vault backups to user's Google Drive (app-created files only). */
+  /** Export encrypted family vault backups to user's Google Drive (on-demand only). */
   driveFile: "https://www.googleapis.com/auth/drive.file",
+  /** Read user contacts to invite and add family members. */
+  contactsReadOnly: "https://www.googleapis.com/auth/contacts.readonly",
 } as const
 
 export type GoogleFeatureScope = (typeof GOOGLE_FEATURE_SCOPES)[keyof typeof GOOGLE_FEATURE_SCOPES]
 
 export type GoogleAccessResult =
   | { status: "granted"; accessToken: string }
-  | { status: "not_signed_in" | "declined" | "not_configured" }
+  | { status: "not_signed_in" | "declined" | "not_configured" | "needs_consent" }
   | { status: "error"; message: string }
 
+/** Essential scopes for Neev features: Calendar + Meet, Tasks, and Contacts. Drive excluded. */
+export const ALL_GOOGLE_FEATURE_SCOPES: GoogleFeatureScope[] = [
+  GOOGLE_FEATURE_SCOPES.calendarEvents,
+  GOOGLE_FEATURE_SCOPES.tasks,
+  GOOGLE_FEATURE_SCOPES.contactsReadOnly,
+]
+
 /**
- * An access token that carries `scopes`. Prompts the user only for scopes they
- * haven't granted yet; returns "declined" if they say no.
+ * An access token that carries `scopes`. Interactive calls prompt once for scopes not
+ * yet granted ("declined" if the user says no); background calls never show UI and
+ * return "needs_consent" instead.
  */
-export async function getGoogleAccessToken(scopes: GoogleFeatureScope[]): Promise<GoogleAccessResult> {
-  if (!isGoogleConfigured()) return { status: "not_configured" }
+export async function getGoogleAccessToken(
+  scopes: GoogleFeatureScope[],
+  options: { interactive?: boolean } = {},
+): Promise<GoogleAccessResult> {
+  const interactive = options.interactive ?? true
+  if (Platform.OS === "web" || !isGoogleConfigured()) return { status: "not_configured" }
   ensureConfigured()
   try {
     let user = GoogleSignin.getCurrentUser()
@@ -268,18 +288,42 @@ export async function getGoogleAccessToken(scopes: GoogleFeatureScope[]): Promis
     }
     if (!user) return { status: "not_signed_in" }
 
-    const missing = scopes.filter((scope) => !user.scopes.includes(scope))
+    const userScopes = user.scopes ?? []
+    const missing = scopes.filter((scope) => !userScopes.includes(scope))
     if (missing.length > 0) {
+      if (!interactive) return { status: "needs_consent" }
       const granted = await GoogleSignin.addScopes({ scopes: missing })
-      if (!granted || !granted.data || missing.some((scope) => !granted.data.scopes.includes(scope))) {
+      const grantedUser =
+        granted && "data" in granted && granted.data
+          ? granted.data
+          : (granted as unknown as typeof user | null)
+      const grantedScopes = grantedUser?.scopes ?? []
+      if (!grantedUser || missing.some((scope) => !grantedScopes.includes(scope))) {
         return { status: "declined" }
       }
     }
     const { accessToken } = await GoogleSignin.getTokens()
     return { status: "granted", accessToken }
   } catch (err) {
-    if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) return { status: "declined" }
+    if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED)
+      return { status: "declined" }
     return { status: "error", message: err instanceof Error ? err.message : "Google access failed" }
   }
 }
 
+/** Scopes from ALL_GOOGLE_FEATURE_SCOPES this account has already granted (no UI). */
+export function getGrantedFeatureScopes(): GoogleFeatureScope[] {
+  if (Platform.OS === "web" || !isGoogleConfigured()) return []
+  ensureConfigured()
+  const user = GoogleSignin.getCurrentUser()
+  const userScopes = user?.scopes ?? []
+  return user ? ALL_GOOGLE_FEATURE_SCOPES.filter((s) => userScopes.includes(s)) : []
+}
+
+/**
+ * One consent screen for Calendar, Tasks and Drive, shown right after sign-in (and from
+ * Settings). Kept separate from sign-in itself so declining never blocks signing in.
+ */
+export async function connectGoogleServices(): Promise<GoogleAccessResult> {
+  return getGoogleAccessToken(ALL_GOOGLE_FEATURE_SCOPES, { interactive: true })
+}

@@ -22,6 +22,10 @@ export interface FamilyFunction {
   rsvpConfirmed?: number
   tasks: FunctionTask[]
   reminderSet: boolean
+  /** "google": mirrored from this user's Google Calendar; stays on this device. */
+  source?: "google"
+  calendarName?: string
+  htmlLink?: string
 }
 
 export interface ScheduleSlice {

@@ -6,6 +6,7 @@
 import { create } from "zustand"
 import { initDatabase } from "./db/database"
 import { purgeLegacyDemoData } from "@/stores/purgeLegacyDemoData"
+import { initGoogleSync } from "./google/googleSyncService"
 import { initCloudSync } from "./sync/cloudSyncEngine"
 
 export const useBootstrapStore = create<{
@@ -27,6 +28,7 @@ export function bootstrapLocalData(): Promise<void> {
       await initDatabase()
       purgeLegacyDemoData()
       initCloudSync()
+      initGoogleSync()
       useBootstrapStore.setState({ ready: true })
       bumpDataVersion()
     } catch (error) {

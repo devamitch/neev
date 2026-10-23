@@ -21,7 +21,8 @@ import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
 import { useRoutineStore } from "@/stores/useRoutineStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
 import { googleServicesClient } from "@/services/google/googleServicesClient"
-import { formatInviteCode, useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
+import { syncGoogleNow, useGoogleSyncStore } from "@/services/google/googleSyncService"
+import { deleteAccountAndData, formatInviteCode, useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useByokStore } from "@/stores/useByokStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useQueryClient } from "@tanstack/react-query"
@@ -52,6 +53,24 @@ export default function SettingsScreen() {
   )
   const isGoogleUser = useRootStore((s) => s.user?.provider === "google")
   const [isBackingUp, setIsBackingUp] = useState(false)
+  const googleSync = useGoogleSyncStore(
+    useShallow((s) => ({
+      status: s.status,
+      lastSyncedAt: s.lastSyncedAt,
+      lastError: s.lastError,
+      importedEvents: s.importedEvents,
+      importedTasks: s.importedTasks,
+    })),
+  )
+
+  const handleGoogleSync = async () => {
+    if (googleSync.status === "syncing") return
+    const res = await syncGoogleNow({ interactive: true })
+    showToast({
+      message: res.ok ? "Google Calendar & Tasks synced" : res.error || "Couldn't sync with Google",
+      type: res.ok ? "success" : "error",
+    })
+  }
 
   const handleDriveBackup = async () => {
     if (isBackingUp) return
@@ -124,6 +143,27 @@ export default function SettingsScreen() {
     } finally {
       setIsSyncing(false)
     }
+  }
+
+  const handleDeleteAccount = () => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    showAlert({
+      title: "Delete account permanently?",
+      message:
+        "This deletes your Neev account and Google access for Neev. If you're the only account in your household, all its members, events, notes and tasks are deleted from the cloud. If others share it, they keep the family data and you're removed. This can't be undone.",
+      confirmText: "Delete Forever",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        const res = await deleteAccountAndData()
+        if (!res.ok) {
+          showToast({ message: res.error || "Couldn't delete the account.", type: "error" })
+          return
+        }
+        await signOut()
+        showToast({ message: "Your account and data were deleted.", type: "info" })
+        router.replace("/(auth)/sign-in")
+      },
+    })
   }
 
   const handleSignOut = () => {
@@ -339,13 +379,36 @@ export default function SettingsScreen() {
           }
         />
         <ListRow
-          title="Google Calendar, Tasks & Meet"
+          title="Google Calendar & Tasks"
           subtitle={
-            isGoogleUser
-              ? "Permission is asked the first time you export or import"
-              : "Sign in with Google to use Calendar, Tasks, Meet and Drive"
+            !isGoogleUser
+              ? "Sign in with Google to sync Calendar, Tasks, Meet and Drive"
+              : googleSync.status === "needs_consent"
+                ? "Allow access to sync your calendars and task lists both ways"
+                : googleSync.lastError
+                  ? googleSync.lastError
+                  : googleSync.lastSyncedAt
+                    ? `${googleSync.importedEvents} events · ${googleSync.importedTasks} tasks · synced ${googleSync.lastSyncedAt}`
+                    : "Two-way sync every 15 minutes and after each change"
           }
-          trailing={<Badge label={isGoogleUser ? "Available" : "Google sign-in needed"} variant="neutral" />}
+          trailing={
+            isGoogleUser ? (
+              <AppButton
+                title={
+                  googleSync.status === "syncing"
+                    ? "Syncing..."
+                    : googleSync.status === "needs_consent"
+                      ? "Allow"
+                      : "Sync"
+                }
+                variant="outline"
+                size="sm"
+                onPress={() => void handleGoogleSync()}
+              />
+            ) : (
+              <Badge label="Google sign-in needed" variant="neutral" />
+            )
+          }
         />
         {isGoogleUser ? (
           <ListRow
@@ -486,10 +549,17 @@ export default function SettingsScreen() {
       <ListGroup>
         <ListRow
           title="Sign Out of Sanctuary"
-          subtitle="Preserves all local data and safely closes cloud session"
+          subtitle="Your household stays in the cloud; this phone's copy is cleared"
           icon="log-out-outline"
           destructive
           onPress={handleSignOut}
+        />
+        <ListRow
+          title="Delete Account & Data"
+          subtitle="Permanently deletes your account, your household data and Neev's Google access"
+          icon="trash-outline"
+          destructive
+          onPress={handleDeleteAccount}
         />
       </ListGroup>
 

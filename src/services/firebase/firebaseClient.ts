@@ -36,9 +36,12 @@ function createAuth(): Auth {
 }
 
 function createFirestore(): Firestore {
+  const configuredDbId =
+    process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID ||
+    (firebaseConfig as Record<string, string | undefined>).firestoreDatabaseId
   const databaseId =
-    firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)"
-      ? firebaseConfig.firestoreDatabaseId
+    configuredDbId && configuredDbId !== "(default)"
+      ? configuredDbId
       : undefined
   if (!isFirstInit) return databaseId ? getFirestore(app, databaseId) : getFirestore(app)
   // App records carry optional fields; Firestore rejects `undefined` unless told to skip it.

@@ -115,11 +115,13 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    // Member editing details; only the owner may change who belongs.
+    // Member editing details; only the owner may change who belongs or hand ownership
+    // to another member (used when the owner deletes their account).
     function isMemberEdit() {
       return request.auth.uid in resource.data.memberUids &&
-        !householdDiff().hasAny(['ownerUid', 'inviteCode', 'createdAt']) &&
-        (!householdDiff().hasAny(['memberUids']) || request.auth.uid == resource.data.ownerUid);
+        !householdDiff().hasAny(['inviteCode', 'createdAt']) &&
+        (!householdDiff().hasAny(['memberUids', 'ownerUid']) || request.auth.uid == resource.data.ownerUid) &&
+        data().ownerUid in data().memberUids;
     }
 
     // A member (not the owner) leaving: removes only themselves.

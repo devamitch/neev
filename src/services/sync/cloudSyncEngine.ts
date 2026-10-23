@@ -12,13 +12,19 @@
  * changes are diffed against the last known remote state and written in batches.
  */
 
-import { onAuthStateChanged, type User } from "firebase/auth"
+import {
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
+  type User,
+} from "firebase/auth"
 import {
   arrayUnion,
   collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   serverTimestamp,
   setDoc,
@@ -95,6 +101,12 @@ function stripMeta(data: DocumentData): SyncedItem {
   for (const [k, v] of Object.entries(data)) if (!k.startsWith("_")) out[k] = v
   return out as SyncedItem
 }
+
+/**
+ * Records mirrored from one person's Google Calendar / Tasks (gcal_ / gtask_ ids) are
+ * their personal data: kept on their device, never uploaded to the shared household.
+ */
+const isDeviceOnlyId = (id: string) => id.startsWith("gcal_") || id.startsWith("gtask_")
 
 const toPlain = (item: unknown) => JSON.parse(JSON.stringify(item)) as Record<string, unknown>
 
@@ -243,7 +255,9 @@ async function pushLocalChanges(): Promise<void> {
     if (!active.ready.has(name)) continue
     const mirror = active.mirrors.get(name) ?? new Map<string, string>()
     const nextMirror = new Map(mirror)
-    const local = storeItems(key).filter((item) => typeof item?.id === "string" && item.id.length > 0)
+    const local = storeItems(key).filter(
+      (item) => typeof item?.id === "string" && item.id.length > 0 && !isDeviceOnlyId(item.id),
+    )
     const localIds = new Set(local.map((i) => i.id))
     for (const item of local) {
       const plain = toPlain(item)
@@ -506,6 +520,87 @@ export function initCloudSync() {
     if (session?.uid === user.uid) return
     void startSession(user)
   })
+}
+
+/**
+ * Permanently deletes this account: its household data (or, if others share the
+ * household, just its membership and shared location), its profile, the Firebase user,
+ * and Neev's Google access. Required for store listings (in-app account deletion).
+ */
+export async function deleteAccountAndData(): Promise<{ ok: boolean; error?: string }> {
+  const user = auth.currentUser
+  if (!user) return { ok: false, error: "No signed-in account to delete." }
+  try {
+    const userSnap = await getDoc(doc(db, "users", user.uid)).catch(() => null)
+    const householdId =
+      session?.householdId ?? (userSnap?.exists() ? (userSnap.data().householdId as string | undefined) : undefined)
+    stopSession()
+
+    if (householdId) {
+      const snap = await getDoc(doc(db, "households", householdId)).catch(() => null)
+      if (snap?.exists()) {
+        const h = snap.data() as { ownerUid: string; memberUids: string[]; inviteCode?: string }
+        const others = (h.memberUids ?? []).filter((u) => u !== user.uid)
+        await deleteDoc(doc(db, "households", householdId, "locations", user.uid)).catch(() => undefined)
+        if (others.length === 0) {
+          for (const { name } of SYNCED_COLLECTIONS) {
+            const docs = await getDocs(collection(db, "households", householdId, name))
+            for (let i = 0; i < docs.docs.length; i += MAX_BATCH_OPS) {
+              const batch = writeBatch(db)
+              docs.docs.slice(i, i + MAX_BATCH_OPS).forEach((d) => batch.delete(d.ref))
+              await batch.commit()
+            }
+          }
+          const locations = await getDocs(collection(db, "households", householdId, "locations"))
+          await Promise.all(locations.docs.map((d) => deleteDoc(d.ref).catch(() => undefined)))
+          if (h.inviteCode) await deleteDoc(doc(db, "inviteCodes", h.inviteCode)).catch(() => undefined)
+          await deleteDoc(doc(db, "households", householdId))
+        } else {
+          // Family keeps its data; ownership passes to the next member.
+          await updateDoc(doc(db, "households", householdId), {
+            memberUids: others,
+            ...(h.ownerUid === user.uid ? { ownerUid: others[0] } : {}),
+            updatedAt: serverTimestamp(),
+          })
+        }
+      }
+      for (const { name } of SYNCED_COLLECTIONS) {
+        try {
+          storage.delete(knownIdsKey(householdId, name))
+        } catch {
+          /* best effort */
+        }
+      }
+    }
+
+    await deleteDoc(doc(db, "users", user.uid)).catch(() => undefined)
+
+    const { GoogleSignin } = await import("@react-native-google-signin/google-signin").catch(() => ({
+      GoogleSignin: null,
+    }))
+    try {
+      await user.delete()
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code !== "auth/requires-recent-login" || !GoogleSignin) throw err
+      // Firebase only deletes recently-authenticated users: re-auth silently with Google.
+      const silent = await GoogleSignin.signInSilently()
+      const idToken = silent.type === "success" ? silent.data.idToken : null
+      if (!idToken) throw err
+      await reauthenticateWithCredential(user, GoogleAuthProvider.credential(idToken))
+      await user.delete()
+    }
+    if (GoogleSignin) {
+      try {
+        if (GoogleSignin.hasPreviousSignIn()) await GoogleSignin.revokeAccess()
+      } catch {
+        /* not a Google account, or already revoked */
+      }
+    }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: errorMessage(err, "Couldn't delete the account. Try again.") }
+  }
 }
 
 /** Detaches listeners without touching cloud data (used before sign-out clears local state). */

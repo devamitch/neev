@@ -22,7 +22,7 @@ import { useTabBarInset } from "@/components/navigation/CustomTabBar"
 import { useScheduleStore, type FunctionCategory, type FamilyFunction, type FunctionTask } from "@/stores/useScheduleStore"
 import { useFamilyStore } from "@/stores/useFamilyStore"
 
-import { googleServicesClient } from "@/services/google/googleServicesClient"
+import { syncGoogleNow, useGoogleSyncStore } from "@/services/google/googleSyncService"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useScheduleQuery, useToggleScheduleTaskMutation } from "@/hooks/useScheduleQuery"
 
@@ -46,36 +46,19 @@ export default function ScheduleScreen() {
   const functions = queryFunctions || storeFunctions
 
   const showToast = useRootStore((s) => s.showToast)
-  const upsertFunctions = useRootStore((s) => s.upsertFunctions)
   const isGoogleUser = useRootStore((s) => s.user?.provider === "google")
-  const [importing, setImporting] = useState(false)
+  const googleStatus = useGoogleSyncStore((s) => s.status)
+  const importing = googleStatus === "syncing"
 
   const importFromGoogleCalendar = useCallback(async () => {
-    if (importing) return
-    setImporting(true)
-    try {
-      const { functions: imported, reason } = await googleServicesClient.fetchUpcomingCalendarEvents(30)
-      if (reason) {
-        showToast({
-          message:
-            reason === "declined"
-              ? "Calendar access was not granted."
-              : reason === "not_signed_in"
-                ? "Sign in with Google to import your calendar."
-                : "Couldn't reach Google Calendar. Try again.",
-          type: "error",
-        })
-        return
-      }
-      const added = upsertFunctions(imported)
-      showToast({
-        message: imported.length === 0 ? "No events in the next 30 days" : `Imported ${imported.length} events (${added} new)`,
-        type: "success",
-      })
-    } finally {
-      setImporting(false)
-    }
-  }, [importing, showToast, upsertFunctions])
+    const res = await syncGoogleNow({ interactive: true })
+    showToast({
+      message: res.ok
+        ? `Google synced · ${res.events ?? 0} calendar events, ${res.tasks ?? 0} tasks`
+        : res.error || "Couldn't sync with Google",
+      type: res.ok ? "success" : "error",
+    })
+  }, [showToast])
 
   const toggleTask = useCallback(
     (functionId: string, taskId: string) => {
@@ -280,7 +263,7 @@ export default function ScheduleScreen() {
         />
         {isGoogleUser ? (
           <AppButton
-            title={importing ? "Importing from Google Calendar…" : "Import next 30 days from Google Calendar"}
+            title={importing ? "Syncing with Google…" : "Sync Google Calendar & Tasks"}
             variant="outline"
             onPress={() => void importFromGoogleCalendar()}
             disabled={importing}

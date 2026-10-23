@@ -250,8 +250,9 @@ export default function SignInScreen() {
               </AppText>
             </View>
             <AppText variant="caption" color={colors.text.secondary} style={{ lineHeight: 18 }}>
-              • Calendar, Tasks and Drive are asked for only when you use those features, and
-              Drive access is limited to files Neev creates.{"\n"}• No Gmail access, ever.{"\n"}• Contacts
+              • Right after sign-in, Google asks once for Calendar, Tasks and Drive. Neev uses them
+              only to sync your events and tasks both ways and to save backups you request; Drive
+              access is limited to files Neev creates. You can skip it and allow it later.{"\n"}• No Gmail access, ever.{"\n"}• Contacts
               are read on this phone only when you pick one to add.{"\n"}• Location is shared only after
               you turn it on in the Family Map.
             </AppText>

@@ -55,6 +55,7 @@ export default function AddMemberModal() {
   const [role, setRole] = useState<FamilyRole>("elder")
   const [hasPhone, setHasPhone] = useState(false)
   const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [superpower, setSuperpower] = useState("")
   const [favoriteTreat, setFavoriteTreat] = useState("")
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
@@ -95,6 +96,11 @@ export default function AddMemberModal() {
       if (number) {
         setHasPhone(true)
         setPhone(number)
+      }
+      const primaryEmail = contact.emails?.find((e) => e.email)?.email
+      if (primaryEmail) {
+        setHasPhone(true)
+        setEmail(primaryEmail)
       }
       const bday = contact.birthday
       if (bday?.year && bday.month !== undefined && bday.day) {
@@ -140,6 +146,7 @@ export default function AddMemberModal() {
       avatarText: initials,
       avatarColor: selectedColor,
       phone: hasPhone && phone.trim() ? phone.trim() : undefined,
+      email: hasPhone && email.trim() ? email.trim() : undefined,
       dateOfBirth,
       superpower: superpower.trim() || undefined,
       favoriteTreat: favoriteTreat.trim() || undefined,
@@ -397,13 +404,21 @@ return (
           </View>
 
           {hasPhone && (
-            <View style={{ marginTop: 12 }}>
+            <View style={{ marginTop: 12, gap: 12 }}>
               <TextField
                 label="Mobile Number (Optional)"
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
+              />
+              <TextField
+                label="Email Address (Optional)"
+                placeholder="name@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
           )}
