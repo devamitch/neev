@@ -38,7 +38,6 @@ import {
   calculateDistanceKm,
   familyLocationService,
   formatDistance,
-  DEMO_LOCATIONS_FIXTURE,
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
@@ -64,10 +63,21 @@ export default function FullscreenFamilyMapScreen() {
   const locations: FamilyLocationData[] = useMemo(() => {
     if (localLocations.length > 0) return localLocations
     if (queryLocations.length > 0) return queryLocations
-    const fromService = familyLocationService.getAllFamilyLocations()
-    if (fromService.length > 0) return fromService
-    return DEMO_LOCATIONS_FIXTURE.map(([, loc]) => loc)
+    return familyLocationService.getAllFamilyLocations()
   }, [localLocations, queryLocations])
+
+  const shareMyLocation = async () => {
+    const res = await familyLocationService.syncCurrentDeviceLocation()
+    if (!res.ok) {
+      showToast(res.error || "Couldn't share your location", "error")
+      return
+    }
+    await refetchLocations()
+    const updated = familyLocationService.getAllFamilyLocations()
+    setLocalLocations(updated)
+    if (updated[0]) setSelectedMember(updated[0])
+    showToast("Sharing your location with your household", "success")
+  }
 
   const [mapMode, setMapMode] = useState<"tile" | "schematic">("tile")
   const [selectedMember, setSelectedMember] = useState<FamilyLocationData | null>(
@@ -475,18 +485,7 @@ export default function FullscreenFamilyMapScreen() {
           onPress={async () => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
             setTileZoom(15)
-            await familyLocationService.syncCurrentDeviceLocation()
-            if (locations.length === 0) {
-              familyLocationService.loadDemoLocationsFixture()
-              const updated = familyLocationService.getAllFamilyLocations()
-              setLocalLocations(updated)
-              if (updated[0]) setSelectedMember(updated[0])
-              useRootStore
-                .getState()
-                .showToast?.("Sanctuary GPS & Member Locations Loaded", "success")
-            } else {
-              useRootStore.getState().showToast?.("Centered on Active Sanctuary Location", "info")
-            }
+            await shareMyLocation()
           }}
           accessibilityLabel="Locate and Center Sanctuary GPS"
         >
@@ -519,8 +518,8 @@ export default function FullscreenFamilyMapScreen() {
                   paddingHorizontal: 16,
                 }}
               >
-                Family members control their own location sharing. Once enabled in sanctuary
-                settings, live 3D telemetry and phone radar will appear here.
+                Each family member chooses whether to share their location. Share yours to
+                see it here; others appear once they share from their own phones.
               </AppText>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                 <PressableScale
@@ -533,18 +532,14 @@ export default function FullscreenFamilyMapScreen() {
                   <AppText style={styles.primaryActionBtnText}>Back to Dashboard</AppText>
                 </PressableScale>
                 <PressableScale
-                  onPress={() => {
-                    familyLocationService.loadDemoLocationsFixture()
-                    setLocalLocations(familyLocationService.getAllFamilyLocations())
-                    useRootStore.getState().showToast?.("Sample Locations Loaded", "info")
-                  }}
+                  onPress={() => void shareMyLocation()}
                   style={[
                     styles.secondaryActionBtn,
                     { backgroundColor: colors.surface2, paddingHorizontal: 12 },
                   ]}
                 >
                   <AppText style={[styles.secondaryActionBtnText, { color: colors.primary }]}>
-                    Preview Sample Map
+                    Share My Location
                   </AppText>
                 </PressableScale>
               </View>

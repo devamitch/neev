@@ -20,7 +20,8 @@ import { useScheduleStore } from "@/stores/useScheduleStore"
 import { useKnowledgeStore } from "@/stores/useKnowledgeStore"
 import { useRoutineStore } from "@/stores/useRoutineStore"
 import { useIntentionsStore } from "@/stores/useIntentionsStore"
-import { useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
+import { googleServicesClient } from "@/services/google/googleServicesClient"
+import { formatInviteCode, useCloudSyncStore } from "@/services/sync/cloudSyncEngine"
 import { useByokStore } from "@/stores/useByokStore"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { useQueryClient } from "@tanstack/react-query"
@@ -39,14 +40,48 @@ export default function SettingsScreen() {
   const routines = useRoutineStore((s) => s.routines)
   const intentions = useIntentionsStore((s) => s.intentions)
 
-  const { status, lastSyncedAt, syncAll, isGoogleConnected } = useCloudSyncStore(
+  const { status, lastSyncedAt, lastError, syncAll, inviteCode, householdAccountCount } = useCloudSyncStore(
     useShallow((s) => ({
       status: s.status,
       lastSyncedAt: s.lastSyncedAt,
+      lastError: s.lastError,
       syncAll: s.syncAll,
-      isGoogleConnected: s.isGoogleConnected,
+      inviteCode: s.inviteCode,
+      householdAccountCount: s.householdAccountCount,
     })),
   )
+  const isGoogleUser = useRootStore((s) => s.user?.provider === "google")
+  const [isBackingUp, setIsBackingUp] = useState(false)
+
+  const handleDriveBackup = async () => {
+    if (isBackingUp) return
+    setIsBackingUp(true)
+    try {
+      const state = useRootStore.getState()
+      const today = new Date().toISOString().slice(0, 10)
+      const res = await googleServicesClient.backupToDrive(`Neev backup ${today}.json`, {
+        app: "Neev",
+        exportedAt: new Date().toISOString(),
+        household: state.household,
+        members: state.members,
+        functions: state.functions,
+        knowledge: state.entries,
+        routines: state.routines,
+        intentions: state.intentions,
+        tasks: state.tasks,
+      })
+      showToast({
+        message: res.success
+          ? "Backup saved to your Google Drive"
+          : res.reason === "declined"
+            ? "Drive access was not granted"
+            : "Couldn't save the backup to Google Drive",
+        type: res.success ? "success" : "error",
+      })
+    } finally {
+      setIsBackingUp(false)
+    }
+  }
   const { credentials, deterministicOnlyMode, setDeterministicOnlyMode, testConnection } = useByokStore(
     useShallow((s) => ({
       credentials: s.credentials,
@@ -80,7 +115,7 @@ export default function SettingsScreen() {
       const res = await syncAll()
       if (res.ok) {
         void queryClient.invalidateQueries()
-        showToast({ message: "Household synchronized with Supabase cloud!", type: "success" })
+        showToast({ message: "Household synced with the cloud", type: "success" })
       } else {
         showToast({ message: res.error || "Cloud sync could not complete. Working in local mode.", type: "error" })
       }
@@ -95,7 +130,10 @@ export default function SettingsScreen() {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
     showAlert({
       title: "Sign Out of Sanctuary?",
-      message: "Your local family data is safely preserved and backed up to your encrypted cloud enclave.",
+      message:
+        useRootStore.getState().user?.provider === "guest"
+          ? "You're using Neev without an account. Signing out permanently disconnects this phone from its household unless another family member's device has joined it. Share your invite code first if you want to keep the data."
+          : "Your family data stays in your household's cloud and comes back when you sign in again. This phone's copy will be cleared.",
       confirmText: "Sign Out",
       cancelText: "Stay in Sanctuary",
       onConfirm: async () => {
@@ -253,40 +291,76 @@ export default function SettingsScreen() {
       </View>
 
       {/* Cloud Backend & Scaled Multi-User Sync */}
-      <SectionHeader title="SUPABASE & GOOGLE CLOUD BACKEND" />
+      <SectionHeader title="CLOUD SYNC & GOOGLE SERVICES" />
       <ListGroup>
         <ListRow
-          title="Cloud Backend Connection"
-          subtitle="Real-time multi-device synchronization via Supabase Postgres"
+          title="Cloud Sync"
+          subtitle={
+            status === "error"
+              ? lastError || "Not connected"
+              : lastSyncedAt
+                ? `Firebase · last synced ${lastSyncedAt}`
+                : "Firebase · real-time across your family's devices"
+          }
           trailing={
             <Badge
-              label={status === "syncing" ? "Syncing..." : "Connected"}
-              variant={status === "syncing" ? "warning" : "success"}
+              label={
+                status === "syncing"
+                  ? "Syncing..."
+                  : status === "connected"
+                    ? "Connected"
+                    : status === "error"
+                      ? "Error"
+                      : "Offline"
+              }
+              variant={status === "connected" ? "success" : status === "error" ? "error" : "warning"}
             />
           }
         />
         <ListRow
-          title="Google Services Integration"
-          subtitle="Google Calendar, Google Tasks & Health Connect sync"
-          trailing={<Badge label={isGoogleConnected ? "Active" : "Offline"} variant="neutral" />}
+          title="Family Household"
+          subtitle={
+            inviteCode
+              ? `${householdAccountCount} account${householdAccountCount === 1 ? "" : "s"} · tap to share or join`
+              : "Share an invite code or join your family"
+          }
+          trailing={
+            <AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>
+              {formatInviteCode(inviteCode) || "Open"}
+            </AppText>
+          }
+          onPress={() => router.push("/modal/household")}
         />
         <ListRow
-          title="Household Invite Code"
-          subtitle="Share with family members to join this cloud sanctuary"
-          trailing={<AppText variant="caption" style={{ fontWeight: "700", color: colors.primary }}>NEEV-7829-SANC</AppText>}
-        />
-        <ListRow
-          title="Last Synchronized"
+          title="Sync Now"
           subtitle="Push local changes and pull updates from family members"
           trailing={
-            <AppButton
-              title="Sync Now"
-              variant="outline"
-              size="sm"
-              onPress={handleSyncNow}
-            />
+            <AppButton title={isSyncing ? "Syncing..." : "Sync Now"} variant="outline" size="sm" onPress={handleSyncNow} />
           }
         />
+        <ListRow
+          title="Google Calendar, Tasks & Meet"
+          subtitle={
+            isGoogleUser
+              ? "Permission is asked the first time you export or import"
+              : "Sign in with Google to use Calendar, Tasks, Meet and Drive"
+          }
+          trailing={<Badge label={isGoogleUser ? "Available" : "Google sign-in needed"} variant="neutral" />}
+        />
+        {isGoogleUser ? (
+          <ListRow
+            title="Back up to Google Drive"
+            subtitle="Saves your household records as a file only Neev can see in your Drive"
+            trailing={
+              <AppButton
+                title={isBackingUp ? "Saving..." : "Back up"}
+                variant="outline"
+                size="sm"
+                onPress={() => void handleDriveBackup()}
+              />
+            }
+          />
+        ) : null}
       </ListGroup>
 
       {/* AI Engine & Token Optimization (BYOK) */}

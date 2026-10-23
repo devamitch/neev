@@ -251,6 +251,10 @@ export default function Root() {
                   name="modal/add-member"
                   options={{ presentation: "modal", animation: "slide_from_bottom" }}
                 />
+                <Stack.Screen
+                  name="modal/household"
+                  options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                />
               </Stack>
             </ErrorBoundary>
           </QueryProvider>

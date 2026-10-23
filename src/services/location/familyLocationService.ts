@@ -24,11 +24,11 @@ export interface FamilyLocationData {
   placeName: string
   roomDetail?: string
   accuracyMeters: number
-  batteryLevel: number
-  isCharging: boolean
+  batteryLevel?: number
+  isCharging?: boolean
   lastUpdated: string
   speedKmH: number
-  health: HealthTelemetry
+  health?: HealthTelemetry
   deviceStatus: "online" | "idle" | "moving"
   isOnline?: boolean
   altitudeMeters?: number
@@ -96,104 +96,26 @@ export interface PhoneRadarScan {
   googleFindMyDeviceUrl: string
 }
 
-export const DEMO_LOCATIONS_FIXTURE: [string, FamilyLocationData][] = [
-  [
-    "m-4",
-    {
-      memberId: "m-4",
-      memberName: "Pooja Chakraborty",
-      memberNickname: "Maa",
-      relationship: "Mother",
-      avatarColor: "#B45309",
-      latitude: 22.57264,
-      longitude: 88.36389,
-      placeName: "Sanctuary Home",
-      roomDetail: "Living Area • Home Sanctuary",
-      accuracyMeters: 4.5,
-      batteryLevel: 68,
-      isCharging: false,
-      lastUpdated: "Just now",
-      speedKmH: 0,
-      health: {
-        memberId: "m-4",
-        memberName: "Pooja Chakraborty",
-        date: new Date().toISOString().split("T")[0],
-        dailySteps: 6840,
-        activeMinutes: 42,
-        sleepHours: 7.1,
-        restingHeartRate: 70,
-        source: "google_fit",
-        lastUpdated: "Just now",
-      },
-      deviceStatus: "online",
-      isOnline: true,
-    },
-  ],
-  [
-    "m-3",
-    {
-      memberId: "m-3",
-      memberName: "Amit Chakraborty",
-      memberNickname: "Papa",
-      relationship: "Father",
-      avatarColor: "#0D9488",
-      latitude: 22.5741,
-      longitude: 88.3672,
-      placeName: "Sanctuary Workspace",
-      roomDetail: "Home Office • Desk Stand",
-      accuracyMeters: 2.0,
-      batteryLevel: 89,
-      isCharging: true,
-      lastUpdated: "2m ago",
-      speedKmH: 0,
-      health: {
-        memberId: "m-3",
-        memberName: "Amit Chakraborty",
-        date: new Date().toISOString().split("T")[0],
-        dailySteps: 7920,
-        activeMinutes: 55,
-        sleepHours: 6.8,
-        restingHeartRate: 68,
-        source: "google_fit",
-        lastUpdated: "2m ago",
-      },
-      deviceStatus: "online",
-      isOnline: true,
-    },
-  ],
-  [
-    "m-1",
-    {
-      memberId: "m-1",
-      memberName: "Shyamal Chakraborty",
-      memberNickname: "Dadu",
-      relationship: "Grandfather",
-      avatarColor: "#D97706",
-      latitude: 22.5815,
-      longitude: 88.3712,
-      placeName: "Sanctuary Garden Walk",
-      roomDetail: "Eco Park Walkway • Bench #4",
-      accuracyMeters: 3.5,
-      batteryLevel: 54,
-      isCharging: false,
-      lastUpdated: "1m ago",
-      speedKmH: 3.2,
-      health: {
-        memberId: "m-1",
-        memberName: "Shyamal Chakraborty",
-        date: new Date().toISOString().split("T")[0],
-        dailySteps: 4310,
-        activeMinutes: 35,
-        sleepHours: 7.4,
-        restingHeartRate: 72,
-        source: "google_fit",
-        lastUpdated: "1m ago",
-      },
-      deviceStatus: "moving",
-      isOnline: true,
-    },
-  ],
-]
+/** Shape of households/{id}/locations/{uid} written by the cloud sync engine. */
+export interface SharedLocationDoc {
+  uid: string
+  memberName?: string
+  latitude: number
+  longitude: number
+  accuracyMeters?: number
+  _updatedAt?: { toDate?: () => Date } | null
+}
+
+const AVATAR_COLORS = ["#0D9488", "#D97706", "#2563EB", "#B45309", "#7C3AED", "#DA7756"]
+
+function relativeTime(date: Date | null): string {
+  if (!date) return "Just now"
+  const mins = Math.round((Date.now() - date.getTime()) / 60_000)
+  if (mins < 1) return "Just now"
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.round(mins / 60)
+  return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`
+}
 
 class FamilyLocationService {
   private activeAlarmAudio: any = null
@@ -210,23 +132,39 @@ class FamilyLocationService {
   }
 
   /**
-   * Load demo locations fixture on explicit user request for previewing
+   * Replace the map with the household's live shared locations (from Firestore).
    */
-  public loadDemoLocationsFixture(): void {
-    this.locations = new Map(DEMO_LOCATIONS_FIXTURE)
+  public setSharedLocations(docs: SharedLocationDoc[], currentUid?: string): void {
+    const next = new Map<string, FamilyLocationData>()
+    docs.forEach((d, index) => {
+      if (typeof d.latitude !== "number" || typeof d.longitude !== "number") return
+      const updated = d._updatedAt?.toDate?.() ?? null
+      const ageMin = updated ? (Date.now() - updated.getTime()) / 60_000 : 0
+      const name = d.uid === currentUid ? `${d.memberName || "You"} (You)` : d.memberName || "Family member"
+      next.set(d.uid, {
+        memberId: d.uid,
+        memberName: name,
+        relationship: d.uid === currentUid ? "This device" : "Household member",
+        avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
+        latitude: d.latitude,
+        longitude: d.longitude,
+        placeName: "Shared location",
+        accuracyMeters: d.accuracyMeters ?? 0,
+        lastUpdated: relativeTime(updated),
+        speedKmH: 0,
+        deviceStatus: ageMin < 15 ? "online" : "idle",
+        isOnline: ageMin < 15,
+      })
+    })
+    this.locations = next
   }
 
   /**
-   * Get all family locations with refreshed health and minor live movement
+   * Get all locations currently shared with this household
    */
   public getAllFamilyLocations(): FamilyLocationData[] {
     const list: FamilyLocationData[] = []
     this.locations.forEach((data) => {
-      // Add subtle organic micro-drift to moving members
-      if (data.deviceStatus === "moving") {
-        data.latitude += (Math.random() - 0.5) * 0.00008
-        data.longitude += (Math.random() - 0.5) * 0.00008
-      }
       list.push({ ...data })
     })
     return list
@@ -240,31 +178,11 @@ class FamilyLocationService {
   }
 
   /**
-   * Update location from live device GPS (Free Web/Native Geolocation)
+   * Publish this device's location to the household (asks for permission first).
    */
-  public async syncCurrentDeviceLocation(memberId = "m-3"): Promise<void> {
-    try {
-      if (typeof navigator !== "undefined" && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const current = this.locations.get(memberId)
-            if (current) {
-              current.latitude = pos.coords.latitude
-              current.longitude = pos.coords.longitude
-              current.accuracyMeters = Math.round(pos.coords.accuracy || 2)
-              current.lastUpdated = "Just now"
-              this.locations.set(memberId, current)
-            }
-          },
-          () => {
-            // Silently fall back to cached coordinates
-          },
-          { enableHighAccuracy: true, timeout: 5000 },
-        )
-      }
-    } catch {
-      // Graceful fallback
-    }
+  public async syncCurrentDeviceLocation(_memberId?: string): Promise<{ ok: boolean; error?: string }> {
+    const { useCloudSyncStore } = await import("@/services/sync/cloudSyncEngine")
+    return useCloudSyncStore.getState().setLocationSharing(true)
   }
 
   /**

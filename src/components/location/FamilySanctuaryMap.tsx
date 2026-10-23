@@ -51,7 +51,6 @@ import {
   calculateDistanceKm,
   familyLocationService,
   formatDistance,
-  DEMO_LOCATIONS_FIXTURE,
   type FamilyLocationData,
   type PhoneRadarScan,
 } from "@/services/location/familyLocationService"
@@ -168,9 +167,7 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
 
   const locations = useMemo(() => {
     if (queryLocations.length > 0) return queryLocations
-    const fromService = familyLocationService.getAllFamilyLocations()
-    if (fromService.length > 0) return fromService
-    return DEMO_LOCATIONS_FIXTURE.map(([, loc]) => loc)
+    return familyLocationService.getAllFamilyLocations()
   }, [queryLocations])
 
   useEffect(() => {
@@ -942,9 +939,11 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
                   >
                     {selectedMember.placeName}
                   </AppText>
-                  <AppText variant="caption" style={{ color: colors.text.muted, marginLeft: 4 }}>
-                    • {selectedMember.roomDetail}
-                  </AppText>
+                  {selectedMember.roomDetail ? (
+                    <AppText variant="caption" style={{ color: colors.text.muted, marginLeft: 4 }}>
+                      • {selectedMember.roomDetail}
+                    </AppText>
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -970,31 +969,19 @@ export const FamilySanctuaryMap = memo(function FamilySanctuaryMap({
               </PressableScale>
             </View>
 
-            {/* Unified Telemetry Bar (Battery + Steps + Sleep) */}
+            {/* Telemetry bar: only values the member's phone actually reported */}
             <View style={[styles.telemetryBar, { backgroundColor: colors.surface2 }]}>
               <View style={styles.telemetryItem}>
-                <Ionicons
-                  name={selectedMember.isCharging ? "battery-charging" : "battery-full"}
-                  size={14}
-                  color={colors.primary}
-                />
+                <Ionicons name="locate-outline" size={14} color={colors.primary} />
                 <AppText variant="caption" style={styles.telemetryText}>
-                  {selectedMember.batteryLevel}%{" "}
-                  {selectedMember.isCharging ? "Charging" : "Battery"}
+                  ±{Math.max(1, Math.round(selectedMember.accuracyMeters))} m
                 </AppText>
               </View>
               <View style={styles.telemetryDivider} />
               <View style={styles.telemetryItem}>
-                <Ionicons name="footsteps-outline" size={14} color={colors.primary} />
+                <Ionicons name="time-outline" size={14} color={colors.primary} />
                 <AppText variant="caption" style={styles.telemetryText}>
-                  {selectedMember.health.dailySteps.toLocaleString()} Steps
-                </AppText>
-              </View>
-              <View style={styles.telemetryDivider} />
-              <View style={styles.telemetryItem}>
-                <Ionicons name="moon-outline" size={14} color={colors.primary} />
-                <AppText variant="caption" style={styles.telemetryText}>
-                  {selectedMember.health.sleepHours}h Sleep
+                  {selectedMember.lastUpdated}
                 </AppText>
               </View>
             </View>
