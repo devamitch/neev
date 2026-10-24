@@ -10,12 +10,13 @@ platform :android do
   end
 
   desc "Deploy a new version to Google Play Internal track"
-  lane :internal do
-    build
+  lane :internal do |options|
+    build unless options[:skip_build]
     upload_to_play_store(
       aab: "android/app/build/outputs/bundle/release/app-release.aab",
-      track: "internal",
-      release_status: "draft",
+      track: options[:track] || "internal",
+      release_status: options[:status] || "completed",
+      timeout: 3600,
       skip_upload_apk: true,
       skip_upload_metadata: true,
       skip_upload_images: true,
