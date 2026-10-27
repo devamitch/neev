@@ -68,3 +68,18 @@ pnpm dlx expo-doctor
 # Start development server
 pnpm start
 ```
+
+---
+
+## 🛡️ AnvayKosh (अन्वयकोश) Ecosystem Integration
+
+<p align="center">
+  <img src="assets/brand/anvaykosh-icon.svg" width="96" height="96" alt="AnvayKosh Ecosystem Icon" />
+</p>
+
+Neev is a registered cornerstone application in the **AnvayKosh** private multi-app ecosystem:
+
+- **Anvay ID**: 1-tap single sign-on powered by federated peer discovery. If Setu is present, it acts as the master vault. If not, Neev or sibling apps (`Thrivefold`, `HarmonyBloom`, `BlinkQuest`) serve as the Anvay Vault Provider.
+- **Anvay Vault**: Encrypted personal profile storing family identity, household location (`homeAddress`, `officeAddress`, sanctuary places), routine times, notification preferences, and non-destructive coalesced state.
+- **Anvay Connect**: Peer-to-peer deep-link channel (`neev://unified-vault`) with package validation and state-nonce tamper verification.
+- **Anvay Sync**: Offline-first synchronization with non-destructive nullish merge (`coalesce`) and secure Supabase cloud reconciliation.

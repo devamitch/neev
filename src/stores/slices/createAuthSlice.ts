@@ -14,6 +14,15 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth as firebaseAuth, db as firestoreDb } from "@/services/firebase/firebaseClient"
 import { connectGoogleServices, signInWithGoogleAccount, signOutOfGoogle } from "@/services/auth/googleSignIn"
 import { setuSsoService, type SsoCallbackData } from "@/services/auth/setuSsoService"
+import {
+  unifiedVaultSosService,
+  type UnifiedVaultResult,
+} from "@/services/auth/unifiedVaultSosService"
+import {
+  ecosystemSyncService,
+  encodeEcosystemPayload,
+  decodeEcosystemPayload,
+} from "@/services/ecosystem/ecosystemSyncService"
 import { supabase } from "@/services/supabase/supabaseClient"
 import { Platform } from "react-native"
 import type { ImmerStateCreator } from "../types"
@@ -50,6 +59,7 @@ export interface AuthSlice {
 
   signInWithGoogle: () => Promise<GoogleSignInStatus>
   signInWithSetu: () => Promise<SetuSignInResult>
+  signInWithUnifiedVaultSos: (preferredTargetId?: string) => Promise<UnifiedVaultResult>
   signInAsGuest: () => Promise<void>
   handleSetuSsoCallback: (data: SsoCallbackData) => boolean
   checkSetuInstalled: () => Promise<boolean>
@@ -238,29 +248,44 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     })
 
     try {
-      const result = await setuSsoService.launchSetuSso()
-      if (result.status === "not_installed") {
-        set((state) => {
-          state.isAuthLoading = false
-          state.authError = "Setu app is not installed on this device"
-        })
-        return { ok: false, status: "not_installed" }
+      const localData = ecosystemSyncService.buildLocalEcosystemPayload()
+      const encodedPayload = encodeEcosystemPayload(localData)
+
+      const isSetuInstalled = await setuSsoService.isSetuInstalled()
+      if (isSetuInstalled) {
+        const result = await setuSsoService.launchSetuSso(encodedPayload)
+        if (result.status === "launched") {
+          set((state) => {
+            state.pendingSsoState = result.state || null
+          })
+          return { ok: true, status: "launched" }
+        }
       }
 
-      if (result.status === "launched") {
+      // If Setu is not installed, seamlessly route through Unified Vault SOS peer mesh!
+      const sosResult = await unifiedVaultSosService.launchUnifiedVaultSos()
+      if (sosResult.status === "launched") {
         set((state) => {
-          state.pendingSsoState = result.state || null
+          state.pendingSsoState = sosResult.state || null
+        })
+        return { ok: true, status: "launched" }
+      }
+
+      if (sosResult.status === "cloud_synced") {
+        set((state) => {
+          state.isAuthLoading = false
+          state.authError = null
         })
         return { ok: true, status: "launched" }
       }
 
       set((state) => {
         state.isAuthLoading = false
-        state.authError = "Failed to launch Setu for authentication"
+        state.authError = "No ecosystem app or cloud vault available"
       })
-      return { ok: false, status: "failed" }
+      return { ok: false, status: "not_installed" }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to connect Setu account"
+      const msg = err instanceof Error ? err.message : "Failed to connect ecosystem account"
       set((state) => {
         state.authError = msg
         state.isAuthLoading = false
@@ -269,10 +294,42 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     }
   },
 
+  signInWithUnifiedVaultSos: async (preferredTargetId?: string) => {
+    set((state) => {
+      state.isAuthLoading = true
+      state.authError = null
+    })
+
+    try {
+      const result = await unifiedVaultSosService.launchUnifiedVaultSos(preferredTargetId)
+      if (result.status === "launched") {
+        set((state) => {
+          state.pendingSsoState = result.state || null
+        })
+      } else if (result.status === "cloud_synced") {
+        set((state) => {
+          state.isAuthLoading = false
+          state.authError = null
+        })
+      } else {
+        set((state) => {
+          state.isAuthLoading = false
+          state.authError = "No ecosystem peer app found to connect"
+        })
+      }
+      return result
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unified Vault SOS connection failed"
+      set((state) => {
+        state.isAuthLoading = false
+        state.authError = msg
+      })
+      return { ok: false, status: "failed" }
+    }
+  },
+
   handleSetuSsoCallback: (data: SsoCallbackData): boolean => {
-    // Only accept a reply to a request this app actually sent. Without this any
-    // app or web page could open the callback link and sign the user in as an
-    // identity of its choosing.
+    // Only accept a reply to a request this app actually sent.
     const expected = get().pendingSsoState
     if (data.status === "authorized" && (!expected || data.state !== expected || !data.userId)) {
       set((state) => {
@@ -284,9 +341,18 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     }
 
     if (data.status === "authorized") {
+      // 1. If full ecosystem data payload received, hydrate local store non-destructively
+      const rawPayload = data.payload || data.ecosystemData
+      if (rawPayload) {
+        const decoded = decodeEcosystemPayload(rawPayload)
+        if (decoded) {
+          ecosystemSyncService.hydrateStoreFromEcosystem(decoded)
+        }
+      }
+
       const user: AuthUser = {
         uid: data.userId || `setu_${Date.now()}`,
-        displayName: data.displayName || "Setu Explorer",
+        displayName: data.displayName || "Sanctuary Explorer",
         provider: "setu",
         token: data.token,
         avatar: data.avatar,
@@ -310,7 +376,7 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     if (data.status === "cancelled") {
       set((state) => {
         state.isAuthLoading = false
-        state.authError = "Setu authorization was cancelled"
+        state.authError = "Unified Vault authorization was cancelled"
         state.pendingSsoState = null
       })
       return false
@@ -318,7 +384,7 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
 
     set((state) => {
       state.isAuthLoading = false
-      state.authError = data.errorMessage || "Setu authentication failed"
+      state.authError = data.errorMessage || "Unified Vault authentication failed"
       state.pendingSsoState = null
     })
     return false

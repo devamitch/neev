@@ -1,0 +1,57 @@
+import React from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
+import Svg, { G, Path } from 'react-native-svg';
+
+export interface AnvayKoshIconProps {
+  size?: number;
+  terracottaColor?: string;
+  pistaColor?: string;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+/**
+ * AnvayKosh (अन्वयकोश) Official Ecosystem Monogram Vector Icon.
+ * Authentic terracotta shackle arch (#D06543) with pista sanctuary leaf (#7A8A6D)
+ * forming the unified 'a' / 'A' lock monogram without any background.
+ */
+export function AnvayKoshIcon({
+  size = 24,
+  terracottaColor = '#D06543',
+  pistaColor = '#7A8A6D',
+  style,
+  testID,
+}: AnvayKoshIconProps) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 1024 1024"
+      fill="none"
+      style={style}
+      testID={testID}
+      accessibilityRole="image"
+      accessibilityLabel="AnvayKosh Ecosystem Icon"
+    >
+      <G transform="translate(0, 1024) scale(0.1, -0.1)">
+        {/* Shackle Arch (Top) */}
+        <Path
+          fill={terracottaColor}
+          d="M4995 8299 c-614 -35 -1168 -408 -1454 -978 -55 -108 -117 -300 -142 -434 -19 -101 -21 -162 -26 -637 -3 -289 -1 -535 4 -548 8 -22 11 -21 78 38 140 121 330 234 521 310 l82 32 4 331 c5 320 6 336 32 432 104 395 424 685 838 761 122 22 339 15 453 -15 387 -103 679 -431 740 -831 10 -66 15 -181 15 -376 l0 -282 73 -17 c177 -43 379 -133 520 -232 43 -30 81 -53 84 -50 3 3 6 226 6 494 0 417 -2 502 -17 583 -48 268 -157 524 -318 742 -82 112 -272 298 -388 381 -171 121 -383 214 -594 261 -99 23 -146 28 -331 40 -27 1 -108 -1 -180 -5z"
+        />
+        {/* Monogram Arch & Right Stem */}
+        <Path
+          fill={terracottaColor}
+          d="M4685 5979 c-353 -27 -711 -176 -1014 -422 -82 -67 -285 -266 -320 -315 -21 -30 -21 -30 796 -25 737 5 829 4 931 -11 452 -68 754 -257 899 -562 99 -209 103 -254 103 -1208 0 -877 -2 -846 68 -981 64 -121 167 -209 302 -256 61 -21 85 -23 368 -27 167 -2 328 -1 358 3 l55 7 -4 1306 c-3 1453 0 1375 -72 1584 -179 522 -702 849 -1449 908 -147 11 -870 11 -1021 -1z"
+        />
+        {/* Pista Green Sanctuary Leaf */}
+        <Path
+          fill={pistaColor}
+          d="M3096 4933 c-9 -60 -7 -574 4 -728 45 -624 260 -1125 650 -1516 269 -270 554 -424 895 -484 150 -26 365 -34 914 -35 l525 0 -80 73 c-319 291 -451 530 -558 1004 -90 396 -211 630 -450 868 -265 264 -619 441 -1101 550 -162 37 -282 70 -389 107 -89 32 -315 139 -372 177 -31 21 -31 21 -38 -16z"
+        />
+      </G>
+    </Svg>
+  );
+}
+
+export default AnvayKoshIcon;

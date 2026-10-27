@@ -12,6 +12,8 @@ export interface SsoCallbackData {
   avatar?: string
   token?: string
   state?: string
+  payload?: string
+  ecosystemData?: string
   errorMessage?: string
 }
 
@@ -49,7 +51,7 @@ export const setuSsoService = {
    * If Setu is installed, switches to Setu with deep link.
    * If not installed, reports 'not_installed'.
    */
-  async launchSetuSso(): Promise<{
+  async launchSetuSso(ecosystemPayload?: string): Promise<{
     ok: boolean
     status: "launched" | "not_installed" | "failed"
     state?: string
@@ -62,13 +64,18 @@ export const setuSsoService = {
     const state = `neev_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
     const callbackUrl = "neev://auth/callback"
 
-    const params = new URLSearchParams({
+    const paramMap: Record<string, string> = {
       app_id: "com.amit.neev",
       app_name: "Neev",
       callback_url: callbackUrl,
       state,
       scopes: "identity,p2p",
-    })
+    }
+    if (ecosystemPayload) {
+      paramMap.ecosystem_data = ecosystemPayload
+    }
+
+    const params = new URLSearchParams(paramMap)
 
     const ssoUrl = `setu://sso?${params.toString()}`
 
@@ -98,6 +105,8 @@ export const setuSsoService = {
         avatar: params.get("avatar") || undefined,
         token: params.get("token") || undefined,
         state: params.get("state") || undefined,
+        payload: params.get("payload") || undefined,
+        ecosystemData: params.get("ecosystem_data") || params.get("payload") || undefined,
         errorMessage: params.get("error_message") || undefined,
       }
     } catch {

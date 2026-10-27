@@ -14,6 +14,7 @@ import { Toast } from "@/components/ui/Toast"
 import { MindfulNotificationBanner } from "@/components/ui/MindfulNotificationBanner"
 import { initI18n } from "@/i18n"
 import { setuSsoService } from "@/services/auth/setuSsoService"
+import { unifiedVaultSosService } from "@/services/auth/unifiedVaultSosService"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { customFontsToLoad } from "@/theme/typography"
 import { loadDateFnsLocale } from "@/utils/formatDate"
@@ -141,7 +142,25 @@ export default function Root() {
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       if (!url) return
-      if (url.startsWith("neev://auth/callback") || url.startsWith("blinkquest://auth/callback") || url.includes("/auth/callback?")) {
+
+      // 1. Unified Vault SOS Provider Request (another ecosystem app requesting data from Neev)
+      if (url.includes("unified-vault?") && !url.includes("unified-vault/callback")) {
+        void unifiedVaultSosService.handleIncomingVaultRequest(url)
+        return
+      }
+
+      // 2. Unified Vault SOS Client Callback (peer app returning merged data to Neev)
+      if (url.includes("unified-vault/callback")) {
+        unifiedVaultSosService.handleIncomingVaultCallback(url)
+        return
+      }
+
+      // 3. Legacy Setu SSO Callback
+      if (
+        url.startsWith("neev://auth/callback") ||
+        url.startsWith("blinkquest://auth/callback") ||
+        url.includes("/auth/callback?")
+      ) {
         const data = setuSsoService.parseCallbackUrl(url)
         handleSetuSsoCallback(data)
       }

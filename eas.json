@@ -22,7 +22,8 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "955342531861",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:955342531861:web:19d7913f1a5cc7621acd1c",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-5GCJJ9VG8P",
-        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf"
+        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kwrdugillyakxgvgbrsu.supabase.co"
       }
     },
     "development:device": {
@@ -38,7 +39,8 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "955342531861",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:955342531861:web:19d7913f1a5cc7621acd1c",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-5GCJJ9VG8P",
-        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf"
+        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kwrdugillyakxgvgbrsu.supabase.co"
       }
     },
     "preview": {
@@ -56,7 +58,8 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "955342531861",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:955342531861:web:19d7913f1a5cc7621acd1c",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-5GCJJ9VG8P",
-        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf"
+        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kwrdugillyakxgvgbrsu.supabase.co"
       }
     },
     "production": {
@@ -75,7 +78,8 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "955342531861",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:955342531861:web:19d7913f1a5cc7621acd1c",
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-5GCJJ9VG8P",
-        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf"
+        "EXPO_PUBLIC_FIREBASE_DATABASE_ID": "ai-studio-90ae183b-b317-4e65-9831-8e489071a4cf",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kwrdugillyakxgvgbrsu.supabase.co"
       }
     },
     "production-local": {

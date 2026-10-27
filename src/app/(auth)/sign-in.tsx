@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Path } from "react-native-svg"
 
 import AnimatedNeevLogoIcon from "@/components/brand/AnimatedNeevLogoIcon"
+import { AnvayKoshIcon } from "@/components/brand/AnvayKoshIcon"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
@@ -107,20 +108,26 @@ export default function SignInScreen() {
     }
   }
 
-  const setu = async () => {
+  const handleVaultSos = async () => {
     setPending("setu")
     try {
       const result = await signInWithSetu()
-      if (result.status === "not_installed") {
+      if (result.status === "launched") {
+        showToast({
+          title: "Vault SOS",
+          message: "Connecting to ecosystem peer vault...",
+          type: "info",
+        })
+      } else if (result.status === "not_installed") {
         showAlert({
-          title: "Get Setu to continue",
-          message: "Setu keeps your identity on your phone and approves Neev in one tap.",
-          confirmText: "Get Setu",
-          cancelText: "Not now",
+          title: "Vault SOS Ecosystem",
+          message: "Connect instantly across your ecosystem apps (Thrivefold, Setu, HarmonyBloom, BlinkQuest) or download Setu Vault.",
+          confirmText: "Get Setu Vault",
+          cancelText: "Dismiss",
           onConfirm: () => void openSetuDownload(),
         })
       } else if (result.status === "failed") {
-        showToast("Couldn't open Setu", "error")
+        showToast("Couldn't open Vault SOS", "error")
       }
     } finally {
       setPending(null)
@@ -172,12 +179,13 @@ export default function SignInScreen() {
         />
 
         <ProviderButton
-          label="Continue with Setu"
-          subtitle="On-device decentralized SSO"
-          icon={<Ionicons name="finger-print-outline" size={20} color={colors.accentText} />}
+          label="Anvay ID"
+          subtitle="AnvayKosh Unified Ecosystem · 1-Tap Sign-In"
+          icon={<AnvayKoshIcon size={24} />}
           busy={pending === "setu"}
           disabled={pending !== null}
-          onPress={() => void setu()}
+          onPress={() => void handleVaultSos()}
+          highlighted
         />
 
         <ProviderButton
