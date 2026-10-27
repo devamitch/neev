@@ -8,6 +8,21 @@ It safeguards family data within an encrypted private enclave with zero third-pa
 
 ---
 
+## 🛡️ AnvayKosh (अन्वयकोश) Ecosystem Integration
+
+<div align="center">
+  <img src="assets/brand/anvaykosh-icon.svg" width="96" height="96" alt="AnvayKosh Ecosystem Icon" />
+  <p><em>Registered flagship application in the AnvayKosh unified private ecosystem.</em></p>
+</div>
+
+Neev is a registered cornerstone application in the **AnvayKosh** private multi-app ecosystem:
+- **Anvay ID**: Fast, federated single sign-on across member apps (`Neev`, `Thrivefold`, `HarmonyBloom`, `BlinkQuest`, `Setu`).
+- **Anvay Vault**: Encrypted personal profile storing user identity basics and shared family traditions while strictly isolating private household radar and locations on-device.
+- **Anvay Connect**: Authorized cross-app peer-to-peer protocol via verified deep links and Android 11+ `<queries>`.
+- **Anvay Sync**: Offline-first synchronization with non-destructive nullish merge (`coalesce`) and secure cloud reconciliation.
+
+---
+
 ## 🌟 Core Architecture & Sacred Spaces
 
 ### 1. 🔒 Sacred Spaces Multi-Partitioning

@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Path } from "react-native-svg"
 
 import AnimatedNeevLogoIcon from "@/components/brand/AnimatedNeevLogoIcon"
-import { AnvayKoshIcon } from "@/components/brand/AnvayKoshIcon"
 import { AppBottomSheetModal } from "@/components/ui/AppBottomSheetModal"
 import { AppButton } from "@/components/ui/AppButton"
 import { HeaderBackButton } from "@/components/ui/AppHeader"
@@ -108,31 +107,34 @@ export default function SignInScreen() {
     }
   }
 
+
+  /*
   const handleVaultSos = async () => {
     setPending("setu")
     try {
       const result = await signInWithSetu()
       if (result.status === "launched") {
         showToast({
-          title: "Vault SOS",
+          title: "Anvay ID",
           message: "Connecting to ecosystem peer vault...",
           type: "info",
         })
       } else if (result.status === "not_installed") {
         showAlert({
-          title: "Vault SOS Ecosystem",
+          title: "Anvay Vault Ecosystem",
           message: "Connect instantly across your ecosystem apps (Thrivefold, Setu, HarmonyBloom, BlinkQuest) or download Setu Vault.",
           confirmText: "Get Setu Vault",
           cancelText: "Dismiss",
           onConfirm: () => void openSetuDownload(),
         })
       } else if (result.status === "failed") {
-        showToast("Couldn't open Vault SOS", "error")
+        showToast("Couldn't open Anvay ID", "error")
       }
     } finally {
       setPending(null)
     }
   }
+  */
 
   const handleGuest = async () => {
     setPending("guest")
@@ -178,6 +180,7 @@ export default function SignInScreen() {
           highlighted
         />
 
+        {/* Anvay ID 1-Tap Ecosystem Sign-In (Uncomment to activate once deep-linking screen is configured)
         <ProviderButton
           label="Anvay ID"
           subtitle="AnvayKosh Unified Ecosystem · 1-Tap Sign-In"
@@ -187,6 +190,8 @@ export default function SignInScreen() {
           onPress={() => void handleVaultSos()}
           highlighted
         />
+        */}
+
 
         <ProviderButton
           label="Continue without an account"
