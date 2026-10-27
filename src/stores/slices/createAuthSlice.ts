@@ -195,18 +195,13 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
         state.isAuthLoading = false
       })
 
-      // One consent screen for Calendar, Tasks and Drive right after sign-in. Declining
-      // keeps the user signed in; they can allow it later from Settings.
+      // Google Sign-In is complete with necessary identity scopes (profile, email).
+      // Any optional external integrations can be connected on-demand later from Settings.
       if (Platform.OS !== "web") {
-        const access = await connectGoogleServices().catch(() => null)
         try {
           const { useCloudSyncStore } = require("@/services/sync/cloudSyncEngine")
-          useCloudSyncStore.setState({ isGoogleConnected: access?.status === "granted" })
+          useCloudSyncStore.setState({ isGoogleConnected: true })
         } catch { /* cloud sync store may not be available yet */ }
-        if (access?.status === "granted") {
-          const { syncGoogleNow } = require("@/services/google/googleSyncService") as typeof import("@/services/google/googleSyncService")
-          void syncGoogleNow()
-        }
       }
 
       return "success"

@@ -2,13 +2,13 @@
   "name": "Neev",
   "slug": "neev",
   "scheme": "neev",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "orientation": "portrait",
   "userInterfaceStyle": "light",
   "icon": "./assets/images/app-icon-all.png",
   "android": {
     "package": "com.amit.neev",
-    "versionCode": 2,
+    "versionCode": 3,
     "googleServicesFile": "./google-services.json",
     "icon": "./assets/images/app-icon-android-legacy.png",
     "adaptiveIcon": {
@@ -33,7 +33,7 @@
   "ios": {
     "supportsTablet": true,
     "bundleIdentifier": "com.amit.neev",
-    "buildNumber": "2",
+    "buildNumber": "3",
     "config": {
       "usesNonExemptEncryption": false
     },

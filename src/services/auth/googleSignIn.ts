@@ -261,11 +261,10 @@ export type GoogleAccessResult =
   | { status: "not_signed_in" | "declined" | "not_configured" | "needs_consent" }
   | { status: "error"; message: string }
 
-/** Essential scopes for Neev features: Calendar + Meet, Tasks, and Contacts. Drive excluded. */
+/** Essential scopes for Neev optional integrations: Calendar + Meet and Tasks. Restricted contacts/drive excluded. */
 export const ALL_GOOGLE_FEATURE_SCOPES: GoogleFeatureScope[] = [
   GOOGLE_FEATURE_SCOPES.calendarEvents,
   GOOGLE_FEATURE_SCOPES.tasks,
-  GOOGLE_FEATURE_SCOPES.contactsReadOnly,
 ]
 
 /**
