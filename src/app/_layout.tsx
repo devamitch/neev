@@ -14,7 +14,6 @@ import { Toast } from "@/components/ui/Toast"
 import { MindfulNotificationBanner } from "@/components/ui/MindfulNotificationBanner"
 import { initI18n } from "@/i18n"
 import { setuSsoService } from "@/services/auth/setuSsoService"
-import { unifiedVaultSosService } from "@/services/auth/unifiedVaultSosService"
 import { useRootStore, useShallow } from "@/stores/useRootStore"
 import { customFontsToLoad } from "@/theme/typography"
 import { loadDateFnsLocale } from "@/utils/formatDate"
@@ -143,17 +142,8 @@ export default function Root() {
     const handleUrl = (url: string | null) => {
       if (!url) return
 
-      // 1. Unified Vault SOS Provider Request (another ecosystem app requesting data from Neev)
-      if (url.includes("unified-vault?") && !url.includes("unified-vault/callback")) {
-        void unifiedVaultSosService.handleIncomingVaultRequest(url)
-        return
-      }
-
-      // 2. Unified Vault SOS Client Callback (peer app returning merged data to Neev)
-      if (url.includes("unified-vault/callback")) {
-        unifiedVaultSosService.handleIncomingVaultCallback(url)
-        return
-      }
+      // Unified Vault SOS links are no longer read or answered: they carried profile data in the
+      // URL and trusted any caller. +native-intent sends them to the start screen.
 
       // 3. Legacy Setu SSO Callback
       if (

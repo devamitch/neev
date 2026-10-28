@@ -241,91 +241,23 @@ export const createAuthSlice: ImmerStateCreator<AuthSlice> = (set, get) => ({
     await setuSsoService.openSetuDownload()
   },
 
+  // Disabled: the Setu / Unified Vault handoff put profile data in deep-link URLs, readable by
+  // any app that registers the scheme. Anvay ID returns as OAuth code + PKCE (see AGENTS.md).
   signInWithSetu: async () => {
     set((state) => {
-      state.isAuthLoading = true
+      state.isAuthLoading = false
       state.authError = null
+      state.pendingSsoState = null
     })
-
-    try {
-      const localData = ecosystemSyncService.buildLocalEcosystemPayload()
-      const encodedPayload = encodeEcosystemPayload(localData)
-
-      const isSetuInstalled = await setuSsoService.isSetuInstalled()
-      if (isSetuInstalled) {
-        const result = await setuSsoService.launchSetuSso(encodedPayload)
-        if (result.status === "launched") {
-          set((state) => {
-            state.pendingSsoState = result.state || null
-          })
-          return { ok: true, status: "launched" }
-        }
-      }
-
-      // If Setu is not installed, seamlessly route through Unified Vault SOS peer mesh!
-      const sosResult = await unifiedVaultSosService.launchUnifiedVaultSos()
-      if (sosResult.status === "launched") {
-        set((state) => {
-          state.pendingSsoState = sosResult.state || null
-        })
-        return { ok: true, status: "launched" }
-      }
-
-      if (sosResult.status === "cloud_synced") {
-        set((state) => {
-          state.isAuthLoading = false
-          state.authError = null
-        })
-        return { ok: true, status: "launched" }
-      }
-
-      set((state) => {
-        state.isAuthLoading = false
-        state.authError = "No ecosystem app or cloud vault available"
-      })
-      return { ok: false, status: "not_installed" }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to connect ecosystem account"
-      set((state) => {
-        state.authError = msg
-        state.isAuthLoading = false
-      })
-      return { ok: false, status: "failed", message: msg }
-    }
+    return { ok: false, status: "not_installed" }
   },
 
-  signInWithUnifiedVaultSos: async (preferredTargetId?: string) => {
+  signInWithUnifiedVaultSos: async () => {
     set((state) => {
-      state.isAuthLoading = true
-      state.authError = null
+      state.isAuthLoading = false
+      state.pendingSsoState = null
     })
-
-    try {
-      const result = await unifiedVaultSosService.launchUnifiedVaultSos(preferredTargetId)
-      if (result.status === "launched") {
-        set((state) => {
-          state.pendingSsoState = result.state || null
-        })
-      } else if (result.status === "cloud_synced") {
-        set((state) => {
-          state.isAuthLoading = false
-          state.authError = null
-        })
-      } else {
-        set((state) => {
-          state.isAuthLoading = false
-          state.authError = "No ecosystem peer app found to connect"
-        })
-      }
-      return result
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unified Vault SOS connection failed"
-      set((state) => {
-        state.isAuthLoading = false
-        state.authError = msg
-      })
-      return { ok: false, status: "failed" }
-    }
+    return { ok: false, status: "not_installed" }
   },
 
   handleSetuSsoCallback: (data: SsoCallbackData): boolean => {
