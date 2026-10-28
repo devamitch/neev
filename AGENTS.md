@@ -70,27 +70,16 @@ adb -s <serial> install -r android/app/build/outputs/apk/release/app-release.apk
 
 Behaviour works on the device, checks pass, tracker updated, honest summary of what was and wasn't verified.
 
-## 8. AnvayKosh (अन्वयकोश) Ecosystem Contract
+## 8. AnvayKosh (अन्वयकोश) ecosystem
 
-Neev is a registered cornerstone application in the **AnvayKosh** private multi-app ecosystem.
-All agents working on this codebase must adhere to the following ecosystem rules:
+Neev belongs to **AnvayKosh** (Neev, Thrivefold, HarmonyBloom, BlinkQuest, Setu). Neev, HarmonyBloom
+and BlinkQuest share the Supabase project `kwrdugill…`, which holds the owner-only `anvay_profiles`
+table (Anvay Vault: name, photo, language, time zone; never health or location data).
 
-1. **Brand Architecture**:
-   - **AnvayKosh**: The master unified ecosystem.
-   - **Anvay ID**: Federated 1-tap single sign-on across member apps (`neev`, `thrivefold`, `harmonybloom`, `blinkquest`, `setu`).
-   - **Anvay Vault**: Encrypted personal profile (identity, household locations, routine, health, cycle, and arcade progression).
-   - **Anvay Connect**: Authorized cross-app peer-to-peer protocol via deep links (`neev://unified-vault` and `neev://auth/callback`).
-   - **Anvay Sync**: Offline-first, non-destructive synchronization with nullish coalescing.
-2. **Decentralized Peer-to-Peer Mesh**:
-   - Setu is NOT a mandatory installation requirement.
-   - If Setu is installed, it acts as the primary master vault.
-   - If Setu is NOT installed, any installed sibling app (`Thrivefold`, `HarmonyBloom`, `Neev`, or `BlinkQuest`) acts as the Anvay Vault Provider.
-   - If no sibling app is installed, sync falls back to the Supabase Cloud Vault when online.
-3. **Non-Destructive Coalescing**:
-   - Never wipe or overwrite populated user fields.
-   - When merging incoming data, use nullish coalescing (`coalesce`) to fill empty/null values while preserving existing user data.
-4. **Zero Secret Exposure**:
-   - Never hardcode secrets, tokens, or private keys in source code or `eas.json`.
-   - All credentials must reside in gitignored `.env` and be managed through `eas env:push`.
-5. **Android Queries Compliance**:
-   - Android 11+ `<queries>` in `AndroidManifest.xml` must declare peer packages: `com.amit.setu`, `com.amit.thrivefold`, `com.amit.harmonybloom`, `com.amit.blinkquest`.
+**Removed:** the "Unified Vault SOS" deep-link handoff put profile data in URLs and trusted any
+caller. `src/app/+native-intent.tsx` sends old `unified-vault`, `auth/callback` and `sso` links to
+the start screen unread; Setu sign-in launches refuse. Do not restore it.
+
+Rules: OAuth code + PKCE for any cross-app sign-in; no data, tokens or keys in URLs; server-side
+app registry; per-category consent; fill-empty merges with provenance; Setu optional; never bypass
+the device or app lock for a link; no secrets in the client (`EXPO_PUBLIC_*` is public).

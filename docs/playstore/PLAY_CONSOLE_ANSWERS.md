@@ -79,7 +79,7 @@ A private family space: shared plans, rituals, family tree and opt-in location.
 | Precise location | Yes, only when the person turns on location sharing | No* | Yes (off by default) | App functionality | Stored in Firestore `households/{id}/locations/{uid}`, visible to household members. *Transfer to other users at the person's request is not "sharing" under Play's definition. |
 | Contacts (name, phone, email, birthday of one picked contact) | Yes, when the person adds a member from contacts and saves | No | Yes | App functionality | Saved as that family member in the household. |
 | Other user content (events, routines, intentions, knowledge entries, family tree) | Yes | No | Required for the household feature | App functionality | Supabase and Firestore, household-scoped. |
-| Crash logs, diagnostics | Yes | No | Check the app: add a toggle if there is none | App stability | Firebase Crashlytics. |
+| Crash logs, diagnostics | Yes | No | **No** (always on today; add an off switch to declare it optional) | App stability | Firebase Crashlytics, enabled unconditionally in `CrashReportingService.ts`. |
 | Health, financial, messages, photos, audio, files, web history | No | No | — | — | |
 | Device or other IDs | No | No | — | — | Advertising ID blocked in `app.json`. |
 
