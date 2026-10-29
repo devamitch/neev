@@ -39,6 +39,14 @@ Deploy a new version to Google Play Internal track
 
 Deploy a new version to Google Play Closed Beta (alpha track)
 
+### android promote_to_beta
+
+```sh
+[bundle exec] fastlane android promote_to_beta
+```
+
+Promote internal release to Closed Beta (alpha track)
+
 ### android release
 
 ```sh

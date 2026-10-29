@@ -18,25 +18,48 @@ platform :android do
       release_status: options[:status] || "completed",
       timeout: 3600,
       skip_upload_apk: true,
-      skip_upload_metadata: true,
-      skip_upload_images: true,
-      skip_upload_screenshots: true
+      skip_upload_metadata: options.fetch(:skip_metadata, true),
+      skip_upload_images: options.fetch(:skip_images, true),
+      skip_upload_screenshots: options.fetch(:skip_screenshots, true),
+      skip_upload_changelogs: options.fetch(:skip_changelogs, false)
     )
   end
 
   desc "Deploy a new version to Google Play Closed Beta (alpha track)"
   lane :beta do |options|
-    build
-    upload_to_play_store(
-      aab: "android/app/build/outputs/bundle/release/app-release.aab",
-      track: "alpha",
-      release_status: options[:status] || "completed",
-      skip_upload_apk: true,
-      skip_upload_metadata: true,
-      skip_upload_changelogs: false,
-      skip_upload_images: true,
-      skip_upload_screenshots: true
-    )
+    if options[:promote]
+      upload_to_play_store(
+        track: "internal",
+        track_promote_to: "alpha",
+        track_promote_release_status: options[:status] || "completed",
+        version_code: options[:version_code] || 4,
+        skip_upload_aab: true,
+        skip_upload_apk: true,
+        skip_upload_metadata: options.fetch(:skip_metadata, true),
+        skip_upload_images: options.fetch(:skip_images, true),
+        skip_upload_screenshots: options.fetch(:skip_screenshots, true),
+        skip_upload_changelogs: options.fetch(:skip_changelogs, false),
+        timeout: 3600
+      )
+    else
+      build unless options[:skip_build]
+      upload_to_play_store(
+        aab: "android/app/build/outputs/bundle/release/app-release.aab",
+        track: "alpha",
+        release_status: options[:status] || "completed",
+        timeout: 3600,
+        skip_upload_apk: true,
+        skip_upload_metadata: options.fetch(:skip_metadata, true),
+        skip_upload_images: options.fetch(:skip_images, true),
+        skip_upload_screenshots: options.fetch(:skip_screenshots, true),
+        skip_upload_changelogs: options.fetch(:skip_changelogs, false)
+      )
+    end
+  end
+
+  desc "Promote internal release to Closed Beta (alpha track)"
+  lane :promote_to_beta do |options|
+    beta(promote: true, version_code: options[:version_code] || 4)
   end
 
   desc "Deploy to Google Play Production track"

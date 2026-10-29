@@ -10,7 +10,7 @@ export const CONFIG = {
   SCHEME: "neev",
   PACKAGE_NAME: "com.amit.neev",
   BUNDLE_ID: "com.amit.neev",
-  VERSION: "1.0.3",
+  VERSION: "1.0.4",
   PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.amit.neev",
   APP_STORE_URL: "https://apps.apple.com/app/neev/id0000000000",
   WEBSITE_URL: "https://neev.app",
