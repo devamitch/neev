@@ -1,0 +1,18 @@
+name: Submit Android Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        description: 'EAS Android Build ID to submit to Google Play'
+      profile:
+        type: string
+        default: production
+
+jobs:
+  submit_android:
+    type: submit
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: ${{ inputs.profile }}
