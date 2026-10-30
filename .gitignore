@@ -202,3 +202,9 @@ blinkquest-*.json
 **/backups/
 *.original.*
 *.zip
+
+# Google Play & EAS Release Service Account Keys
+setu-511211-f490a061589b.json
+*511211*.json
+*-play-service-account*.json
+
