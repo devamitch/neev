@@ -90,18 +90,35 @@
   "submit": {
     "production": {
       "android": {
+        "serviceAccountKeyPath": "./setu-511211-f490a061589b.json",
         "track": "internal",
+        "releaseStatus": "completed"
+      }
+    },
+    "internal": {
+      "android": {
+        "serviceAccountKeyPath": "./setu-511211-f490a061589b.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    },
+    "closed-draft": {
+      "android": {
+        "serviceAccountKeyPath": "./setu-511211-f490a061589b.json",
+        "track": "alpha",
         "releaseStatus": "draft"
       }
     },
     "alpha": {
       "android": {
+        "serviceAccountKeyPath": "./setu-511211-f490a061589b.json",
         "track": "alpha",
         "releaseStatus": "completed"
       }
     },
     "store": {
       "android": {
+        "serviceAccountKeyPath": "./setu-511211-f490a061589b.json",
         "track": "production",
         "releaseStatus": "completed"
       }
