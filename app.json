@@ -8,7 +8,7 @@
   "icon": "./assets/images/app-icon-all.png",
   "android": {
     "package": "com.amit.neev",
-    "versionCode": 5,
+    "versionCode": 6,
     "googleServicesFile": "./google-services.json",
     "icon": "./assets/images/app-icon-android-legacy.png",
     "adaptiveIcon": {
