@@ -127,7 +127,7 @@ class NotificationsService {
       try {
         const deviceTokenData = await Notifications.getDevicePushTokenAsync()
         this.fcmToken = deviceTokenData.data
-        if (__DEV__) console.log("[NotificationsService] Native Device/FCM Push Token:", this.fcmToken)
+        if (__DEV__) console.log("[NotificationsService] Native Device FCM Push Ident:", this.fcmToken)
       } catch (err) {
         if (__DEV__) console.warn("[NotificationsService] Device push token unavailable:", err)
       }
@@ -135,7 +135,7 @@ class NotificationsService {
       // [REAL FIREBASE PUSH NOTIFICATIONS]
       // Using native Firebase Cloud Messaging (FCM) push token directly from Google Play Services.
       if (this.fcmToken) {
-        if (__DEV__) console.log("[NotificationsService] Active Native Firebase (FCM) Token:", this.fcmToken)
+        if (__DEV__) console.log("[NotificationsService] Active Native Firebase FCM Ident:", this.fcmToken)
       }
 
       // [EXPO PUSH NOTIFICATIONS - COMMENTED OUT AS REQUESTED]
